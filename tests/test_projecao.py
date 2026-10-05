@@ -101,7 +101,7 @@ def test_mesma_semente_mesmo_resultado():
 
 # --- backtest: simulação da chegada -------------------------------------------
 
-from apuracao.projecao.backtest import observar, ordens, resumo, rodar
+from apuracao.projecao.backtest import observar as observar_chegada, ordens, resumo, rodar
 
 
 def test_ordens_sao_permutacoes_e_respeitam_o_criterio():
@@ -118,7 +118,7 @@ def test_ordens_sao_permutacoes_e_respeitam_o_criterio():
 def test_observar_corte_e_parciais():
     base, v = mundo(n=300)
     ordem = np.arange(len(base))
-    obs = observar(base, v, ordem, 0.5, np.random.default_rng(0))
+    obs = observar_chegada(base, v, ordem, 0.5, np.random.default_rng(0))
     peso_apurado = base["vv1"][obs["frac"] == 1].sum() / base["vv1"].sum()
     assert 0.45 < peso_apurado <= 0.5
     parciais = obs[(obs["frac"] > 0) & (obs["frac"] < 1)]
