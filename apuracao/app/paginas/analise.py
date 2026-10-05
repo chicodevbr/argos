@@ -9,10 +9,12 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from apuracao.app import analise
+from apuracao.app import analise, mapa
+from apuracao.carga.ibge import ler_malha
 from apuracao.modelo import consultas
 
 DIR_PARQUET = Path(os.environ.get("APURACAO_DIR_PARQUET", "data/parquet"))
+MALHA = Path(os.environ.get("APURACAO_MALHA", "data/raw/ibge/malha-municipios-minima.json"))
 alt.data_transformers.disable_max_rows()  # ~5.700 municípios no gráfico de dispersão
 
 # Paleta validada (dataviz): ano base (referência) em cinza, 2026 no azul do slot 1.
@@ -31,6 +33,11 @@ def tema() -> str:
 
 def br(v, casas=2) -> str:
     return "–" if pd.isna(v) else f"{v:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+@st.cache_data(show_spinner="Carregando o mapa...")
+def malha(caminho: str) -> dict | None:
+    return ler_malha(Path(caminho)) if Path(caminho).exists() else None
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -129,6 +136,29 @@ texto = alt.Chart(var).encode(
 positivos = texto.transform_filter("datum.variacao >= 0").mark_text(dx=4, align="left", color=p["texto"])
 negativos = texto.transform_filter("datum.variacao < 0").mark_text(dx=-4, align="right", color=p["texto"])
 st.altair_chart((barras + positivos + negativos).properties(height=24 * len(var)), use_container_width=True)
+
+# --- Mapa ------------------------------------------------------------------------------------------
+st.subheader("Mapa por município")
+geo = malha(str(MALHA))
+if geo is None:
+    st.info(f"Malha municipal do IBGE não encontrada em `{MALHA}`. Baixe com `python -m apuracao.carga --malha`.")
+else:
+    opcoes = {
+        "Abstenção em 2026": ("abst_pct_atual", mapa.ABSTENCAO, "Abstenção em 2026"),
+        f"Variação da abstenção ({ano} → 2026)": ("var_abst", mapa.VARIACAO, f"Abstenção, 2026 vs {ano}"),
+        f"Votos de {nomes['pt_atual'].title()} em 2026": ("pct_pt_atual", mapa.VOTOS, "% dos votos válidos"),
+        f"Votos de {nomes['adv_atual'].title()} em 2026": ("pct_adv_atual", mapa.VOTOS, "% dos votos válidos"),
+    }
+    escolha_mapa = st.radio("Colorir por", list(opcoes), horizontal=True, label_visibility="collapsed")
+    campo, escala, titulo = opcoes[escolha_mapa]
+    base_mapa = mun[mun["uf"] != "zz"].dropna(subset=["cod_ibge"])
+    tt = [alt.Tooltip("nome:N", title="Município"), alt.Tooltip("uf:N", title="UF"),
+          alt.Tooltip(f"{campo}:Q", title=escolha_mapa, format="+.1f" if campo.startswith("var") else ".1f")]
+    st.altair_chart(mapa.grafico(geo, base_mapa[["cod_ibge", "nome", "uf", campo]], campo, escala, titulo, tema(), tt),
+                    use_container_width=True)
+    st.caption("Malha municipal do IBGE (qualidade mínima). Boa Esperança do Norte (MT), instalado recentemente, ainda "
+               "não está na malha. 'Sem dado' = município que não existia no ano de comparação. Votação colorida em "
+               "azul para os dois candidatos, sem cor de partido.")
 
 # --- Municípios -------------------------------------------------------------------------------------
 st.subheader("Municípios")

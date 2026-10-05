@@ -92,3 +92,11 @@ base = "https://cdn.tse.jus.br/estatistica/sead/odsele"
 votacao = "/votacao_candidato_munzona/votacao_candidato_munzona_{ano}.zip"
 detalhe = "/detalhe_votacao_munzona/detalhe_votacao_munzona_{ano}.zip"
 dir = "data/raw/historico"
+
+# --- Malha municipal do IBGE (mapas) -----------------------------------------
+# API de malhas v3: GeoJSON de todos os municípios, `codarea` = código IBGE (7 dígitos),
+# que casa com municipios.cod_ibge (5.570 de 5.571 em 05/10/2026; Boa Esperança do
+# Norte/MT, instalado recentemente, ainda não está na malha).
+[ibge]
+malha = "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo%2Bjson&qualidade=minima&intrarregiao=municipio"
+arquivo = "data/raw/ibge/malha-municipios-minima.json"

@@ -81,11 +81,11 @@ def municipios(con: duckdb.DuckDBPyConnection, ano_base: int = 2022) -> pd.DataF
     )
     -- FULL OUTER: municípios/localidades que só existem num dos anos entram nos totais
     -- daquele ano (em 2014, 30 deles ficariam de fora e o total não bateria com o oficial).
-    SELECT * EXCLUDE (cod_tse, uf_m), m.nome, m.capital
+    SELECT * EXCLUDE (cod_tse, uf_m), m.nome, m.capital, m.cod_ibge
     FROM atual
     FULL OUTER JOIN c_base USING (uf, cod_mun)
     FULL OUTER JOIN v_base USING (uf, cod_mun)
-    LEFT JOIN (SELECT uf AS uf_m, cod_tse, nome, capital FROM municipios) m ON m.uf_m = uf AND m.cod_tse = cod_mun
+    LEFT JOIN (SELECT uf AS uf_m, cod_tse, nome, capital, cod_ibge FROM municipios) m ON m.uf_m = uf AND m.cod_tse = cod_mun
     """).df()
     df["regiao"] = df["uf"].map(REGIAO)
     return _taxas(df)

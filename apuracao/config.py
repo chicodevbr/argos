@@ -49,6 +49,11 @@ class Historico(BaseModel):
     dir: Path
 
 
+class Ibge(BaseModel):
+    malha: str
+    arquivo: Path
+
+
 class Config(BaseModel):
     ambientes: dict[str, str]
     cargos: dict[str, int]
@@ -56,6 +61,7 @@ class Config(BaseModel):
     eleicao: list[Eleicao]
     coletor: Coletor
     historico: Historico
+    ibge: Ibge | None = None
 
     @model_validator(mode="after")
     def _valida(self) -> Config:
