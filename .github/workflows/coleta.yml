@@ -1,0 +1,58 @@
+name: coleta
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        type: choice
+        options: [oficial, simulado]
+        default: oficial
+      eleicoes:
+        description: ids de config/eleicoes.toml, separados por espaço
+        default: 2026-t2-federal 2026-t2-estadual
+      duracao:
+        description: segundos de coleta (máx. ~20400 para caber em 6h)
+        default: "20400"
+  schedule:
+    # 25/10, 19:45 UTC = 16:45 em Brasília. Cron do GitHub pode atrasar ou
+    # falhar em horário de pico: é só reserva. O disparo principal é manual.
+    - cron: "45 19 25 10 *"
+
+permissions:
+  contents: read
+
+jobs:
+  coleta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355  # 5h55: abaixo do limite de 6h
+    env:
+      AMBIENTE: ${{ inputs.ambiente || 'oficial' }}
+      ELEICOES: ${{ inputs.eleicoes || '2026-t2-federal 2026-t2-estadual' }}
+      DURACAO: ${{ inputs.duracao || '20400' }}
+      DIR_RAW: data/raw
+      LOGS: logs
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - run: uv sync --frozen --no-dev
+
+      - name: Coletar
+        run: scripts/coleta.sh
+
+      # Redundância: além do R2, guarda tudo como artefato do run.
+      - name: Empacotar snapshots
+        if: always()
+        run: tar -czf snapshots.tar.gz data/raw logs 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snapshots-${{ github.run_id }}
+          path: snapshots.tar.gz
+          retention-days: 90

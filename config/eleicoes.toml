@@ -1,0 +1,74 @@
+# Configuração das eleições acompanhadas pelo coletor.
+# Nenhum código de eleição deve ficar fixo no código Python: tudo vem daqui.
+
+[ambientes]
+oficial = "https://resultados.tse.jus.br/oficial"
+simulado = "https://resultados-sim.tse.jus.br/simulado"
+
+[cargos]
+presidente = 1
+governador = 3
+
+[urls]
+# Placeholders: {ciclo}, {eleicao}, {uf}, {cod_mun}, {cargo}
+resultado = "/{ciclo}/{eleicao}/dados/{uf}/{uf}-c{cargo:04d}-e{eleicao:06d}-u.json"
+resultado_municipio = "/{ciclo}/{eleicao}/dados/{uf}/{uf}{cod_mun}-c{cargo:04d}-e{eleicao:06d}-u.json"
+acompanhamento = "/{ciclo}/{eleicao}/dados/{uf}/{uf}-c{cargo:04d}-e{eleicao:06d}-ab.json"
+config_municipios = "/{ciclo}/{eleicao}/config/mun-e{eleicao:06d}-cm.json"
+
+# --- 2026, 1º turno -------------------------------------------------------
+# Códigos vindos de projetos da comunidade. Confirmados em 05/10/2026: os
+# arquivos br/uf/município e -cm.json respondem 200 no ambiente oficial.
+[[eleicao]]
+id = "2026-t1-federal"
+ciclo = "ele2026"
+turno = 1
+codigo = 6257
+cargos = ["presidente"]
+confirmado = true
+
+[[eleicao]]
+id = "2026-t1-estadual"
+ciclo = "ele2026"
+turno = 1
+codigo = 6259
+cargos = ["governador"]
+confirmado = true
+
+# --- 2026, 2º turno -------------------------------------------------------
+# CÓDIGOS AINDA NÃO CONFIRMADOS. Em 2022 o padrão foi 544/546 (1º turno) e
+# 545/547 (2º turno), o que sugere 6258/6260, mas isso é palpite.
+# Confirmar no ambiente simulado/oficial antes de 25/10/2026.
+[[eleicao]]
+id = "2026-t2-federal"
+ciclo = "ele2026"
+turno = 2
+codigo = 0
+cargos = ["presidente"]
+confirmado = false
+
+[[eleicao]]
+id = "2026-t2-estadual"
+ciclo = "ele2026"
+turno = 2
+codigo = 0
+cargos = ["governador"]
+confirmado = false
+
+[coletor]
+intervalo_uf_s = 30
+intervalo_municipio_s = 300
+timeout_s = 10
+duracao_max_s = 20700  # 5h45: encerra antes do limite de 6h do GitHub Actions
+dir_raw = "data/raw"
+concorrencia = 8          # requisições simultâneas no máximo
+backoff_base_s = 2
+backoff_max_s = 120
+# "resultado" (-u.json) e/ou "acompanhamento" (-ab.json)
+tipos = ["resultado"]
+# Cargos com arquivo nacional (br) e do exterior (zz)
+cargos_nacionais = ["presidente"]
+ufs = [
+  "ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt", "pa",
+  "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to",
+]

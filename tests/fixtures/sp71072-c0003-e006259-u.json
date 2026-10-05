@@ -1,0 +1,27 @@
+
+{ "ele" : "6259", "t" : "1", "f" : "o", "sup" : "n", "tpabr" : "mu", "cdabr" : "71072", "dg" : "04/10/2026", "hg" : "22:59:35", "idg" : "2363292", "dt" : "04/10/2026", "ht" : "22:56:59", "dv" : "s", "tf" : "s", "and" : "f", "esae" : "n", "mnae" : [  ], "carg" : [ 
+{ "cd" : "3", "nmn" : "Governador", "nmm" : "Governador", "nmf" : "Governadora", "nv" : "1", "fed" : [ 
+{ "n" : "101", "sg" : "PT/PC do B/PV", "nm" : "FEDERAÇÃO BRASIL DA ESPERANÇA - FE BRASIL", "com" : "PT/PC do B/PV", "npar" : [ "13", "43", "65" ] } ], "agr" : [ 
+{ "n" : "250001800554", "nm" : "CORAGEM PARA SEGUIR AVANÇANDO", "tp" : "c", "com" : "REPUBLICANOS / PL / MDB / DEMOCRATA / AVANTE / PSD / PRD / SOLIDARIEDADE / PP / UNIÃO", "tvtn" : "3233696", "tvan" : "3233696", "par" : [ 
+{ "n" : "10", "sg" : "REPUBLICANOS", "nm" : "REPUBLICANOS", "nfed" : "", "tvtn" : "3233696", "tvan" : "3233696", "cand" : [ 
+{ "n" : "10", "sqcand" : "250002541303", "nm" : "TARCISIO GOMES DE FREITAS", "nmu" : "TARCÍSIO", "dt" : "19/06/1975", "dvt" : "Válido", "seq" : "1", "e" : "s", "st" : "Eleito", "vap" : "3233696", "pvap" : "52,76", "pvapn" : "52,759065819", "vs" : [ 
+{ "tp" : "v", "sqcand" : "250002541302", "nm" : "FELICIO RAMUTH", "nmu" : "FELICIO RAMUTH", "sgp" : "MDB" } ] } ] } ] }, 
+{ "n" : "250001801022", "nm" : "DESPERTA SÃO PAULO", "tp" : "c", "com" : "PDT / PSB / PCDOB / PT / PV / PSOL / REDE", "tvtn" : "2825126", "tvan" : "2825126", "par" : [ 
+{ "n" : "13", "sg" : "PT", "nm" : "PARTIDO DOS TRABALHADORES", "nfed" : "101", "tvtn" : "2825126", "tvan" : "2825126", "cand" : [ 
+{ "n" : "13", "sqcand" : "250002549705", "nm" : "FERNANDO HADDAD", "nmu" : "FERNANDO HADDAD", "dt" : "25/01/1963", "dvt" : "Válido", "seq" : "2", "e" : "n", "st" : "Não eleito", "vap" : "2825126", "pvap" : "46,09", "pvapn" : "46,093080049", "vs" : [ 
+{ "tp" : "v", "sqcand" : "250002549704", "nm" : "MARCIO LUIZ FRANÇA GOMES", "nmu" : "MÁRCIO FRANÇA", "sgp" : "PSB" } ] } ] } ] }, 
+{ "n" : "250001800766", "nm" : "UNIDADE POPULAR", "tp" : "i", "com" : "UP", "vag" : "0", "par" : [ 
+{ "n" : "80", "sg" : "UP", "nm" : "UNIDADE POPULAR", "nfed" : "", "tvtn" : "28294", "tvan" : "28294", "cand" : [ 
+{ "n" : "80", "sqcand" : "250002544912", "nm" : "VIVIAN MENDES DA SILVA", "nmu" : "VIVIAN MENDES", "dt" : "13/01/1981", "dvt" : "Válido", "seq" : "3", "e" : "n", "st" : "Não eleito", "vap" : "28294", "pvap" : "0,46", "pvapn" : "0,461628121", "vs" : [ 
+{ "tp" : "v", "sqcand" : "250002552372", "nm" : "MARIA CRISTINA DAMASIO DE ALMEIDA", "nmu" : "CRIS DAMASIO", "sgp" : "UP" } ] } ] } ] }, 
+{ "n" : "250001800332", "nm" : "PARTIDO SOCIALISTA  DOS TRABALHADORES UNIFICADO", "tp" : "i", "com" : "PSTU", "vag" : "0", "par" : [ 
+{ "n" : "16", "sg" : "PSTU", "nm" : "PARTIDO SOCIALISTA  DOS TRABALHADORES UNIFICADO", "nfed" : "", "tvtn" : "24706", "tvan" : "24706", "cand" : [ 
+{ "n" : "16", "sqcand" : "250002536915", "nm" : "VERA LÚCIA PEREIRA DA SILVA SALGADO", "nmu" : "VERA LÚCIA", "dt" : "12/09/1967", "dvt" : "Válido", "seq" : "4", "e" : "n", "st" : "Não eleito", "vap" : "24706", "pvap" : "0,40", "pvapn" : "0,403088441", "vs" : [ 
+{ "tp" : "v", "sqcand" : "250002554470", "nm" : "FABIO JOSE BOSCO", "nmu" : "FABIO BOSCO", "sgp" : "PSTU" } ] } ] } ] }, 
+{ "n" : "250001801160", "nm" : "PARTIDO COMUNISTA BRASILEIRO", "tp" : "i", "com" : "PCB", "vag" : "0", "par" : [ 
+{ "n" : "21", "sg" : "PCB", "nm" : "PARTIDO COMUNISTA BRASILEIRO", "nfed" : "", "tvtn" : "17354", "tvan" : "17354", "cand" : [ 
+{ "n" : "21", "sqcand" : "250002550913", "nm" : "CARLOS ALBERTO MACHADO", "nmu" : "CARLOS MACHADO", "dt" : "02/03/1985", "dvt" : "Válido", "seq" : "5", "e" : "n", "st" : "Não eleito", "vap" : "17354", "pvap" : "0,28", "pvapn" : "0,283137570", "vs" : [ 
+{ "tp" : "v", "sqcand" : "250002550912", "nm" : "FELIPE DE OLIVEIRA QUEIROZ", "nmu" : "FELIPE QUEIROZ", "sgp" : "PCB" } ] } ] } ] } ] } ], "s" : 
+{ "ts" : "26683", "st" : "26683", "pst" : "100,00", "pstn" : "100", "snt" : "0", "psnt" : "0,00", "psntn" : "0", "si" : "26683", "psi" : "100,00", "psin" : "100", "sni" : "0", "psni" : "0,00", "psnin" : "0", "sa" : "26683", "psa" : "100,00", "psan" : "100", "sna" : "0", "psna" : "0,00", "psnan" : "0" }, "e" : 
+{ "te" : "9126158", "est" : "9126158", "pest" : "100,00", "pestn" : "100", "esnt" : "0", "pesnt" : "0,00", "pesntn" : "0", "esi" : "9126158", "pesi" : "100,00", "pesin" : "100", "esni" : "0", "pesni" : "0,00", "pesnin" : "0", "esa" : "9126158", "pesa" : "100,00", "pesan" : "100", "esna" : "0", "pesna" : "0,00", "pesnan" : "0", "c" : "6988929", "pc" : "76,58", "pcn" : "76,581284260", "a" : "2137229", "pa" : "23,42", "pan" : "23,418715740" }, "v" : 
+{ "tv" : "6988929", "vvc" : "6129176", "pvvc" : "87,70", "pvvcn" : "87,698358361", "vv" : "6129176", "pvv" : "100,00", "pvvn" : "100", "vnom" : "6129176", "pvnom" : "100,00", "pvnomn" : "100", "van" : "0", "pvan" : "0,00", "pvann" : "0", "vansj" : "0", "pvansj" : "0,00", "pvansjn" : "0", "vb" : "329514", "pvb" : "4,71", "pvbn" : "4,714799650", "tvn" : "530239", "ptvn" : "7,59", "ptvnn" : "7,586841990", "vn" : "522965", "pvn" : "98,63", "pvnn" : "98,628165789", "vnt" : "7274", "pvnt" : "1,37", "pvntn" : "1,371834211", "vsan" : "0", "vscv" : "0" } }

@@ -1,0 +1,27 @@
+# Dados coletados e derivados: nunca versionar
+data/
+
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Credenciais (R2 etc.)
+.env
+.env.*
+
+# DuckDB local
+*.duckdb
+*.duckdb.wal
+
+# Sistema / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Logs locais do coletor
+logs/
