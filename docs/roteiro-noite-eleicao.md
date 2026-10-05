@@ -1,8 +1,13 @@
 # Roteiro da noite da eleição — 2º turno, 25/10/2026
 
 Urnas fecham às **17h (Brasília)**. A coleta roda em **dois lugares ao mesmo tempo**:
-o GitHub Actions (sincroniza com o R2 e guarda artefato) e este Mac (cópia local, que
-também alimenta o painel). Se um cair, o outro continua.
+- **GitHub Actions:** envia ao **R2** e guarda o artefato do run.
+- **Este Mac:** cópia local em `data/raw`, espelhada numa pasta (`SYNC_PASTA`, de preferência
+  num disco externo), e que alimenta o painel. **A cópia local não envia ao R2**: assim o R2
+  recebe uma cópia só (~400 mil operações de escrita na noite), longe do limite de 1 milhão/mês
+  do plano gratuito.
+
+Se um cair, o outro continua.
 
 | Eleição | Código | Cargo | Abrangência |
 |---|---|---|---|
@@ -38,8 +43,9 @@ terminar verde, com o artefato e com arquivos novos no R2. Se falhar, há tempo 
    Se diferir, corrigir `ufs` no toml, commitar e dar push (o Actions usa o código da `main`).
 3. **Testes:** `source .venv/bin/activate && python -m pytest -q` → tudo verde.
 4. **Disco:** `df -h .` → pelo menos **3 GB livres**. No ensaio geral, cada snapshot ocupou ~8 KB
-   em disco (dado + metadado); se o TSE regerar os arquivos a cada ciclo, a noite inteira pode
-   chegar a ~200 mil snapshots e ~1,7 GB, mais o mesmo tanto em `SYNC_PASTA`, se usada.
+   em disco (dado + metadado, cada um no mínimo um bloco); se o TSE regerar os arquivos a cada
+   ciclo, a noite inteira pode chegar a ~200 mil snapshots e ~1,7 GB. A pasta `SYNC_PASTA` ocupa
+   o mesmo tanto no disco em que estiver.
 5. **Base da projeção presente** (1º turno por município, carregado em 05/10):
    ```
    ls data/parquet/snapshot_totais/ data/parquet/municipios.parquet
@@ -52,9 +58,15 @@ terminar verde, com o artefato e com arquivos novos no R2. Se falhar, há tempo 
    python -m apuracao.modelo construir
    ```
 6. **Secrets do R2** no GitHub (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
-   `R2_BUCKET`). Para a cópia local também subir ao R2, deixar as mesmas variáveis exportadas
-   no terminal (opcional).
-7. **Mac na tomada**, rede estável. O `coleta.sh` já impede o repouso (`caffeinate`);
+   `R2_BUCKET`). Só o Actions usa; o Mac não precisa das variáveis `R2_*`.
+7. **Pasta da cópia local (`SYNC_PASTA`).** De preferência num **disco externo** (protege contra
+   falha do disco do Mac). Conectar e conferir que o caminho existe, por exemplo:
+   ```
+   ls /Volumes/NOME_DO_DISCO && mkdir -p /Volumes/NOME_DO_DISCO/eleicao-copia
+   ```
+   Sem disco externo, usar uma pasta fora do repositório (ex.: `~/eleicao-copia`): protege contra
+   apagar `data/raw` por engano, mas não contra falha do disco, e dobra o espaço usado no Mac.
+8. **Mac na tomada**, rede estável. O `coleta.sh` já impede o repouso (`caffeinate`);
    o Mac dorme após 1 minuto ocioso se o script não estiver rodando.
 
 ---
@@ -81,9 +93,10 @@ por volta das 21h30 (os dois se sobrepõem um pouco; não há perda).
 ### 2. Cópia local (3 terminais)
 
 ```
-# terminal 1 — coleta (+ R2 se as variáveis R2_* estiverem exportadas)
+# terminal 1 — coleta + cópia para SYNC_PASTA (sem R2)
 cd ~/repos/eleicao && source .venv/bin/activate
-AMBIENTE=oficial ELEICOES="2026-t2-federal 2026-t2-estadual" MUNICIPIOS=1 DURACAO=28800 scripts/coleta.sh
+R2_BUCKET= SYNC_PASTA=/Volumes/NOME_DO_DISCO/eleicao-copia \
+  AMBIENTE=oficial ELEICOES="2026-t2-federal 2026-t2-estadual" MUNICIPIOS=1 DURACAO=28800 scripts/coleta.sh
 
 # terminal 2 — tabelas para o painel
 cd ~/repos/eleicao && source .venv/bin/activate
@@ -93,6 +106,11 @@ python -m apuracao.modelo construir --loop 15
 cd ~/repos/eleicao && source .venv/bin/activate
 APURACAO_ELEICAO=2026-t2-federal streamlit run apuracao/app/main.py
 ```
+
+`R2_BUCKET=` (vazio) é de propósito: se `R2_BUCKET` estiver definida, o `coleta.sh` envia ao R2
+e **ignora** `SYNC_PASTA`. Vazia, a cópia vai só para a pasta, mesmo que as variáveis `R2_*`
+tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
+`aviso: sem R2_BUCKET nem SYNC_PASTA`.
 
 ---
 
@@ -123,7 +141,8 @@ APURACAO_ELEICAO=2026-t2-federal streamlit run apuracao/app/main.py
 | Muitos erros seguidos, `429`/`403`, ou nenhum snapshot com o site do TSE no ar | Possível bloqueio de IP (o TSE bloqueia **10 min** e reinicia o prazo a cada tentativa). Não reiniciar em sequência. Baixar `max_req_s` no toml (ex.: 10) e reiniciar a coleta **uma vez** depois de 10 min. O Actions usa outro IP. |
 | `"config_municipios_reserva"` no log | O `-cm.json` do 2º turno ainda não existia: usou a lista do repositório. Normal. |
 | `"config_municipios_indisponivel"` no log | Sem lista de municípios: coleta só BR/UF e **a projeção fica sem dados novos**. Verificar se `config/municipios-reserva-2026.json` existe e reiniciar a coleta. |
-| R2 com erros (`sync_erro` em `logs/sync.jsonl`) | Os snapshots continuam em `data/raw`. O sincronizador tenta de novo a cada 15 s; depois da noite, rodar `python -m apuracao.coletor.sync` para enviar o que faltou. |
+| Cópia local com erros (`sync_erro` em `logs/sync.jsonl`), ex.: disco externo desconectou | A coleta continua normalmente em `data/raw` (a cópia roda em outro processo). Reconectar o disco: o sincronizador tenta de novo a cada 15 s e copia o que faltou. |
+| R2 sem arquivos novos | É o Actions que envia: ver se o run está rodando e sem anotação de erro. Os snapshots também ficam no artefato do run. |
 | Painel diz "Sem dados" | O terminal 2 (`modelo construir --loop 15`) está rodando? Há arquivos em `data/parquet/snapshot_totais/`? |
 | Painel sem a seção de projeção | Selecionar eleição de 2º turno; presidente só aparece em *BR*, governador só por UF. Conferir a base do 1º turno (véspera, item 5). |
 | Painel com erro depois de mexer no código | Reiniciar o Streamlit (Ctrl+C e rodar de novo): o recarregamento automático não relê módulos importados. |
@@ -150,5 +169,8 @@ APURACAO_ELEICAO=2026-t2-federal streamlit run apuracao/app/main.py
    até o fim da duração.
 2. Baixar o artefato `snapshots-<run_id>` de cada run do Actions (fica 90 dias).
 3. Conferir no R2 que há arquivos em `raw/6258/` e `raw/6260/`.
-4. Enviar ao R2 o que a cópia local tiver a mais: `python -m apuracao.coletor.sync`.
+4. **Só se o Actions tiver falhado** (R2 incompleto): enviar a cópia local ao R2, com as
+   variáveis `R2_*` exportadas, `python -m apuracao.coletor.sync`. Custa ~2 operações de escrita
+   por snapshot e, na primeira vez, envia também o 1º turno que já está em `data/raw`
+   (~46 mil operações).
 5. Nada de `data/` vai para o git.
