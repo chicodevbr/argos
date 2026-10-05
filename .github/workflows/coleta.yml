@@ -8,8 +8,12 @@ on:
         options: [oficial, simulado]
         default: oficial
       eleicoes:
-        description: ids de config/eleicoes.toml, separados por espaço
-        default: 2026-t2-federal 2026-t2-estadual
+        description: "Eleições a coletar (ensaio = 1º turno, dados já encerrados)"
+        type: choice
+        options:
+          - "ENSAIO: 2026-t1-federal"
+          - "2º TURNO: 2026-t2-federal 2026-t2-estadual"
+        default: "ENSAIO: 2026-t1-federal"
       duracao:
         description: segundos de coleta (máx. ~20400 para caber em 6h)
         default: "20400"
@@ -27,7 +31,8 @@ jobs:
     timeout-minutes: 355  # 5h55: abaixo do limite de 6h
     env:
       AMBIENTE: ${{ inputs.ambiente || 'oficial' }}
-      ELEICOES: ${{ inputs.eleicoes || '2026-t2-federal 2026-t2-estadual' }}
+      # Cron (sem inputs) cai no 2º turno. O rótulo antes de ":" é removido no passo Coletar.
+      ELEICOES: ${{ inputs.eleicoes || '2º TURNO: 2026-t2-federal 2026-t2-estadual' }}
       DURACAO: ${{ inputs.duracao || '20400' }}
       DIR_RAW: data/raw
       LOGS: logs
@@ -43,7 +48,10 @@ jobs:
       - run: uv sync --frozen --no-dev
 
       - name: Coletar
-        run: scripts/coleta.sh
+        run: |
+          export ELEICOES="${ELEICOES#*: }"
+          echo "ambiente=$AMBIENTE eleicoes=$ELEICOES duracao=$DURACAO"
+          scripts/coleta.sh
 
       # Redundância: além do R2, guarda tudo como artefato do run.
       - name: Empacotar snapshots
