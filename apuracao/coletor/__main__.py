@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         concorrencia=c.concorrencia,
         backoff_base_s=c.backoff_base_s,
         backoff_max_s=c.backoff_max_s,
+        max_espera_404_s=c.max_espera_404_s,
     )
     log = LogJson()
     for e in eleicoes:

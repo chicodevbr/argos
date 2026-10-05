@@ -8,7 +8,9 @@ Resultados possíveis de uma busca:
 - novo       200 com conteúdo diferente do último: grava snapshot
 - igual      200 com conteúdo idêntico ao último (CDN ignorou ETag): não grava
 - nao_mod    304: não grava
-- ausente    404: arquivo ainda não publicado (normal antes da apuração)
+- ausente    404: arquivo ainda não publicado. As instruções do TSE avisam que
+             muitos 404 podem bloquear o IP, então a espera dobra a cada 404
+             seguido (até max_espera_404_s) e volta ao normal no 1º 200/304.
 - erro       5xx, 429, timeout, erro de rede ou outro status: backoff
 """
 
@@ -41,6 +43,7 @@ class Alvo:
     last_modified: str | None = None
     sha256: str | None = None
     falhas: int = 0
+    ausencias: int = 0  # 404 seguidos
     _restaurado: bool = field(default=False, repr=False)
 
 
@@ -51,6 +54,7 @@ class Parametros:
     concorrencia: int = 8
     backoff_base_s: float = 2.0
     backoff_max_s: float = 120.0
+    max_espera_404_s: float = 300.0
     intervalo_resumo_s: float = 60.0
     escalonar_inicio: bool = True
 
@@ -59,6 +63,12 @@ def espera_backoff(falhas: int, base: float, maximo: float) -> float:
     """Backoff exponencial com jitter: uniforme em [teto/2, teto], teto = min(max, base*2^(n-1))."""
     teto = min(maximo, base * 2 ** max(falhas - 1, 0))
     return random.uniform(teto / 2, teto)
+
+
+def espera_ausente(ausencias: int, intervalo: float, maximo: float) -> float:
+    """Espera após 404: intervalo * 2^(n-1), limitada a `maximo`, com jitter de até 20%."""
+    teto = min(maximo, intervalo * 2 ** max(ausencias - 1, 0))
+    return random.uniform(teto * 0.8, teto)
 
 
 def _restaurar(alvo: Alvo, dir_raw: Path) -> None:
@@ -99,17 +109,22 @@ async def buscar(
     ms = round((time.monotonic() - t0) * 1000)
 
     if resp.status_code == 304:
-        alvo.falhas = 0
+        alvo.falhas = alvo.ausencias = 0
         log.contar("nao_mod")
         return "nao_mod"
     if resp.status_code == 404:
         alvo.falhas = 0
+        alvo.ausencias += 1
         log.contar("ausente")
+        if alvo.ausencias == 1:
+            log.evento("ausente", url=alvo.url)
         return "ausente"
     if resp.status_code != 200:
         return _falha(alvo, log, "http", status=resp.status_code)
 
-    alvo.falhas = 0
+    if alvo.ausencias:
+        log.evento("publicado", url=alvo.url, apos_404=alvo.ausencias)
+    alvo.falhas = alvo.ausencias = 0
     etag = resp.headers.get("ETag")
     last_mod = resp.headers.get("Last-Modified")
     hash_ = snapshot.sha256(conteudo)
@@ -175,6 +190,8 @@ async def _laco_alvo(
             alvo.falhas += 1
         if resultado == "erro":
             espera = espera_backoff(alvo.falhas, params.backoff_base_s, params.backoff_max_s)
+        elif resultado == "ausente":
+            espera = espera_ausente(alvo.ausencias, alvo.intervalo_s, params.max_espera_404_s)
         else:
             espera = alvo.intervalo_s
         await _esperar(parar, espera)

@@ -36,11 +36,10 @@ cargos = ["governador"]
 confirmado = true
 
 # --- 2026, 2º turno -------------------------------------------------------
-# Códigos lidos em 05/10/2026 do campo `cdt2` das eleições 6257/6259 no arquivo
-# oficial de configuração de eleições (/oficial/comum/config/ele-c.json, gerado
-# em 02/10/2026; cópia em tests/fixtures/ele-c.json). Batem com o padrão de 2022
-# (1º turno + 1). `confirmado = false` até os arquivos do 2º turno responderem
-# 200 no ambiente oficial (em 05/10 ainda dão 404, o que é esperado).
+# Códigos = campo `cdt2` ("código da eleição para o segundo turno", spec EA11)
+# das eleições 6257/6259 em /oficial/comum/config/ele-c.json (cópia em
+# tests/fixtures/ele-c.json). `confirmado = false` até os arquivos do 2º turno
+# responderem 200 no ambiente oficial (em 05/10 ainda dão 404, o que é esperado).
 [[eleicao]]
 id = "2026-t2-federal"
 ciclo = "ele2026"
@@ -56,6 +55,11 @@ turno = 2
 codigo = 6260
 cargos = ["governador"]
 confirmado = false
+# Só UFs com 2º turno para governador: as demais dariam 404 a noite toda, e o
+# TSE avisa que muitos 404 podem bloquear o IP. Lista tirada do 1º turno
+# (candidatos com st = "2º turno" nos arquivos UF da 6259, tf = s, 05/10/2026).
+# Conferir com o `abr` da eleição 6260 no ele-c.json quando for publicado.
+ufs = ["ac", "am", "df", "es", "rj", "rn", "to"]
 
 [coletor]
 intervalo_uf_s = 30
@@ -66,6 +70,7 @@ dir_raw = "data/raw"
 concorrencia = 8          # requisições simultâneas no máximo
 backoff_base_s = 2
 backoff_max_s = 120
+max_espera_404_s = 300    # 404 seguidos: espera dobra até este teto (ver docs/tse/instrucoes-tse.md)
 # "resultado" (-u.json) e/ou "acompanhamento" (-ab.json)
 tipos = ["resultado"]
 # Cargos com arquivo nacional (br) e do exterior (zz)

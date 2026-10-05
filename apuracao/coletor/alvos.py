@@ -16,7 +16,7 @@ def montar_alvos(cfg: Config, ambiente: str, eleicoes: list[Eleicao]) -> list[Al
     alvos: list[Alvo] = []
     for eleicao in eleicoes:
         for cargo in eleicao.cargos:
-            ufs = list(c.ufs)
+            ufs = list(eleicao.ufs if eleicao.ufs is not None else c.ufs)
             if cargo in c.cargos_nacionais:
                 ufs = ["br", "zz", *ufs]
             for uf in ufs:

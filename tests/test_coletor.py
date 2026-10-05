@@ -12,7 +12,7 @@ import pytest
 
 from apuracao.coletor import snapshot
 from apuracao.coletor.alvos import montar_alvos
-from apuracao.coletor.coletor import Alvo, Parametros, buscar, espera_backoff, rodar
+from apuracao.coletor.coletor import Alvo, Parametros, buscar, espera_ausente, espera_backoff, rodar
 from apuracao.coletor.log import LogJson
 from apuracao.config import carregar
 
@@ -133,7 +133,28 @@ def test_404_ausente(params):
     s.programar(URL, 404)
     a = alvo()
     assert buscar_sync(s, a, params) == "ausente"
-    assert a.falhas == 0
+    assert a.falhas == 0 and a.ausencias == 1
+
+
+def test_404_seguidos_contam_e_zeram_quando_publica(params):
+    s = ServidorFalso()
+    s.programar(URL, 404, 404, 404, (b"v1", '"e1"'))
+    a, log = alvo(), LogJson(io.StringIO())
+    for _ in range(3):
+        buscar_sync(s, a, params, log)
+    assert a.ausencias == 3
+    assert buscar_sync(s, a, params, log) == "novo"
+    assert a.ausencias == 0
+    eventos = [json.loads(l)["evento"] for l in log.saida.getvalue().splitlines()]
+    assert eventos.count("ausente") == 1  # loga só o início da sequência
+    assert "publicado" in eventos
+
+
+def test_espera_ausente_dobra_e_respeita_teto():
+    assert 24 <= espera_ausente(1, 30, 300) <= 30
+    assert 48 <= espera_ausente(2, 30, 300) <= 60
+    assert 96 <= espera_ausente(3, 30, 300) <= 120
+    assert 240 <= espera_ausente(20, 30, 300) <= 300
 
 
 @pytest.mark.parametrize("acao,contador", [(503, "erro_http"), (429, "erro_http"), ("timeout", "erro_timeout")])
@@ -193,6 +214,26 @@ def test_rodar_isola_erros_e_respeita_duracao(params):
     assert "duracao_max_atingida" in eventos and eventos[-1] == "fim"
 
 
+def test_rodar_espaca_requisicoes_de_arquivo_ausente(params):
+    """Arquivo que só dá 404 recebe bem menos requisições que um que existe."""
+    ausente = "https://teste/ausente.json"
+    s = ServidorFalso()
+    s.programar(URL, (b"x", '"e"'))
+    s.programar(ausente, 404)
+    params.escalonar_inicio = False
+    params.max_espera_404_s = 10
+
+    async def _():
+        await rodar([alvo(URL, 0.01), alvo(ausente, 0.01)], params, LogJson(io.StringIO()),
+                    asyncio.Event(), duracao_max_s=0.4, transport=s.transport())
+
+    asyncio.run(_())
+    n_ok = sum(str(r.url) == URL for r in s.pedidos)
+    n_404 = sum(str(r.url) == ausente for r in s.pedidos)
+    assert n_404 <= 8  # 0,01 -> 0,02 -> 0,04 -> ... soma passa de 0,4s em ~6 tentativas
+    assert n_ok > 3 * n_404
+
+
 def test_rodar_para_rapido_ao_sinal(params):
     s = ServidorFalso()
     s.programar(URL, (b"x", '"e"'))
@@ -218,3 +259,11 @@ def test_montar_alvos():
     assert len(pres) == 29 and {"br", "zz"} <= {a.uf for a in pres}
     assert len(gov) == 27 and "br" not in {a.uf for a in gov}
     assert pres[0].arquivo == "br-c0001-e006257-u"
+
+
+def test_montar_alvos_2o_turno_so_ufs_com_disputa():
+    cfg = carregar(CONFIG)
+    gov = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t2-estadual")])
+    pres = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t2-federal")])
+    assert sorted(a.uf for a in gov) == ["ac", "am", "df", "es", "rj", "rn", "to"]
+    assert len(pres) == 29  # presidente: br, zz e as 27 UFs

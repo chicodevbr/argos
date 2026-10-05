@@ -15,6 +15,7 @@ class Eleicao(BaseModel):
     codigo: int
     cargos: list[str]
     confirmado: bool = False
+    ufs: list[str] | None = None  # se definido, substitui coletor.ufs
 
 
 class Urls(BaseModel):
@@ -36,6 +37,7 @@ class Coletor(BaseModel):
     concorrencia: int = 8
     backoff_base_s: float = 2.0
     backoff_max_s: float = 120.0
+    max_espera_404_s: float = 300.0
 
 
 class Config(BaseModel):
