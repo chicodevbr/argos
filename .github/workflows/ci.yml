@@ -17,3 +17,6 @@ jobs:
       - run: uv sync --frozen
       - run: uv run pytest -q
       - run: bash -n scripts/coleta.sh
+      # Workflow com YAML inválido some da aba Actions sem erro visível.
+      - name: Validar YAML dos workflows
+        run: uv run --no-project --with pyyaml python -c "import glob, yaml; [yaml.safe_load(open(f)) for f in glob.glob('.github/workflows/*.yml')]"

@@ -8,12 +8,10 @@ on:
         options: [oficial, simulado]
         default: oficial
       eleicoes:
-        description: "Eleições a coletar (ensaio = 1º turno, dados já encerrados)"
+        description: "ensaio = 1º turno (dados já encerrados); segundo-turno = noite da eleição"
         type: choice
-        options:
-          - "ENSAIO: 2026-t1-federal"
-          - "2º TURNO: 2026-t2-federal 2026-t2-estadual"
-        default: "ENSAIO: 2026-t1-federal"
+        options: [ensaio, segundo-turno]
+        default: ensaio
       duracao:
         description: segundos de coleta (máx. ~20400 para caber em 6h)
         default: "20400"
@@ -31,8 +29,8 @@ jobs:
     timeout-minutes: 355  # 5h55: abaixo do limite de 6h
     env:
       AMBIENTE: ${{ inputs.ambiente || 'oficial' }}
-      # Cron (sem inputs) cai no 2º turno. O rótulo antes de ":" é removido no passo Coletar.
-      ELEICOES: ${{ inputs.eleicoes || '2º TURNO: 2026-t2-federal 2026-t2-estadual' }}
+      # Cron (sem inputs) cai no 2º turno. Traduzido para ids no passo Coletar.
+      PERFIL: ${{ inputs.eleicoes || 'segundo-turno' }}
       DURACAO: ${{ inputs.duracao || '20400' }}
       DIR_RAW: data/raw
       LOGS: logs
@@ -49,8 +47,12 @@ jobs:
 
       - name: Coletar
         run: |
-          export ELEICOES="${ELEICOES#*: }"
-          echo "ambiente=$AMBIENTE eleicoes=$ELEICOES duracao=$DURACAO"
+          case "$PERFIL" in
+            ensaio)        export ELEICOES="2026-t1-federal" ;;
+            segundo-turno) export ELEICOES="2026-t2-federal 2026-t2-estadual" ;;
+            *) echo "::error::perfil desconhecido: $PERFIL"; exit 2 ;;
+          esac
+          echo "ambiente=$AMBIENTE perfil=$PERFIL eleicoes=$ELEICOES duracao=$DURACAO"
           scripts/coleta.sh
 
       # Redundância: além do R2, guarda tudo como artefato do run.
