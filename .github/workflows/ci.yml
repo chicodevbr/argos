@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   testes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # fixo: ubuntu-latest migra para Ubuntu 26 em 19/10/2026, antes da eleição
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
