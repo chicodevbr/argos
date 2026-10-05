@@ -17,6 +17,11 @@ import altair as alt
 import numpy as np
 import pandas as pd
 
+# Albers (cônica equivalente) com os parâmetros do IBGE para o Brasil: meridiano central -54°,
+# paralelos-padrão -2° e -22°. Área igual e sem a inclinação da Equal Earth, que é centrada em
+# Greenwich e cisalha o Brasil (~54° a oeste do centro).
+PROJECAO = {"type": "conicEqualArea", "parallels": [-2, -22], "rotate": [54, 0, 0]}
+
 SEQUENCIAL_CLARO = ["#b7d3f6", "#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"]
 
 
@@ -76,6 +81,6 @@ def grafico(malha: dict, dados: pd.DataFrame, campo: str, escala: Escala, titulo
                                               symbolType="square", symbolSize=180, symbolStrokeWidth=0)),
             tooltip=tooltip,
         )
-        .project(type="equalEarth")
+        .project(**PROJECAO)
         .properties(height=altura)
     )

@@ -32,5 +32,6 @@ def test_grafico_monta_com_a_malha():
     tt = [alt.Tooltip("nome:N"), alt.Tooltip("abst_pct_atual:Q")]
     for tema in ("light", "dark"):
         spec = mapa.grafico(geo, dados, "abst_pct_atual", mapa.ABSTENCAO, "Abstenção", tema, tt).to_dict()
-        assert spec["mark"]["type"] == "geoshape" and spec["projection"]["type"] == "equalEarth"
+        assert spec["mark"]["type"] == "geoshape"
+        assert spec["projection"] == {"type": "conicEqualArea", "parallels": [-2, -22], "rotate": [54, 0, 0]}
         assert spec["encoding"]["color"]["scale"]["domain"][-1] == "sem dado"
