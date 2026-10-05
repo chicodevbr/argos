@@ -29,13 +29,22 @@ for e in $ELEICOES; do args+=(--eleicao "$e"); done
 
 # Valida a configuração antes de começar (falha rápido, ex.: código ainda 0).
 "$PY" - "$ELEICOES" <<'EOF' || exit 2
-import sys
+import os, sys
 from apuracao.config import carregar
+
+def erro(msg):
+    # No GitHub Actions, ::error:: vira anotação visível no resumo do run.
+    print(f"::error::{msg}" if os.environ.get("GITHUB_ACTIONS") else f"ERRO: {msg}")
+    sys.exit(1)
+
 cfg = carregar("config/eleicoes.toml")
 for i in sys.argv[1].split():
-    e = cfg.eleicao_por_id(i)
+    try:
+        e = cfg.eleicao_por_id(i)
+    except KeyError:
+        erro(f"eleição '{i}' não existe em config/eleicoes.toml")
     if e.codigo <= 0:
-        sys.exit(f"ERRO: eleição {i} sem código definido em config/eleicoes.toml")
+        erro(f"eleição {i} sem código definido em config/eleicoes.toml")
 EOF
 
 SYNC_PID=""
