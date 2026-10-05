@@ -112,6 +112,7 @@ Não extrapole o percentual nacional parcial: a ordem de chegada dos votos varia
 ```
 uv run pytest
 uv run python -m apuracao.coletor --config config/eleicoes.toml --ambiente simulado
+uv run python -m apuracao.modelo construir --loop 15   # data/raw -> data/parquet (painel lê daqui)
 uv run python -m apuracao.carga --ano 2022
 uv run streamlit run apuracao/app/main.py
 ```
