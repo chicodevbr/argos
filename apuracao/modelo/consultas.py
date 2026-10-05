@@ -20,6 +20,9 @@ def conectar(dir_parquet: Path | str) -> duckdb.DuckDBPyConnection:
             con.execute(
                 f"CREATE VIEW {tabela} AS SELECT DISTINCT * FROM read_parquet('{d / tabela}/*.parquet')"
             )
+    for tabela in ("hist_votacao", "hist_comparecimento"):
+        if list((d / tabela).glob("*.parquet")):
+            con.execute(f"CREATE VIEW {tabela} AS SELECT * FROM read_parquet('{d / tabela}/*.parquet')")
     if (d / "municipios.parquet").exists():
         con.execute(f"CREATE VIEW municipios AS SELECT * FROM read_parquet('{d / 'municipios.parquet'}')")
     return con
