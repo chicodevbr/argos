@@ -19,6 +19,7 @@ import streamlit as st
 from apuracao.app import dados
 from apuracao.config import carregar
 from apuracao.modelo import consultas
+from apuracao.modelo.anomalias import verificar
 from apuracao.projecao.ao_vivo import GOVERNADOR, projecao_por_uf, projetar_ao_vivo
 
 DIR_PARQUET = Path(os.environ.get("APURACAO_DIR_PARQUET", "data/parquet"))
@@ -54,6 +55,12 @@ def conexao(dir_parquet: str):
 def projecao(_con, eleicao_id: str, cargo: int, abrangencia: str, _marca):
     """Recalcula só quando chega snapshot novo (_marca) ou a cada INTERVALO_S."""
     return projetar_ao_vivo(_con, cfg, cfg.eleicao_por_id(eleicao_id), cargo, abrangencia)
+
+
+@st.cache_data(ttl=INTERVALO_S, show_spinner=False)
+def anomalias(_con, _marca) -> pd.DataFrame:
+    a = verificar(_con)
+    return pd.DataFrame([vars(x) for x in a]) if a else pd.DataFrame()
 
 
 def marca_dados(con, eleicao: int) -> str:
@@ -134,6 +141,15 @@ def painel() -> None:
 
     if df_cand.empty:
         return
+
+    an = anomalias(con, marca_dados(con, eleicao.codigo))
+    if not an.empty:
+        daqui = an[(an["eleicao"] == eleicao.codigo) & (an["cargo"] == cargo)]
+        st.warning(f"⚠️ {len(an)} anomalia(s) nos dados publicados pelo TSE "
+                   f"({len(daqui)} nesta eleição/cargo). Os snapshots brutos citados são a evidência.")
+        with st.expander("Ver anomalias"):
+            st.dataframe(an[["tipo", "eleicao", "cargo", "abrangencia", "detalhe", "arquivo_raw"]],
+                         hide_index=True, use_container_width=True)
 
     proj = projecao(con, eleicao.id, cargo, abr, marca_dados(con, eleicao.codigo))
     if proj:

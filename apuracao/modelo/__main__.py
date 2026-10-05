@@ -13,7 +13,23 @@ import threading
 from pathlib import Path
 
 from apuracao.coletor.log import LogJson
+from apuracao.modelo import consultas
+from apuracao.modelo.anomalias import verificar
 from apuracao.modelo.construir import construir, construir_municipios
+
+
+def registrar_anomalias(dir_parquet: Path, log: LogJson, vistas: set) -> None:
+    """Loga cada anomalia nova uma vez (evento "anomalia"); nunca derruba a construção."""
+    try:
+        for a in verificar(consultas.conectar(dir_parquet)):
+            chave = (a.tipo, a.arquivo_raw, a.detalhe)
+            if chave not in vistas:
+                vistas.add(chave)
+                log.contar("anomalias")
+                log.evento("anomalia", tipo=a.tipo, eleicao=a.eleicao, cargo=a.cargo,
+                           abrangencia=a.abrangencia, detalhe=a.detalhe, arquivo_raw=a.arquivo_raw)
+    except Exception as e:
+        log.evento("anomalia_erro_verificacao", erro=repr(e))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -34,8 +50,10 @@ def main(argv: list[str] | None = None) -> int:
         log.evento("municipios", total=n)
         return 0
 
+    vistas: set = set()
     if not args.loop:
         construir(args.dir_raw, args.dir_parquet, log)
+        registrar_anomalias(args.dir_parquet, log, vistas)
         return 0
 
     parar = threading.Event()
@@ -44,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     falhas: set[str] = set()
     while not parar.is_set():
         try:
-            construir(args.dir_raw, args.dir_parquet, log, ignorar=falhas)
+            if construir(args.dir_raw, args.dir_parquet, log, ignorar=falhas):
+                registrar_anomalias(args.dir_parquet, log, vistas)
         except Exception as e:  # nada derruba o laço
             log.evento("modelo_erro_inesperado", erro=repr(e))
         parar.wait(args.loop)

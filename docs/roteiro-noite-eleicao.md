@@ -98,9 +98,9 @@ cd ~/repos/eleicao && source .venv/bin/activate
 R2_BUCKET= SYNC_PASTA=/Volumes/NOME_DO_DISCO/eleicao-copia \
   AMBIENTE=oficial ELEICOES="2026-t2-federal 2026-t2-estadual" MUNICIPIOS=1 DURACAO=28800 scripts/coleta.sh
 
-# terminal 2 — tabelas para o painel
+# terminal 2 — tabelas para o painel + verificação de anomalias (também grava em logs/modelo.jsonl)
 cd ~/repos/eleicao && source .venv/bin/activate
-python -m apuracao.modelo construir --loop 15
+mkdir -p logs && python -m apuracao.modelo construir --loop 15 2>&1 | tee -a logs/modelo.jsonl
 
 # terminal 3 — painel (abre em http://localhost:8501)
 cd ~/repos/eleicao && source .venv/bin/activate
@@ -127,6 +127,11 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
   ```
   `requisicoes`, `snapshots`, `nao_mod` (304), `ausente` (404), `erros`. Erros esporádicos
   de rede/timeout são normais (backoff com nova tentativa).
+- **Anomalias nos dados do TSE:** o normal é **nenhuma**. O terminal 2 verifica a cada passada
+  e registra `"anomalia"` em `logs/modelo.jsonl`; o painel mostra um aviso amarelo com a lista.
+  ```
+  grep '"anomalia"' logs/modelo.jsonl | tail -5
+  ```
 - **Painel:** a projeção aparece em *presidente → BR* e em *governador → cada UF*.
   Antes de haver municípios contados, a faixa é larga e a projeção ≈ 1º turno — esperado.
 
@@ -147,6 +152,7 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
 | Painel sem a seção de projeção | Selecionar eleição de 2º turno; presidente só aparece em *BR*, governador só por UF. Conferir a base do 1º turno (véspera, item 5). |
 | Painel com erro depois de mexer no código | Reiniciar o Streamlit (Ctrl+C e rodar de novo): o recarregamento automático não relê módulos importados. |
 | Governador em UF fora das 7 configuradas | O TSE mudou a lista: corrigir `ufs` em `2026-t2-estadual`, reiniciar a coleta local, commitar e disparar novo run no Actions. |
+| Painel avisa **anomalia nos dados do TSE** | É do lado do TSE; a coleta continua e o snapshot citado em `arquivo_raw` é a prova. Anotar o horário. `versao_antiga` isolada = servidor do CDN desatualizado; inofensiva (o painel usa sempre a versão mais nova). `votos_diminuem` / `secoes_diminuem` = o TSE corrigiu ou errou algo: os números do painel e a projeção podem oscilar naquele trecho. `validos_nao_batem` / `comparecimento_excede` / `soma_ufs_nao_bate` = arquivo incoerente: desconfiar daquele arquivo até a próxima versão. Não reiniciar nada por causa disso. |
 | Disco quase cheio | Liberar espaço fora do repositório. **Não** apagar `data/raw` (é a fonte da verdade). |
 
 ---
