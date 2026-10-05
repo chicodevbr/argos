@@ -11,6 +11,14 @@ também alimenta o painel). Se um cair, o outro continua.
 
 ---
 
+## Entre 19 e 24/10 — ensaio na imagem nova do Actions
+
+O GitHub troca `ubuntu-latest` para **Ubuntu 26 a partir de 19/10**. O workflow usa
+`ubuntu-latest` (fixar `ubuntu-24.04` foi tentado em 05/10 e o job ficou sem runner).
+Depois do dia 19, rodar o ensaio de novo: **Actions → coleta → Run workflow** com
+`ambiente: oficial`, `eleicoes: ensaio`, `duracao: 900`, `municipios` marcado. Tem de
+terminar verde, com o artefato e com arquivos novos no R2. Se falhar, há tempo de corrigir.
+
 ## Na véspera (ou na manhã de 25/10)
 
 1. **Arquivos do 2º turno já existem?** (só 2 requisições)

@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   coleta:
-    runs-on: ubuntu-24.04  # fixo: ubuntu-latest migra para Ubuntu 26 em 19/10/2026, antes da eleição
+    runs-on: ubuntu-latest  # ubuntu-24.04 fixo ficou sem runner (05/10); ensaiar de novo após 19/10 (Ubuntu 26)
     timeout-minutes: 355  # 5h55: abaixo do limite de 6h
     env:
       AMBIENTE: ${{ inputs.ambiente || 'oficial' }}
