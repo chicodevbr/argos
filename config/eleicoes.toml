@@ -36,14 +36,16 @@ cargos = ["governador"]
 confirmado = true
 
 # --- 2026, 2º turno -------------------------------------------------------
-# CÓDIGOS AINDA NÃO CONFIRMADOS. Em 2022 o padrão foi 544/546 (1º turno) e
-# 545/547 (2º turno), o que sugere 6258/6260, mas isso é palpite.
-# Confirmar no ambiente simulado/oficial antes de 25/10/2026.
+# Códigos lidos em 05/10/2026 do campo `cdt2` das eleições 6257/6259 no arquivo
+# oficial de configuração de eleições (/oficial/comum/config/ele-c.json, gerado
+# em 02/10/2026; cópia em tests/fixtures/ele-c.json). Batem com o padrão de 2022
+# (1º turno + 1). `confirmado = false` até os arquivos do 2º turno responderem
+# 200 no ambiente oficial (em 05/10 ainda dão 404, o que é esperado).
 [[eleicao]]
 id = "2026-t2-federal"
 ciclo = "ele2026"
 turno = 2
-codigo = 0
+codigo = 6258
 cargos = ["presidente"]
 confirmado = false
 
@@ -51,7 +53,7 @@ confirmado = false
 id = "2026-t2-estadual"
 ciclo = "ele2026"
 turno = 2
-codigo = 0
+codigo = 6260
 cargos = ["governador"]
 confirmado = false
 

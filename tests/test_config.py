@@ -34,7 +34,7 @@ def test_url_resultado_municipio(cfg):
 
 
 def test_codigo_nao_definido_falha(cfg):
-    e = cfg.eleicao_por_id("2026-t2-federal")
+    e = cfg.eleicao_por_id("2026-t2-federal").model_copy(update={"codigo": 0})
     with pytest.raises(ValueError, match="não definido"):
         cfg.url_resultado("oficial", e, "br", "presidente")
 
@@ -61,3 +61,13 @@ def test_url_config_municipios_bate_com_arquivo_real(cfg):
     e = cfg.eleicao_por_id("2026-t1-federal")
     caminho = cfg.urls.config_municipios.format(ciclo=e.ciclo, eleicao=e.codigo)
     assert (FIXTURES / caminho.rsplit("/", 1)[-1]).is_file()
+
+
+def test_codigos_2o_turno_batem_com_config_oficial(cfg):
+    """O código do 2º turno no toml é o `cdt2` da eleição de 1º turno no ele-c.json oficial."""
+    import json
+
+    ele = json.loads((FIXTURES / "ele-c.json").read_text())
+    cdt2 = {e["cd"]: e["cdt2"] for pl in ele["pl"] if pl["c"] == "ele2026" for e in pl["e"]}
+    for t1, t2 in [("2026-t1-federal", "2026-t2-federal"), ("2026-t1-estadual", "2026-t2-estadual")]:
+        assert cdt2[str(cfg.eleicao_por_id(t1).codigo)] == str(cfg.eleicao_por_id(t2).codigo)

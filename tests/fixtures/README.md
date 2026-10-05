@@ -17,6 +17,7 @@ Base: `https://resultados.tse.jus.br/oficial/ele2026/`
 | `ac01120-c0001-e006257-u.json` | `6257/dados/ac/` | Presidente, Acrelândia (TSE 01120) |
 | `mun-e006257-cm.json` | `6257/config/` | Configuração de municípios, eleição federal |
 | `mun-e006259-cm.json` | `6259/config/` | Configuração de municípios, eleição estadual |
+| `ele-c.json` | `/oficial/comum/config/` (fora de `ele2026/`) | Configuração de eleições (todos os ciclos); `cdt2` = código do 2º turno |
 
 Observação: `br-c0001-e006257-ab.json` (acompanhamento) respondeu **404**.
 
