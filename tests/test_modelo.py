@@ -174,3 +174,9 @@ def test_municipios_parquet(tmp_path):
     assert construir_municipios(FIX / "mun-e006257-cm.json", tmp_path) == 5757
     con = consultas.conectar(tmp_path)
     assert con.execute("SELECT nome FROM municipios WHERE cod_ibge = '3550308'").fetchone() == ("SÃO PAULO",)
+
+
+def test_municipios_parquet_de_snapshot_bruto_gz(tmp_path):
+    gz = tmp_path / "cm.json.gz"
+    gz.write_bytes(gzip.compress(ler("mun-e006257-cm.json")))
+    assert construir_municipios(gz, tmp_path / "pq") == 5757

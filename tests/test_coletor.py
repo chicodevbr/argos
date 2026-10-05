@@ -12,7 +12,9 @@ import pytest
 
 from apuracao.coletor import snapshot
 from apuracao.coletor.alvos import montar_alvos
-from apuracao.coletor.coletor import Alvo, Parametros, buscar, espera_ausente, espera_backoff, rodar
+from apuracao.coletor.coletor import (
+    Alvo, Limitador, Parametros, buscar, espera_ausente, espera_backoff, rodar,
+)
 from apuracao.coletor.log import LogJson
 from apuracao.config import carregar
 
@@ -67,7 +69,9 @@ def buscar_sync(servidor, a, params, log=None):
 
 @pytest.fixture
 def params(tmp_path):
-    return Parametros(dir_raw=tmp_path / "raw", timeout_s=1, backoff_base_s=0.01, backoff_max_s=0.05)
+    # max_req_s=0 desliga o limitador global; ele tem testes próprios abaixo
+    return Parametros(dir_raw=tmp_path / "raw", timeout_s=1, backoff_base_s=0.01, backoff_max_s=0.05,
+                      max_req_s=0)
 
 
 # --- snapshot -----------------------------------------------------------------
@@ -234,6 +238,53 @@ def test_rodar_espaca_requisicoes_de_arquivo_ausente(params):
     assert n_ok > 3 * n_404
 
 
+def test_limitador_espaca_requisicoes():
+    async def _():
+        lim = Limitador(50)  # 1 a cada 20ms
+        t0 = asyncio.get_running_loop().time()
+        await asyncio.gather(*(lim.esperar() for _ in range(11)))
+        return asyncio.get_running_loop().time() - t0
+
+    assert asyncio.run(_()) >= 0.19  # 10 intervalos de 20ms
+
+
+def test_rodar_respeita_teto_de_requisicoes(params):
+    s = ServidorFalso()
+    urls = [f"https://teste/{i}.json" for i in range(20)]
+    for u in urls:
+        s.programar(u, (b"x", '"e"'))
+    params.escalonar_inicio, params.max_req_s, params.concorrencia = False, 40, 20
+
+    async def _():
+        await rodar([alvo(u, 0.001) for u in urls], params, LogJson(io.StringIO()),
+                    asyncio.Event(), duracao_max_s=0.5, transport=s.transport())
+
+    asyncio.run(_())
+    assert len(s.pedidos) <= 0.5 * 40 + 2  # nunca passa do teto, mesmo com 20 alvos e concorrência 20
+
+
+def test_uma_vez_busca_cada_alvo_e_encerra_sozinho(params):
+    instavel = "https://teste/instavel.json"
+    s = ServidorFalso()
+    s.programar(URL, (b"x", '"e"'))
+    s.programar(instavel, 503, 503, (b"y", '"f"'))
+    s.programar("https://teste/ausente.json", 404)
+    params.uma_vez = True
+    log = LogJson(io.StringIO())
+
+    async def _():
+        alvos = [alvo(URL, 30), alvo(instavel, 30), alvo("https://teste/ausente.json", 30)]
+        await asyncio.wait_for(rodar(alvos, params, log, asyncio.Event(), transport=s.transport()), timeout=5)
+
+    asyncio.run(_())  # termina sem sinal nem duração máxima
+    por_url = {}
+    for r in s.pedidos:
+        por_url[str(r.url)] = por_url.get(str(r.url), 0) + 1
+    assert por_url == {URL: 1, instavel: 3, "https://teste/ausente.json": 1}  # erro é retentado; 404 não
+    assert len(snapshots(params.dir_raw)) == 2
+    assert "uma_vez_concluida" in log.saida.getvalue()
+
+
 def test_rodar_para_rapido_ao_sinal(params):
     s = ServidorFalso()
     s.programar(URL, (b"x", '"e"'))
@@ -267,3 +318,112 @@ def test_montar_alvos_2o_turno_so_ufs_com_disputa():
     pres = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t2-federal")])
     assert sorted(a.uf for a in gov) == ["ac", "am", "df", "es", "rj", "rn", "to"]
     assert len(pres) == 29  # presidente: br, zz e as 27 UFs
+
+
+# --- municípios: porteiro, alvos e config -------------------------------------
+
+from apuracao.coletor import municipios as cfg_municipios
+from apuracao.coletor.alvos import montar_alvos_municipios
+from apuracao.modelo import ea12
+
+FIX = Path(__file__).parent / "fixtures"
+
+
+def test_espera_ausente_nunca_abaixo_do_intervalo():
+    assert espera_ausente(5, 600, 300) >= 480  # município: intervalo 600 > teto 300
+
+
+def test_porteiro_municipio_so_comeca_depois_da_uf(params):
+    uf_ok, uf_404 = "https://teste/sp.json", "https://teste/rj.json"
+    mun_sp, mun_rj = "https://teste/sp71072.json", "https://teste/rj60011.json"
+    s = ServidorFalso()
+    s.programar(uf_ok, 404, (b"uf", '"e"'))  # UF publica na 2ª tentativa
+    s.programar(uf_404, 404)                 # UF nunca publica
+    s.programar(mun_sp, (b"mun", '"m"'))
+    s.programar(mun_rj, (b"mun", '"m"'))
+    params.escalonar_inicio, params.max_espera_404_s = False, 0.02
+    alvos = [
+        Alvo(url=uf_ok, eleicao=1, uf="sp", arquivo="sp", intervalo_s=0.01, abre="1/sp"),
+        Alvo(url=uf_404, eleicao=1, uf="rj", arquivo="rj", intervalo_s=0.01, abre="1/rj"),
+        Alvo(url=mun_sp, eleicao=1, uf="sp", arquivo="sp71072", intervalo_s=0.01, espera="1/sp"),
+        Alvo(url=mun_rj, eleicao=1, uf="rj", arquivo="rj60011", intervalo_s=0.01, espera="1/rj"),
+    ]
+
+    async def _():
+        await rodar(alvos, params, LogJson(io.StringIO()), asyncio.Event(),
+                    duracao_max_s=0.3, transport=s.transport())
+
+    asyncio.run(_())
+    pedidos = [str(r.url) for r in s.pedidos]
+    assert mun_rj not in pedidos  # UF sem publicação: município nunca é consultado
+    assert mun_sp in pedidos and pedidos.index(mun_sp) > pedidos.index(uf_ok, 1)
+
+
+def test_porteiro_sem_alvo_que_abra_e_erro(params):
+    a = Alvo(url=URL, eleicao=1, uf="sp", arquivo="x", intervalo_s=1, espera="1/sp")
+    with pytest.raises(ValueError, match="portões"):
+        asyncio.run(rodar([a], params, LogJson(io.StringIO()), asyncio.Event(), duracao_max_s=0.1))
+
+
+def test_montar_alvos_municipios():
+    cfg = carregar(CONFIG)
+    ms = ea12.parse((FIX / "mun-e006257-cm.json").read_bytes())
+    pres = montar_alvos_municipios(cfg, "oficial", cfg.eleicao_por_id("2026-t1-federal"), ms)
+    assert len(pres) == 5757  # 5.571 municípios + 186 localidades do exterior
+    nomes = {a.arquivo for a in pres}
+    assert {"sp71072-c0001-e006257-u", "ac01120-c0001-e006257-u"} <= nomes  # = nomes reais das fixtures
+    assert all(a.espera == f"6257/{a.uf}" for a in pres)
+    gov2 = montar_alvos_municipios(cfg, "oficial", cfg.eleicao_por_id("2026-t2-estadual"), ms)
+    ufs2 = {"ac", "am", "df", "es", "rj", "rn", "to"}
+    assert {a.uf for a in gov2} == ufs2 and len(gov2) == sum(m.uf in ufs2 for m in ms)
+    # todo portão aguardado por município é aberto por algum alvo de UF
+    uf_alvos = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t1-federal")])
+    assert {a.espera for a in pres} <= {a.abre for a in uf_alvos}
+
+
+def _transporte(*respostas):
+    fila = list(respostas)
+    pedidos = []
+
+    def h(req):
+        pedidos.append(req)
+        r = fila.pop(0) if len(fila) > 1 else fila[0]
+        return r if isinstance(r, httpx.Response) else httpx.Response(r)
+    return httpx.MockTransport(h), pedidos
+
+
+def test_config_municipios_baixa_e_grava_bruto(tmp_path):
+    cfg = carregar(CONFIG)
+    e = cfg.eleicao_por_id("2026-t1-federal")
+    t, pedidos = _transporte(httpx.Response(200, content=(FIX / "mun-e006257-cm.json").read_bytes()))
+    ms = cfg_municipios.carregar(cfg, "oficial", e, tmp_path, LogJson(io.StringIO()), transport=t)
+    assert len(ms) == 5757
+    assert str(pedidos[0].url).endswith("/ele2026/6257/config/mun-e006257-cm.json")
+    assert len(list((tmp_path / "6257" / "config").rglob("*.json.gz"))) == 1
+
+
+def test_config_municipios_falha_usa_disco_e_404_nao_insiste(tmp_path):
+    cfg = carregar(CONFIG)
+    e = cfg.eleicao_por_id("2026-t1-federal")
+    log = LogJson(io.StringIO())
+    # sem nada em disco, sem reserva e 404: uma tentativa só, devolve None
+    sem_reserva = cfg.model_copy(update={"coletor": cfg.coletor.model_copy(update={"municipios_reserva": None})})
+    t, pedidos = _transporte(404)
+    assert cfg_municipios.carregar(sem_reserva, "oficial", e, tmp_path, log, transport=t, espera_s=0) is None
+    assert len(pedidos) == 1
+    # baixa com sucesso uma vez, depois o servidor cai: usa a cópia do disco
+    t, _ = _transporte(httpx.Response(200, content=(FIX / "mun-e006257-cm.json").read_bytes()))
+    cfg_municipios.carregar(cfg, "oficial", e, tmp_path, log, transport=t)
+    t, pedidos = _transporte(503)
+    ms = cfg_municipios.carregar(cfg, "oficial", e, tmp_path, log, transport=t, espera_s=0)
+    assert len(ms) == 5757 and len(pedidos) == 3
+
+
+def test_config_municipios_usa_reserva_do_repo(tmp_path):
+    cfg = carregar(CONFIG)
+    e = cfg.eleicao_por_id("2026-t2-federal")
+    t, pedidos = _transporte(404)  # -cm.json do 2º turno ainda não publicado, disco vazio
+    log = LogJson(io.StringIO())
+    ms = cfg_municipios.carregar(cfg, "oficial", e, tmp_path, log, transport=t, espera_s=0)
+    assert len(ms) == 5757 and len(pedidos) == 1
+    assert "config_municipios_reserva" in log.saida.getvalue()

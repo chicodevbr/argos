@@ -38,6 +38,8 @@ class Coletor(BaseModel):
     backoff_base_s: float = 2.0
     backoff_max_s: float = 120.0
     max_espera_404_s: float = 300.0
+    max_req_s: float = 20.0
+    municipios_reserva: Path | None = None
 
 
 class Config(BaseModel):

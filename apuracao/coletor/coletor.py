@@ -44,6 +44,11 @@ class Alvo:
     sha256: str | None = None
     falhas: int = 0
     ausencias: int = 0  # 404 seguidos
+    # Porteiro: arquivos de município só começam depois que o arquivo da UF
+    # respondeu 200/304 uma vez. Antes da publicação, só os ~36 arquivos de UF
+    # tomam 404 (com backoff), e não os milhares de municípios.
+    abre: str | None = None      # chave que este alvo libera ao ter sucesso (ex.: "6258/sp")
+    espera: str | None = None    # chave que este alvo aguarda antes da 1ª requisição
     _restaurado: bool = field(default=False, repr=False)
 
 
@@ -57,6 +62,29 @@ class Parametros:
     max_espera_404_s: float = 300.0
     intervalo_resumo_s: float = 60.0
     escalonar_inicio: bool = True
+    # Teto global de requisições/s (o TSE permite 100 por IP e bloqueia 10 min
+    # quem passa). Com milhares de arquivos de município, picos chegariam perto.
+    max_req_s: float = 20.0
+    # Busca cada alvo até 1 resultado sem erro e encerra (carga de eleição já apurada).
+    uma_vez: bool = False
+
+
+class Limitador:
+    """Espaça o início das requisições em pelo menos 1/taxa segundos (todas as tarefas)."""
+
+    def __init__(self, taxa: float):
+        self.intervalo = 1 / taxa if taxa > 0 else 0.0
+        self._proximo = 0.0
+        self._trava = asyncio.Lock()
+
+    async def esperar(self) -> None:
+        if not self.intervalo:
+            return
+        async with self._trava:
+            agora = time.monotonic()
+            if self._proximo > agora:
+                await asyncio.sleep(self._proximo - agora)
+            self._proximo = max(agora, self._proximo) + self.intervalo
 
 
 def espera_backoff(falhas: int, base: float, maximo: float) -> float:
@@ -66,8 +94,12 @@ def espera_backoff(falhas: int, base: float, maximo: float) -> float:
 
 
 def espera_ausente(ausencias: int, intervalo: float, maximo: float) -> float:
-    """Espera após 404: intervalo * 2^(n-1), limitada a `maximo`, com jitter de até 20%."""
-    teto = min(maximo, intervalo * 2 ** max(ausencias - 1, 0))
+    """Espera após 404: intervalo * 2^(n-1), com jitter de até 20%.
+
+    Teto = max(maximo, intervalo): um arquivo ausente nunca é consultado com mais
+    frequência que o intervalo normal dele (municípios têm intervalo > maximo).
+    """
+    teto = min(max(maximo, intervalo), intervalo * 2 ** max(ausencias - 1, 0))
     return random.uniform(teto * 0.8, teto)
 
 
@@ -174,20 +206,39 @@ async def _laco_alvo(
     log: LogJson,
     sem: asyncio.Semaphore,
     parar: asyncio.Event,
+    limitador: Limitador | None = None,
+    portoes: dict[str, asyncio.Event] | None = None,
 ) -> None:
-    if params.escalonar_inicio:
+    if alvo.espera and portoes is not None:
+        portao = portoes[alvo.espera]
+        espera_portao = asyncio.ensure_future(portao.wait())
+        espera_parar = asyncio.ensure_future(parar.wait())
+        await asyncio.wait([espera_portao, espera_parar], return_when=asyncio.FIRST_COMPLETED)
+        espera_portao.cancel()
+        espera_parar.cancel()
+        if parar.is_set():
+            return
+    if params.escalonar_inicio and not params.uma_vez:
         await _esperar(parar, random.uniform(0, alvo.intervalo_s))
     while not parar.is_set():
         try:
             async with sem:
                 if parar.is_set():
                     break
+                if limitador:
+                    await limitador.esperar()
+                    if parar.is_set():  # o sinal pode ter chegado durante a espera na fila
+                        break
                 resultado = await buscar(cliente, alvo, params, log)
         except Exception as e:  # rede de segurança: nada derruba o laço
             log.contar("erros")
             log.evento("erro_inesperado", url=alvo.url, erro=repr(e))
             resultado = "erro"
             alvo.falhas += 1
+        if alvo.abre and portoes is not None and resultado in ("novo", "igual", "nao_mod"):
+            portoes[alvo.abre].set()
+        if params.uma_vez and resultado != "erro":
+            return
         if resultado == "erro":
             espera = espera_backoff(alvo.falhas, params.backoff_base_s, params.backoff_max_s)
         elif resultado == "ausente":
@@ -213,8 +264,14 @@ async def rodar(
         headers={"User-Agent": "apuracao-coletor/0.1"},
     ) as cliente:
         sem = asyncio.Semaphore(params.concorrencia)
+        limitador = Limitador(params.max_req_s)
+        chaves = {a.abre for a in alvos if a.abre}
+        sem_porteiro = {a.espera for a in alvos if a.espera} - chaves
+        if sem_porteiro:
+            raise ValueError(f"alvos aguardam portões que nenhum alvo abre: {sorted(sem_porteiro)}")
+        portoes = {k: asyncio.Event() for k in chaves}
         tarefas = [
-            asyncio.create_task(_laco_alvo(cliente, a, params, log, sem, parar))
+            asyncio.create_task(_laco_alvo(cliente, a, params, log, sem, parar, limitador, portoes))
             for a in alvos
         ]
 
@@ -231,8 +288,16 @@ async def rodar(
                     log.evento("duracao_max_atingida", segundos=duracao_max_s)
                     parar.set()
 
-        extras = [asyncio.create_task(resumos()), asyncio.create_task(cronometro())]
-        await parar.wait()
+        espera_parar = asyncio.create_task(parar.wait())
+        extras = [asyncio.create_task(resumos()), asyncio.create_task(cronometro()), espera_parar]
+        if params.uma_vez and tarefas:
+            todas = asyncio.gather(*tarefas, return_exceptions=True)
+            await asyncio.wait([todas, espera_parar], return_when=asyncio.FIRST_COMPLETED)
+            if not parar.is_set():
+                log.evento("uma_vez_concluida", alvos=len(tarefas))
+                parar.set()
+        else:
+            await parar.wait()
         # Dá até timeout+5s para requisições em andamento terminarem e gravarem.
         _, pendentes = await asyncio.wait(tarefas, timeout=params.timeout_s + 5)
         for t in [*pendentes, *extras]:

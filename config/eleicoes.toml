@@ -63,7 +63,7 @@ ufs = ["ac", "am", "df", "es", "rj", "rn", "to"]
 
 [coletor]
 intervalo_uf_s = 30
-intervalo_municipio_s = 300
+intervalo_municipio_s = 600  # ~6.300 arquivos no 2º turno -> ~10 req/s, abaixo de max_req_s
 timeout_s = 10
 duracao_max_s = 20700  # 5h45: encerra antes do limite de 6h do GitHub Actions
 dir_raw = "data/raw"
@@ -71,6 +71,11 @@ concorrencia = 8          # requisições simultâneas no máximo
 backoff_base_s = 2
 backoff_max_s = 120
 max_espera_404_s = 300    # 404 seguidos: espera dobra até este teto (ver docs/tse/instrucoes-tse.md)
+max_req_s = 20            # teto global de requisições/s; o TSE bloqueia acima de 100/s por IP
+# Lista de municípios usada se o -cm.json da eleição não existir na partida (o do
+# 2º turno deu 404 até 05/10). Cópia do mun-e006257-cm.json do 1º turno: os
+# municípios e localidades do exterior são os mesmos nos dois turnos.
+municipios_reserva = "config/municipios-reserva-2026.json"
 # "resultado" (-u.json) e/ou "acompanhamento" (-ab.json)
 tipos = ["resultado"]
 # Cargos com arquivo nacional (br) e do exterior (zz)

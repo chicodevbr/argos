@@ -15,6 +15,10 @@ on:
       duracao:
         description: segundos de coleta (máx. ~20400 para caber em 6h)
         default: "20400"
+      municipios:
+        description: incluir arquivos de cada município (base da projeção)
+        type: boolean
+        default: true
   schedule:
     # 25/10, 19:45 UTC = 16:45 em Brasília. Cron do GitHub pode atrasar ou
     # falhar em horário de pico: é só reserva. O disparo principal é manual.
@@ -32,6 +36,9 @@ jobs:
       # Cron (sem inputs) cai no 2º turno. Traduzido para ids no passo Coletar.
       PERFIL: ${{ inputs.eleicoes || 'segundo-turno' }}
       DURACAO: ${{ inputs.duracao || '20400' }}
+      # Compara como texto: no cron não há inputs, e `null == false` é verdadeiro
+      # nas expressões do Actions (ambos viram 0), o que desligaria os municípios.
+      MUNICIPIOS: ${{ format('{0}', inputs.municipios) == 'false' && '0' || '1' }}
       DIR_RAW: data/raw
       LOGS: logs
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -52,7 +59,7 @@ jobs:
             segundo-turno) export ELEICOES="2026-t2-federal 2026-t2-estadual" ;;
             *) echo "::error::perfil desconhecido: $PERFIL"; exit 2 ;;
           esac
-          echo "ambiente=$AMBIENTE perfil=$PERFIL eleicoes=$ELEICOES duracao=$DURACAO"
+          echo "ambiente=$AMBIENTE perfil=$PERFIL eleicoes=$ELEICOES duracao=$DURACAO municipios=$MUNICIPIOS"
           scripts/coleta.sh
 
       # Redundância: além do R2, guarda tudo como artefato do run.

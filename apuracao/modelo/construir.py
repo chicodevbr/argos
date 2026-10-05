@@ -216,7 +216,11 @@ def compactar(dir_parquet: Path, acima_de: int = COMPACTAR_ACIMA_DE) -> None:
 
 
 def construir_municipios(cm_json: Path, dir_parquet: Path) -> int:
-    municipios = ea12.parse(Path(cm_json).read_bytes())
+    """Gera municipios.parquet a partir de um -cm.json (EA12), puro ou .json.gz (snapshot bruto)."""
+    conteudo = Path(cm_json).read_bytes()
+    if str(cm_json).endswith(".gz"):
+        conteudo = gzip.decompress(conteudo)
+    municipios = ea12.parse(conteudo)
     linhas = [(m.cod_tse, m.cod_ibge, m.nome, m.uf, m.regiao, m.capital) for m in municipios]
     _gravar_parquet(Path(dir_parquet) / "municipios.parquet", "municipios", MUNICIPIOS, linhas)
     return len(linhas)

@@ -9,6 +9,7 @@
 #   ELEICOES      ids de config/eleicoes.toml separados por espaço (obrigatória)
 #   DURACAO       segundos (padrão: coletor.duracao_max_s do config)
 #   DIR_RAW       padrão data/raw
+#   MUNICIPIOS    1 = inclui os arquivos de cada município (base da projeção)
 #   R2_*          se R2_BUCKET estiver definida, sincroniza com o R2
 #   SYNC_PASTA    senão, se definida, copia para essa pasta
 #
@@ -26,6 +27,7 @@ mkdir -p "$DIR_RAW" "$LOGS"
 args=(--ambiente "$AMBIENTE" --dir-raw "$DIR_RAW")
 for e in $ELEICOES; do args+=(--eleicao "$e"); done
 [[ -n "${DURACAO:-}" ]] && args+=(--duracao "$DURACAO")
+[[ "${MUNICIPIOS:-0}" == "1" ]] && args+=(--municipios)
 
 # Valida a configuração antes de começar (falha rápido, ex.: código ainda 0).
 "$PY" - "$ELEICOES" <<'EOF' || exit 2
@@ -46,6 +48,13 @@ for i in sys.argv[1].split():
     if e.codigo <= 0:
         erro(f"eleição {i} sem código definido em config/eleicoes.toml")
 EOF
+
+# macOS: impede o repouso por inatividade enquanto este script roda. Sem isso, a
+# cópia local para quando o Mac dorme (visto em 05/10/2026: Idle Sleep de 4 min
+# no meio de uma carga). -w encerra o caffeinate junto com este processo.
+if command -v caffeinate >/dev/null 2>&1; then
+  caffeinate -i -s -w $$ &
+fi
 
 SYNC_PID=""
 if [[ -n "${R2_BUCKET:-}" ]]; then

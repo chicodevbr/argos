@@ -9,7 +9,8 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.coletor.alvos import montar_alvos
+from apuracao.coletor import municipios as cfg_municipios
+from apuracao.coletor.alvos import montar_alvos, montar_alvos_municipios
 from apuracao.coletor.coletor import Parametros, rodar
 from apuracao.coletor.log import LogJson
 
@@ -24,21 +25,33 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--duracao", type=float, help="segundos; padrão: coletor.duracao_max_s")
     ap.add_argument("--dir-raw", type=Path, help="padrão: coletor.dir_raw")
+    ap.add_argument("--municipios", action="store_true",
+                    help="inclui os arquivos de cada município (baixa o -cm.json na partida)")
+    ap.add_argument("--uma-vez", action="store_true",
+                    help="busca cada arquivo uma vez e encerra (carga de eleição já apurada)")
     args = ap.parse_args(argv)
 
     cfg = carregar(args.config)
     eleicoes = [cfg.eleicao_por_id(i) for i in args.eleicao]
     alvos = montar_alvos(cfg, args.ambiente, eleicoes)
     c = cfg.coletor
+    dir_raw = args.dir_raw or c.dir_raw
+    log = LogJson()
+    if args.municipios:
+        for e in eleicoes:
+            ms = cfg_municipios.carregar(cfg, args.ambiente, e, dir_raw, log)
+            if ms:
+                alvos += montar_alvos_municipios(cfg, args.ambiente, e, ms)
     params = Parametros(
-        dir_raw=args.dir_raw or c.dir_raw,
+        dir_raw=dir_raw,
         timeout_s=c.timeout_s,
         concorrencia=c.concorrencia,
         backoff_base_s=c.backoff_base_s,
         backoff_max_s=c.backoff_max_s,
         max_espera_404_s=c.max_espera_404_s,
+        max_req_s=c.max_req_s,
+        uma_vez=args.uma_vez,
     )
-    log = LogJson()
     for e in eleicoes:
         if not e.confirmado:
             log.evento("aviso", msg="código de eleição não confirmado", eleicao=e.id, codigo=e.codigo)
