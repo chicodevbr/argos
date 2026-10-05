@@ -8,6 +8,7 @@
 #   AMBIENTE      oficial | simulado (obrigatória)
 #   ELEICOES      ids de config/eleicoes.toml separados por espaço (obrigatória)
 #   DURACAO       segundos (padrão: coletor.duracao_max_s do config)
+#   CONFIG        padrão config/eleicoes.toml (outro arquivo: ensaio contra um TSE falso)
 #   DIR_RAW       padrão data/raw
 #   MUNICIPIOS    1 = inclui os arquivos de cada município (base da projeção)
 #   R2_*          se R2_BUCKET estiver definida, sincroniza com o R2
@@ -19,18 +20,19 @@ set -uo pipefail
 
 : "${AMBIENTE:?defina AMBIENTE}"
 : "${ELEICOES:?defina ELEICOES}"
+CONFIG="${CONFIG:-config/eleicoes.toml}"
 DIR_RAW="${DIR_RAW:-data/raw}"
 LOGS="${LOGS:-logs}"
 PY="${PY:-.venv/bin/python}"   # python direto (sem uv run) para os sinais chegarem sem intermediário
 mkdir -p "$DIR_RAW" "$LOGS"
 
-args=(--ambiente "$AMBIENTE" --dir-raw "$DIR_RAW")
+args=(--config "$CONFIG" --ambiente "$AMBIENTE" --dir-raw "$DIR_RAW")
 for e in $ELEICOES; do args+=(--eleicao "$e"); done
 [[ -n "${DURACAO:-}" ]] && args+=(--duracao "$DURACAO")
 [[ "${MUNICIPIOS:-0}" == "1" ]] && args+=(--municipios)
 
 # Valida a configuração antes de começar (falha rápido, ex.: código ainda 0).
-"$PY" - "$ELEICOES" <<'EOF' || exit 2
+"$PY" - "$ELEICOES" "$CONFIG" <<'EOF' || exit 2
 import os, sys
 from apuracao.config import carregar
 
@@ -39,7 +41,7 @@ def erro(msg):
     print(f"::error::{msg}" if os.environ.get("GITHUB_ACTIONS") else f"ERRO: {msg}")
     sys.exit(1)
 
-cfg = carregar("config/eleicoes.toml")
+cfg = carregar(sys.argv[2])
 for i in sys.argv[1].split():
     try:
         e = cfg.eleicao_por_id(i)

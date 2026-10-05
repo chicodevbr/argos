@@ -65,6 +65,10 @@ class Parametros:
     # Teto global de requisições/s (o TSE permite 100 por IP e bloqueia 10 min
     # quem passa). Com milhares de arquivos de município, picos chegariam perto.
     max_req_s: float = 20.0
+    # Fração do teto reservada aos arquivos prioritários (BR, exterior, UF). Eles têm
+    # fila própria: no ensaio geral de 05/10/2026, com o teto saturado pelos ~6.300
+    # municípios, o arquivo BR chegou a esperar 254 s na fila (configurado: 3 s).
+    fracao_prioritaria: float = 0.25
     # Busca cada alvo até 1 resultado sem erro e encerra (carga de eleição já apurada).
     uma_vez: bool = False
 
@@ -258,20 +262,26 @@ async def rodar(
 ) -> None:
     """Roda o coletor até `parar` ser sinalizado ou `duracao_max_s` esgotar."""
     log.evento("inicio", alvos=len(alvos), dir_raw=str(params.dir_raw))
-    limites = httpx.Limits(max_connections=params.concorrencia)
+    limites = httpx.Limits(max_connections=2 * params.concorrencia)  # uma cota por fila
     async with httpx.AsyncClient(
         transport=transport, limits=limites, follow_redirects=True,
         headers={"User-Agent": "apuracao-coletor/0.1"},
     ) as cliente:
-        sem = asyncio.Semaphore(params.concorrencia)
-        limitador = Limitador(params.max_req_s)
+        # Duas filas independentes: municípios nunca atrasam BR/UF.
+        filas = {
+            True: (asyncio.Semaphore(params.concorrencia),
+                   Limitador(params.max_req_s * params.fracao_prioritaria)),
+            False: (asyncio.Semaphore(params.concorrencia),
+                    Limitador(params.max_req_s * (1 - params.fracao_prioritaria))),
+        }
         chaves = {a.abre for a in alvos if a.abre}
         sem_porteiro = {a.espera for a in alvos if a.espera} - chaves
         if sem_porteiro:
             raise ValueError(f"alvos aguardam portões que nenhum alvo abre: {sorted(sem_porteiro)}")
         portoes = {k: asyncio.Event() for k in chaves}
         tarefas = [
-            asyncio.create_task(_laco_alvo(cliente, a, params, log, sem, parar, limitador, portoes))
+            asyncio.create_task(_laco_alvo(cliente, a, params, log, filas[a.espera is None][0], parar,
+                                           filas[a.espera is None][1], portoes))
             for a in alvos
         ]
 

@@ -427,3 +427,26 @@ def test_config_municipios_usa_reserva_do_repo(tmp_path):
     ms = cfg_municipios.carregar(cfg, "oficial", e, tmp_path, log, transport=t, espera_s=0)
     assert len(ms) == 5757 and len(pedidos) == 1
     assert "config_municipios_reserva" in log.saida.getvalue()
+
+
+def test_municipios_saturando_o_teto_nao_atrasam_a_uf(params):
+    """Ensaio geral de 05/10/2026: com o teto saturado pelos municípios, o arquivo BR
+    esperou 254 s na fila. BR/UF agora têm fila própria (fracao_prioritaria do teto)."""
+    uf = "https://teste/sp.json"
+    s = ServidorFalso()
+    s.programar(uf, *[(f"uf{i}".encode(), f'"u{i}"') for i in range(1000)])
+    muns = [f"https://teste/sp{i:05d}.json" for i in range(300)]
+    for u in muns:
+        s.programar(u, *[(f"m{i}".encode(), f'"m{i}"') for i in range(50)])
+    params.escalonar_inicio, params.max_req_s, params.concorrencia = False, 40, 8
+    alvos = [Alvo(url=uf, eleicao=1, uf="sp", arquivo="sp", intervalo_s=0.05, abre="1/sp")]
+    alvos += [Alvo(url=u, eleicao=1, uf="sp", arquivo=u[-12:-5], intervalo_s=0.001, espera="1/sp") for u in muns]
+
+    async def _():
+        await rodar(alvos, params, LogJson(io.StringIO()), asyncio.Event(), duracao_max_s=1.5,
+                    transport=s.transport())
+
+    asyncio.run(_())
+    n_uf = sum(str(r.url) == uf for r in s.pedidos)
+    assert n_uf >= 8           # fila prioritária: 10 req/s, intervalo 0,05 s -> ~10-15 em 1,5 s
+    assert len(s.pedidos) <= 40 * 1.5 + 4  # o teto total continua valendo

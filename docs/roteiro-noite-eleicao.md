@@ -29,7 +29,9 @@ também alimenta o painel). Se um cair, o outro continua.
    ```
    Se diferir, corrigir `ufs` no toml, commitar e dar push (o Actions usa o código da `main`).
 3. **Testes:** `source .venv/bin/activate && python -m pytest -q` → tudo verde.
-4. **Disco:** `df -h .` → pelo menos 2 GB livres (a noite gera algumas centenas de MB).
+4. **Disco:** `df -h .` → pelo menos **3 GB livres**. No ensaio geral, cada snapshot ocupou ~8 KB
+   em disco (dado + metadado); se o TSE regerar os arquivos a cada ciclo, a noite inteira pode
+   chegar a ~200 mil snapshots e ~1,7 GB, mais o mesmo tanto em `SYNC_PASTA`, se usada.
 5. **Base da projeção presente** (1º turno por município, carregado em 05/10):
    ```
    ls data/parquet/snapshot_totais/ data/parquet/municipios.parquet
