@@ -42,12 +42,20 @@ class Coletor(BaseModel):
     municipios_reserva: Path | None = None
 
 
+class Historico(BaseModel):
+    base: str
+    votacao: str
+    detalhe: str
+    dir: Path
+
+
 class Config(BaseModel):
     ambientes: dict[str, str]
     cargos: dict[str, int]
     urls: Urls
     eleicao: list[Eleicao]
     coletor: Coletor
+    historico: Historico
 
     @model_validator(mode="after")
     def _valida(self) -> Config:

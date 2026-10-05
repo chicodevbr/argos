@@ -84,3 +84,11 @@ ufs = [
   "ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt", "pa",
   "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to",
 ]
+
+# --- Histórico: Portal de Dados Abertos do TSE ------------------------------
+# Leiautes: leiame.pdf dentro de cada zip. Latin-1, ';', #NULO = -1, #NE = -3.
+[historico]
+base = "https://cdn.tse.jus.br/estatistica/sead/odsele"
+votacao = "/votacao_candidato_munzona/votacao_candidato_munzona_{ano}.zip"
+detalhe = "/detalhe_votacao_munzona/detalhe_votacao_munzona_{ano}.zip"
+dir = "data/raw/historico"
