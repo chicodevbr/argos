@@ -37,23 +37,40 @@ def pq(tmp_path):
 def test_taxas_do_municipio(pq):
     con = consultas.conectar(pq)
     assert analise.disponivel(con)
-    m = analise.municipios(con)
+    m = analise.municipios(con, 2022)
     acre = m[m["cod_mun"] == "01120"].iloc[0]
     assert acre["nome"] == "ACRELÂNDIA"
     # 2026: mesmas contas do arquivo do TSE
-    assert acre["abst_pct_2026"] == pytest.approx(100 * acre["abst_2026"] / (acre["comp_2026"] + acre["abst_2026"]))
-    assert 0 < acre["pct13_2026"] < 100 and 0 < acre["pct22_2026"] < 100
-    assert acre["var_abst"] == pytest.approx(acre["abst_pct_2026"] - acre["abst_pct_2022"])
+    assert acre["abst_pct_atual"] == pytest.approx(100 * acre["abst_atual"] / (acre["comp_atual"] + acre["abst_atual"]))
+    assert 0 < acre["pct_pt_atual"] < 100 and 0 < acre["pct_adv_atual"] < 100
+    assert acre["var_abst"] == pytest.approx(acre["abst_pct_atual"] - acre["abst_pct_base"])
+
+
+def test_ano_base_e_nomes_vem_dos_dados(pq):
+    con = consultas.conectar(pq)
+    assert analise.anos_base(con) == [2022]
+    assert analise.nomes(con, 2022) == {"pt_base": "LULA (13)", "adv_base": "JAIR BOLSONARO (22)",
+                                        "pt_atual": "LULA (13)", "adv_atual": "FLAVIO BOLSONARO (22)"}
+
+
+def test_municipio_so_de_um_ano_entra_no_total_daquele_ano(pq):
+    """Full outer join: a amostra de 2022 tem Rio Branco, que não está na base de 2026 do teste."""
+    con = consultas.conectar(pq)
+    m = analise.municipios(con, 2022)
+    # (a amostra de votação também traz localidades do exterior que a de detalhe não traz:
+    # aparecem só com votos, como deve ser num full outer join)
+    so_base = m[m["comp_atual"].isna() & m["comp_base"].notna()]
+    assert list(so_base["cod_mun"]) == ["01392"]  # Rio Branco
+    total = analise.agregar(m).iloc[0]
+    assert total["comp_base"] == pytest.approx(m["comp_base"].sum())
 
 
 def test_agregar_recalcula_taxas_pela_soma():
     import pandas as pd
     m = pd.DataFrame({"uf": ["aa", "aa"], **{c: [1.0, 1.0] for c in analise.SOMAVEIS}})
-    m["comp_2026"], m["abst_2026"] = [80.0, 10.0], [20.0, 90.0]  # 20% e 90% -> soma 110/200 = 55%
-    for c in ("brancos_2026", "nulos_2026", "vv_2026", "v13_2026", "v22_2026"):
-        m[c] = [1.0, 1.0]
+    m["comp_atual"], m["abst_atual"] = [80.0, 10.0], [20.0, 90.0]  # 20% e 90% -> soma 110/200 = 55%
     g = analise.agregar(m, ["uf"]).iloc[0]
-    assert g["abst_pct_2026"] == pytest.approx(55.0)  # média ponderada, não média simples (55 = 110/200)
+    assert g["abst_pct_atual"] == pytest.approx(55.0)  # média ponderada, não média simples (55 = 110/200)
 
 
 def test_pagina_de_analise_renderiza(pq, monkeypatch):

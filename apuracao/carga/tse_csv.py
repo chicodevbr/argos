@@ -13,12 +13,20 @@ descompactado em 2022).
 Convenções do TSE: latin-1, ';', tudo entre aspas; #NULO = -1 e #NE = -3 nos campos
 numéricos (viram NULL aqui). O CSV omite zeros à esquerda (município "5231", zona
 "64"); normalizamos para 5 e 4 dígitos, como no JSON de divulgação.
+
+Anos antigos: o CSV de 2014 não tem QT_VOTOS_NOMINAIS_VALIDOS nem
+NM_TIPO_DESTINACAO_VOTOS. Nesse caso usamos QT_VOTOS_NOMINAIS como válidos e
+deixamos a destinação vazia, e `carregar_ano` CONFERE que a soma por (turno, UF,
+cargo) bate com QT_TOTAL_VOTOS_VALIDOS do detalhe; se não bater (havia votos
+anulados), a carga falha em vez de gravar números errados. Em 2014 bate em todas as
+56 (presidente) e 42 (governador) combinações.
 """
 
 from __future__ import annotations
 
 import csv
 import io
+from collections import Counter
 import re
 import zipfile
 from collections.abc import Iterator
@@ -92,10 +100,11 @@ def linhas_votacao(zip_path: Path) -> Iterator[tuple]:
     fontes = [(m, {1}) for m in _membros(zip_path, r"_BR\.csv$")] + [(m, {3}) for m in membros_uf]
     for membro, cargos in fontes:
         for l in ler_membro(zip_path, membro, cargos):
+            nominais = numero(l["QT_VOTOS_NOMINAIS"])
+            validos = numero(l["QT_VOTOS_NOMINAIS_VALIDOS"]) if "QT_VOTOS_NOMINAIS_VALIDOS" in l else nominais
             yield _base(l) + (
                 int(l["NR_CANDIDATO"]), l["NM_URNA_CANDIDATO"],
-                numero(l["QT_VOTOS_NOMINAIS"]), numero(l["QT_VOTOS_NOMINAIS_VALIDOS"]),
-                l["NM_TIPO_DESTINACAO_VOTOS"], l["ST_VOTO_EM_TRANSITO"] == "S",
+                nominais, validos, l.get("NM_TIPO_DESTINACAO_VOTOS", ""), l["ST_VOTO_EM_TRANSITO"] == "S",
             )
 
 
@@ -109,12 +118,32 @@ def linhas_comparecimento(zip_path: Path) -> Iterator[tuple]:
             )
 
 
+def conferir_validos(ano: int, votacao: list[tuple], comparecimento: list[tuple]) -> None:
+    """Soma dos votos dos candidatos == votos válidos do detalhe, por (turno, cargo, UF)."""
+    iv = {c: i for i, (c, _) in enumerate(HIST_VOTACAO)}
+    ic = {c: i for i, (c, _) in enumerate(HIST_COMPARECIMENTO)}
+    soma_v, soma_c = Counter(), Counter()
+    for l in votacao:
+        if not l[iv["transito"]]:
+            soma_v[(l[iv["turno"]], l[iv["cargo"]], l[iv["uf"]])] += l[iv["votos_validos"]] or 0
+    for l in comparecimento:
+        if not l[ic["transito"]]:
+            soma_c[(l[ic["turno"]], l[ic["cargo"]], l[ic["uf"]])] += l[ic["votos_validos"]] or 0
+    diferentes = {k: (soma_v[k], soma_c[k]) for k in set(soma_v) | set(soma_c) if soma_v[k] != soma_c[k]}
+    if diferentes:
+        raise ValueError(f"{ano}: CSV sem QT_VOTOS_NOMINAIS_VALIDOS e votos nominais != válidos em "
+                         f"{len(diferentes)} (turno, cargo, UF), ex.: {sorted(diferentes.items())[:3]}")
+
+
 def carregar_ano(ano: int, dir_hist: Path, dir_parquet: Path, log: LogJson) -> dict[str, int]:
     d = Path(dir_hist) / str(ano)
     votacao = list(linhas_votacao(d / f"votacao_candidato_munzona_{ano}.zip"))
     comparecimento = list(linhas_comparecimento(d / f"detalhe_votacao_munzona_{ano}.zip"))
     if not votacao or not comparecimento:
         raise ValueError(f"{ano}: CSV sem linhas de presidente/governador (arquivo ainda vazio no TSE?)")
+    iv = {c: i for i, (c, _) in enumerate(HIST_VOTACAO)}
+    if all(l[iv["destinacao"]] == "" for l in votacao):  # layout antigo: válidos = nominais
+        conferir_validos(ano, votacao, comparecimento)
     _gravar_parquet(Path(dir_parquet) / "hist_votacao" / f"ano={ano}.parquet",
                     "hist_votacao", HIST_VOTACAO, votacao)
     _gravar_parquet(Path(dir_parquet) / "hist_comparecimento" / f"ano={ano}.parquet",

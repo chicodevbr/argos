@@ -92,3 +92,44 @@ def test_baixar_ano_pula_arquivo_ja_baixado(tmp_path):
     assert pedidos.count("GET") == 2
     baixar_ano(cfg, 2022, LogJson(io.StringIO()), transport=t)
     assert pedidos.count("GET") == 2  # segunda vez: só HEAD
+
+
+# --- layout antigo (2014): sem QT_VOTOS_NOMINAIS_VALIDOS / NM_TIPO_DESTINACAO_VOTOS ----
+
+# como no CSV real: DS_CARGO existe (o pré-filtro de texto procura "Presidente")
+BASE = ["ANO_ELEICAO", "NR_TURNO", "CD_CARGO", "DS_CARGO", "CD_ELEICAO", "SG_UF", "CD_MUNICIPIO", "NR_ZONA",
+        "ST_VOTO_EM_TRANSITO"]
+
+
+def _zip(caminho: Path, membro: str, cab: list[str], linhas: list[list]):
+    corpo = ";".join(f'"{c}"' for c in cab) + "\n" + "".join(";".join(str(v) for v in l) + "\n" for l in linhas)
+    with zipfile.ZipFile(caminho, "w") as z:
+        z.writestr(membro, corpo.encode("latin-1"))
+
+
+def _ano_antigo(tmp_path, validos_detalhe: int):
+    d = tmp_path / "hist" / "2014"
+    d.mkdir(parents=True)
+    base = [2014, 1, 1, '"Presidente"', 680, '"AC"', 1120, 9]
+    _zip(d / "votacao_candidato_munzona_2014.zip", "votacao_candidato_munzona_2014_BR.csv",
+         BASE + ["NR_CANDIDATO", "NM_URNA_CANDIDATO", "QT_VOTOS_NOMINAIS"],
+         [base + ['"N"', 13, '"DILMA"', 600], base + ['"N"', 45, '"AÉCIO"', 400]])
+    _zip(d / "detalhe_votacao_munzona_2014.zip", "detalhe_votacao_munzona_2014_BRASIL.csv",
+         BASE + ["QT_APTOS", "QT_COMPARECIMENTO", "QT_ABSTENCOES", "QT_TOTAL_VOTOS_VALIDOS",
+                 "QT_VOTOS_BRANCOS", "QT_TOTAL_VOTOS_NULOS"],
+         [base + ['"N"', 1300, 1100, 200, validos_detalhe, 40, 60]])
+    return tmp_path / "hist"
+
+
+def test_layout_antigo_usa_nominais_quando_batem_com_validos(tmp_path):
+    hist = _ano_antigo(tmp_path, validos_detalhe=1000)
+    n = tse_csv.carregar_ano(2014, hist, tmp_path / "pq", LogJson(io.StringIO()))
+    assert n == {"hist_votacao": 2, "hist_comparecimento": 1}
+    linhas = list(tse_csv.linhas_votacao(hist / "2014" / "votacao_candidato_munzona_2014.zip"))
+    assert [(l[iv["votos"]], l[iv["votos_validos"]], l[iv["destinacao"]]) for l in linhas] == [(600, 600, ""), (400, 400, "")]
+
+
+def test_layout_antigo_falha_se_houve_votos_anulados(tmp_path):
+    hist = _ano_antigo(tmp_path, validos_detalhe=900)  # 100 votos nominais não foram válidos
+    with pytest.raises(ValueError, match="nominais != válidos"):
+        tse_csv.carregar_ano(2014, hist, tmp_path / "pq", LogJson(io.StringIO()))
