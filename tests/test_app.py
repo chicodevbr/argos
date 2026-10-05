@@ -97,3 +97,17 @@ def test_rotulos_sem_colisao():
     assert dados.rotulos_sem_colisao([47.0, 45.2, 2.9], 3) == [48.2, 45.2, 2.9]
     assert dados.rotulos_sem_colisao([50.1, 49.9], 3) == [52.9, 49.9]
     assert dados.rotulos_sem_colisao([60, 40], 3) == [60, 40]  # longe: não mexe
+
+
+def test_app_2o_turno_mostra_projecao(monkeypatch, tmp_path):
+    from tests.apoio_2t import montar_pq_2t
+
+    monkeypatch.setenv("APURACAO_DIR_PARQUET", str(montar_pq_2t(tmp_path)))
+    monkeypatch.setenv("APURACAO_CONFIG", str(Path(__file__).parent.parent / "config" / "eleicoes.toml"))
+    monkeypatch.setenv("APURACAO_ELEICAO", "2026-t2-federal")
+    at = AppTest.from_file(str(MAIN), default_timeout=60)
+    at.run()
+    assert not at.exception, at.exception
+    rotulos = [m.label for m in at.metric]
+    assert "Probabilidade de vitória (modelo)" in rotulos and "LULA" in rotulos
+    assert any("faixa de 90%" in c.value for c in at.caption)

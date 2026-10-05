@@ -19,6 +19,7 @@ import streamlit as st
 from apuracao.app import dados
 from apuracao.config import carregar
 from apuracao.modelo import consultas
+from apuracao.projecao.ao_vivo import GOVERNADOR, projecao_por_uf, projetar_ao_vivo
 
 DIR_PARQUET = Path(os.environ.get("APURACAO_DIR_PARQUET", "data/parquet"))
 CONFIG = Path(os.environ.get("APURACAO_CONFIG", "config/eleicoes.toml"))
@@ -47,6 +48,16 @@ def conexao(dir_parquet: str):
     # Uma conexão por processo: a 1ª consulta do DuckDB é lenta (~3s), as demais não.
     # As views reavaliam *.parquet a cada consulta, então parts novos entram sozinhos.
     return consultas.conectar(dir_parquet)
+
+
+@st.cache_data(ttl=INTERVALO_S, show_spinner=False)
+def projecao(_con, eleicao_id: str, cargo: int, abrangencia: str, _marca):
+    """Recalcula só quando chega snapshot novo (_marca) ou a cada INTERVALO_S."""
+    return projetar_ao_vivo(_con, cfg, cfg.eleicao_por_id(eleicao_id), cargo, abrangencia)
+
+
+def marca_dados(con, eleicao: int) -> str:
+    return str(con.execute("SELECT max(ts_coleta) FROM snapshot_totais WHERE eleicao = ?", [eleicao]).fetchone()[0])
 
 
 def pct(v) -> str:
@@ -124,6 +135,10 @@ def painel() -> None:
     if df_cand.empty:
         return
 
+    proj = projecao(con, eleicao.id, cargo, abr, marca_dados(con, eleicao.codigo))
+    if proj:
+        mostrar_projecao(proj, cor_de, t, cargo)
+
     esq, dir_ = st.columns([2, 3])
     with esq:
         st.markdown("**Votos válidos por candidato**")
@@ -177,6 +192,11 @@ def painel() -> None:
         st.markdown("**Por UF**")
         tab = dados.tabela_ufs(con, eleicao.codigo, cargo, numeros)
         if not tab.empty:
+            if proj:
+                por_uf = projecao_por_uf(proj).rename(columns={"pct_a": f"projeção {proj.nome_a}"})
+                por_uf[f"faixa {proj.nome_a}"] = [f"{pct(i)} – {pct(s)}" for i, s in
+                                                    zip(por_uf["pct_a_inf"], por_uf["pct_a_sup"])]
+                tab = tab.merge(por_uf.drop(columns=["pct_a_inf", "pct_a_sup"]), on="uf", how="left")
             tab["uf"] = tab["uf"].str.upper()
             st.dataframe(
                 tab, hide_index=True, use_container_width=True,
@@ -185,13 +205,64 @@ def painel() -> None:
                     "pct_secoes": st.column_config.NumberColumn("% seções", format="%.2f"),
                     "atualizado": st.column_config.DatetimeColumn("Atualizado (Brasília)", format="HH:mm:ss"),
                     **{c: st.column_config.NumberColumn(f"{c} (% válidos)", format="%.2f")
-                       for c in tab.columns if c not in ("uf", "pct_secoes", "atualizado")},
+                       for c in tab.columns if c not in ("uf", "pct_secoes", "atualizado")
+                       and not c.startswith(("projeção", "faixa"))},
+                    **{c: st.column_config.NumberColumn(f"{c} (%)", format="%.2f")
+                       for c in tab.columns if c.startswith("projeção")},
                 },
             )
 
     with st.expander("Tabela de candidatos"):
         st.dataframe(df_cand[["numero", "nome", "partido", "votos", "pct_validos", "eleito", "situacao"]],
                      hide_index=True, use_container_width=True)
+
+
+def mostrar_projecao(proj, cor_de: dict, t: str, cargo: int) -> None:
+    r = proj.r
+    st.markdown("**Projeção do resultado final**")
+    pct_b, pct_b_inf, pct_b_sup = 100 - r.pct_a, 100 - r.pct_a_sup, 100 - r.pct_a_inf
+    lider, prob = (proj.nome_a, r.prob_a_vence) if r.prob_a_vence >= 0.5 else (proj.nome_b, 1 - r.prob_a_vence)
+    c = st.columns(4)
+    c[0].metric(proj.nome_a, pct(r.pct_a), help="Mediana da projeção; faixa de 90% abaixo.")
+    c[0].caption(f"faixa de 90%: {pct(r.pct_a_inf)} a {pct(r.pct_a_sup)}")
+    c[1].metric(proj.nome_b, pct(pct_b), help="Mediana da projeção; faixa de 90% abaixo.")
+    c[1].caption(f"faixa de 90%: {pct(pct_b_inf)} a {pct(pct_b_sup)}")
+    c[2].metric("Probabilidade de vitória (modelo)", f"{100 * prob:.0f}%",
+                help="Fração das simulações do modelo em que o candidato termina com mais votos válidos.")
+    c[2].caption(f"de {lider}")
+    c[3].metric("Eleitorado com dados", pct(r.pct_contado),
+                help=f"Pelos votos válidos do 1º turno, em {proj.municipios_base} municípios/localidades.")
+
+    faixas = pd.DataFrame({
+        "nome": [proj.nome_a, proj.nome_b],
+        "mediana": [r.pct_a, pct_b], "inf": [r.pct_a_inf, pct_b_inf], "sup": [r.pct_a_sup, pct_b_sup],
+        "cor": [cor_de.get(proj.num_a, CINZA[t]), cor_de.get(proj.num_b, CINZA[t])],
+    })
+    faixas["rotulo"] = [f"{pct(m)} ({pct(i)} – {pct(s)})" for m, i, s in zip(faixas["mediana"], faixas["inf"], faixas["sup"])]
+    lo = max(0, min(faixas["inf"].min(), 50) - 3)
+    hi = min(100, max(faixas["sup"].max(), 50) + 3)
+    eixo_x = alt.X("inf:Q", title="% dos votos válidos (projeção, faixa de 90%)",
+                   scale=alt.Scale(domain=[lo, hi]), axis=alt.Axis(tickCount=6, format=".0f"))
+    base = alt.Chart(faixas).encode(y=alt.Y("nome:N", title=None, axis=alt.Axis(labelLimit=220)))
+    grafico = (
+        base.mark_rule(strokeWidth=10, opacity=0.35, strokeCap="round").encode(
+            x=eixo_x, x2="sup:Q", color=alt.Color("cor:N", scale=None))
+        + base.mark_tick(thickness=3, size=22).encode(x="mediana:Q", color=alt.Color("cor:N", scale=None),
+            tooltip=[alt.Tooltip("nome:N", title="Candidato"), alt.Tooltip("mediana:Q", format=".2f"),
+                     alt.Tooltip("inf:Q", title="faixa de", format=".2f"),
+                     alt.Tooltip("sup:Q", title="até", format=".2f")])
+        + base.mark_text(align="left", dx=8, color=TEXTO[t]).encode(x="sup:Q", text="rotulo:N")
+        + alt.Chart(pd.DataFrame({"x": [50]})).mark_rule(strokeDash=[4, 4], color=TEXTO[t]).encode(x="x:Q")
+    ).properties(height=140, padding={"right": 140})
+    st.altair_chart(grafico, use_container_width=True)
+    if cargo == GOVERNADOR:
+        st.warning("Governador é bem menos previsível que presidente: no backtest de 2022, com 25% do "
+                   "eleitorado contado, o erro médio foi de 3,2 pontos e a faixa tinha ~9 pontos. "
+                   "Leve a faixa a sério, não só a mediana.")
+    else:
+        st.caption("Modelo por município (1º turno + deslocamento observado nos já apurados da mesma UF/região). "
+                   "Backtest com 2022: erro médio de 0,09 ponto; a faixa conteve o resultado real em todos os cenários "
+                   "de ordem de chegada testados.")
 
 
 painel()
