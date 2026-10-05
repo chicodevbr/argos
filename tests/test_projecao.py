@@ -133,3 +133,34 @@ def test_backtest_sintetico_cobre_e_supera_parcial_nacional():
     assert res["cobre"].mean() >= 0.9
     assert res["erro"].abs().max() < res["erro_parcial_nacional"].abs().max()
     assert set(resumo(res).index) == {0.25, 0.5}
+
+
+# --- porte e parâmetros por cargo ---------------------------------------------
+
+from apuracao.projecao.modelo import parametros_governador, parametros_presidente, porte
+
+
+def test_porte_por_votos_validos():
+    assert list(porte(pd.Series([500, 10_000, 49_999, 50_000, 300_000]))) == [
+        "<10mil", "10-50mil", "10-50mil", "50-200mil", ">200mil"]
+
+
+def test_porte_separa_capital_do_interior():
+    """Cidades grandes contadas primeiro e deslocando ao contrário das pequenas: com o nível
+    de porte, as pequenas (sem dados) herdam a UF com a incerteza entre portes, e a faixa cobre."""
+    base, v_peq = mundo(n=300, swing=0.5, seed=3)
+    _, v_gra = mundo(n=300, swing=-0.3, seed=3)
+    # alinhado às faixas de porte (>= 50 mil = "50-200mil" e ">200mil"); diferenças que
+    # cortam uma faixa ao meio ficam só com a variação entre municípios (limitação)
+    grande = (base["vv1"] >= 50_000).to_numpy()
+    v = v_peq.copy()
+    v.loc[grande, ["a2", "b2"]] = v_gra.loc[grande, ["a2", "b2"]]
+    obs = observar(v, np.where(grande, 1.0, 0.0))
+    r = projetar(base, obs, parametros_governador(sd_entre_min={"porte": 0.6}))
+    assert r.pct_a_inf <= pct_verdade(v) <= r.pct_a_sup
+
+
+def test_parametros_por_cargo():
+    assert parametros_presidente().niveis == ["regiao", "uf"]
+    g = parametros_governador(tau=0.1)
+    assert g.niveis == ["porte"] and g.tau == 0.1 and g.sd_prior_nacional == 0.5

@@ -35,6 +35,18 @@ import pandas as pd
 EPS = 1e-4
 SD_DENTRO_MIN = 0.05       # piso da variação entre municípios (logit), evita confiança infinita
 
+# Porte do município pelos votos válidos do 1º turno. No governador de 2022, cidades
+# grandes e pequenas da mesma UF se deslocaram de forma diferente (sd entre portes
+# 0,111 em logit; em AL, BA, MS, PE e SE em sentidos opostos), o que engana a
+# projeção quando a capital chega primeiro. No presidente a diferença foi 0,011.
+# Limitação: só são corrigidas diferenças que coincidem com estas faixas.
+PORTES = [0, 10_000, 50_000, 200_000, np.inf]
+ROTULOS_PORTE = ["<10mil", "10-50mil", "50-200mil", ">200mil"]
+
+
+def porte(vv1: pd.Series) -> pd.Series:
+    return pd.cut(vv1, PORTES, labels=ROTULOS_PORTE, right=False).astype(str)
+
 
 @dataclass
 class Parametros:
@@ -150,6 +162,8 @@ def projetar(base: pd.DataFrame, atual: pd.DataFrame, params: Parametros | None 
     p = params or Parametros()
     rng = np.random.default_rng(p.seed)
     df = base.merge(atual[["chave", "frac", "a2", "b2"]], on="chave", how="left")
+    if "porte" in p.niveis and "porte" not in df:
+        df["porte"] = porte(df["vv1"])
     df[["frac", "a2", "b2"]] = df[["frac", "a2", "b2"]].fillna(0.0)
     frac = df["frac"].clip(0, 1).to_numpy()
     a2, b2 = df["a2"].to_numpy(float), df["b2"].to_numpy(float)
@@ -226,3 +240,21 @@ def projetar(base: pd.DataFrame, atual: pd.DataFrame, params: Parametros | None 
         pct_contado=float(100 * vv1[contado].sum() / max(vv1.sum(), 1)),
         por_grupo=pd.DataFrame(por_grupo),
     )
+
+
+# Parâmetros por cargo. Presidente: validados no backtest de 2022 (erro máx. 0,51 pp,
+# cobertura 100%). Governador: medidos no 2º turno de 2022 (12 UFs): sd do deslocamento
+# entre UFs 0,39 (sem nada contado) e entre portes dentro da UF 0,111; usamos um pouco acima.
+# Os argumentos passados substituem os padrões do cargo.
+def parametros_presidente(**kw) -> Parametros:
+    return Parametros(**{"niveis": ["regiao", "uf"], **kw})
+
+
+def parametros_governador(**kw) -> Parametros:
+    return Parametros(**{
+        "niveis": ["porte"],
+        "sd_entre_min": {"porte": 0.15},
+        "sd_entre_min_razao": {"porte": 0.05},
+        "sd_prior_nacional": 0.5,
+        **kw,
+    })

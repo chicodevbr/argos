@@ -29,7 +29,7 @@ def _hist(dir_parquet: Path) -> duckdb.DuckDBPyConnection:
 
 
 def base_historica(dir_parquet: Path, ano: int, cargo: int, num_a: int, num_b: int,
-                   turno: int = 1) -> pd.DataFrame:
+                   turno: int = 1, uf: str | None = None) -> pd.DataFrame:
     """Votos de A e B e total de válidos por município (soma das zonas), sem voto em trânsito."""
     df = _hist(dir_parquet).execute(
         """
@@ -38,16 +38,18 @@ def base_historica(dir_parquet: Path, ano: int, cargo: int, num_a: int, num_b: i
                sum(votos_validos) FILTER (numero = $b) AS b1,
                sum(votos_validos) AS vv1
         FROM v WHERE ano = $ano AND cargo = $cargo AND turno = $turno AND NOT transito
+              AND ($uf IS NULL OR uf = $uf)
         GROUP BY ALL
         """,
-        {"a": num_a, "b": num_b, "ano": ano, "cargo": cargo, "turno": turno},
+        {"a": num_a, "b": num_b, "ano": ano, "cargo": cargo, "turno": turno, "uf": uf},
     ).df()
     return _com_regiao(df.fillna({"a1": 0, "b1": 0}))
 
 
-def verdade_historica(dir_parquet: Path, ano: int, cargo: int, num_a: int, num_b: int) -> pd.DataFrame:
+def verdade_historica(dir_parquet: Path, ano: int, cargo: int, num_a: int, num_b: int,
+                      uf: str | None = None) -> pd.DataFrame:
     """Resultado final do 2º turno por município, no formato de `atual` com frac = 1."""
-    b = base_historica(dir_parquet, ano, cargo, num_a, num_b, turno=2)
+    b = base_historica(dir_parquet, ano, cargo, num_a, num_b, turno=2, uf=uf)
     return pd.DataFrame({"chave": b["chave"], "frac": 1.0, "a2": b["a1"], "b2": b["b1"]})
 
 
@@ -91,3 +93,13 @@ def atual_ao_vivo(con: duckdb.DuckDBPyConnection, eleicao_t2: int, cargo: int,
         """,
         {"a": num_a, "b": num_b},
     ).df()
+
+
+def disputas_2o_turno(dir_parquet: Path, ano: int, cargo: int) -> list[tuple[str, int, int]]:
+    """(uf, número A, número B) de cada UF com 2º turno; A = menor número."""
+    linhas = _hist(dir_parquet).execute(
+        """SELECT uf, list_sort(list(DISTINCT numero)) FROM v
+           WHERE ano = ? AND cargo = ? AND turno = 2 GROUP BY uf ORDER BY uf""",
+        [ano, cargo],
+    ).fetchall()
+    return [(uf, nums[0], nums[1]) for uf, nums in linhas if len(nums) == 2]
