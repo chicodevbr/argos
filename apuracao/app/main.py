@@ -12,4 +12,5 @@ st.set_page_config(page_title="Apuração", layout="wide")
 st.navigation([
     st.Page("paginas/ao_vivo.py", title="Apuração ao vivo", default=True),
     st.Page("paginas/analise.py", title="Análise do 1º turno"),
+    st.Page("paginas/noite.py", title="A noite da apuração"),
 ]).run()

@@ -18,8 +18,13 @@ A projeção (modelo.py) diz onde a contagem termina. Aqui se estima o caminho a
   dentro da UF não é modelada. A ordem ENTRE UFs (ex.: Nordeste mais lento) é.
 - Incerteza do ritmo: multiplicador lognormal comum a todas as UFs e outro por UF.
 
-Validação (sem dados reais de ritmo por UF; não há registro do horário da apuração por UF
-em 2022):
+Validação na noite REAL do 2º turno de 2022 (reconstruída do boletim de urna, ver
+noite.py; virada real às 18h44): com 11% das seções, previu 19h13 (18h19-20h35); com 21%,
+18h38; 32%, 18h33; 44%, 18h34; 59%, 18h39. Ou seja, de 5 a 11 min cedo a partir de 20%
+das seções, e a curva dos 15-60 min seguintes dentro da faixa em todos os cortes a partir
+de 11%. Com 3% das seções erra por horas (o painel esconde o horário abaixo de 10%).
+
+Validação anterior, em simulação:
 - Dado o progresso real de cada UF, a curva prevista erra no máximo ~0,15 ponto (noite do
   ensaio geral): a composição vinda da projeção está certa; o erro é todo de ritmo.
 - Mundo sintético "como 2022" (todas as UFs em paralelo, em curva S, Nordeste e Norte

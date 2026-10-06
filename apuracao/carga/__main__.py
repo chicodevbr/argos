@@ -1,5 +1,6 @@
 """uv run python -m apuracao.carga --ano 2022 [--sem-download]
-uv run python -m apuracao.carga --malha   (malha municipal do IBGE, para os mapas)"""
+uv run python -m apuracao.carga --malha   (malha municipal do IBGE, para os mapas)
+uv run python -m apuracao.carga --boletim 2022:2   (boletim de urna: curva da noite)"""
 
 from __future__ import annotations
 
@@ -7,6 +8,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from apuracao.carga import boletim
 from apuracao.carga.baixar import baixar_ano
 from apuracao.carga.ibge import baixar_malha
 from apuracao.carga.tse_csv import carregar_ano
@@ -21,10 +23,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
     ap.add_argument("--dir-parquet", type=Path, default=Path("data/parquet"))
     ap.add_argument("--sem-download", action="store_true", help="usa só os zips já baixados")
+    ap.add_argument("--boletim", action="append", default=[], metavar="ANO:TURNO",
+                    help="boletim de urna (votos por seção + horário de chegada), ex.: 2022:2")
+    ap.add_argument("--sem-guardar-zip", action="store_true",
+                    help="boletim: apaga cada zip depois de lido (1º turno tem ~1,4 GB)")
     args = ap.parse_args(argv)
     cfg, log = carregar(args.config), LogJson()
-    if not args.ano and not args.malha:
-        ap.error("informe --ano e/ou --malha")
+    if not args.ano and not args.malha and not args.boletim:
+        ap.error("informe --ano, --malha e/ou --boletim")
+    for item in args.boletim:
+        ano, turno = (int(x) for x in item.split(":"))
+        boletim.carregar(cfg, ano, turno, args.dir_parquet, log, baixar=not args.sem_download,
+                         guardar_zip=not args.sem_guardar_zip)
     if args.malha:
         baixar_malha(cfg, log)
     for ano in args.ano:

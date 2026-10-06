@@ -92,6 +92,9 @@ base = "https://cdn.tse.jus.br/estatistica/sead/odsele"
 votacao = "/votacao_candidato_munzona/votacao_candidato_munzona_{ano}.zip"
 detalhe = "/detalhe_votacao_munzona/detalhe_votacao_munzona_{ano}.zip"
 dir = "data/raw/historico"
+# Boletim de urna (votos por seção + horário de chegada ao TSE): catálogo CKAN do portal,
+# porque o nome de cada zip traz a data de geração. Sai alguns dias depois do turno.
+boletim_pacote = "https://dadosabertos.tse.jus.br/api/3/action/package_show?id=resultados-{ano}-boletim-de-urna"
 
 # --- Malha municipal do IBGE (mapas) -----------------------------------------
 # API de malhas v3: GeoJSON de todos os municípios, `codarea` = código IBGE (7 dígitos),

@@ -86,13 +86,27 @@ uv run python -m apuracao.carga --ano 2022 --sem-download          # usa os zips
 uv run python -m apuracao.carga --malha                            # malha municipal do IBGE
 ```
 
+### Boletim de urna (curva de noites passadas)
+
+```
+uv run python -m apuracao.carga --boletim 2022:2                     # 66 MB de zips
+uv run python -m apuracao.carga --boletim 2026:1 --sem-guardar-zip   # ~1,4 GB; apaga cada zip depois de ler
+```
+
+O boletim de urna (Portal de Dados Abertos) traz os votos de cada seção e o horário em que o
+boletim chegou ao TSE. Com ele, `apuracao/projecao/noite.py` reconstrói a curva da apuração minuto a
+minuto e o ritmo de cada região. Em 2022 os totais batem com os oficiais e a curva bate com a
+publicada pelo g1 na noite (1 min de defasagem). O TSE publica o boletim alguns dias depois do
+turno; enquanto não sai, o comando avisa `boletim_indisponivel`. Saída em `data/parquet/hist_boletim/`.
+
 ### Painel
 
 ```
 uv run streamlit run apuracao/app/main.py
 ```
 
-Abre em http://localhost:8501 com duas páginas: **Apuração ao vivo** e **Análise do 1º turno**.
+Abre em http://localhost:8501 com três páginas: **Apuração ao vivo**, **Análise do 1º turno** e
+**A noite da apuração** (curva e ritmo por região de noites passadas, a partir do boletim de urna).
 No topo da página ao vivo, um selo mostra se a coleta local está ativa (lê `logs/coletor.jsonl`).
 Variáveis opcionais: `APURACAO_DIR_PARQUET`, `APURACAO_CONFIG`, `APURACAO_MALHA`,
 `APURACAO_LOG_COLETOR`, `APURACAO_HISTORICO_PROJECAO` e `APURACAO_ELEICAO` (id da eleição aberta
@@ -110,8 +124,8 @@ No 2º turno de presidente, o painel mostra também o **caminho da apuração**
 (`apuracao/projecao/caminho.py`): quanto falta contar por região, quanto o candidato que está atrás
 precisa do que falta, a chance de virada e o horário provável, comparados com a curva minuto a minuto
 de 2022 (`config/referencias/apuracao-2022-t2-presidente.csv`, extraída do gráfico do g1 com dados do
-TSE). O horário supõe que cada UF segue no ritmo dos últimos 30 min; em simulações, tende a sair
-20-30 min cedo quando a virada acontece no fim da apuração.
+TSE). O horário supõe que cada UF segue no ritmo dos últimos 30 min. Na noite real de 2022
+(virada às 18h44), a partir de 20% das seções previu entre 5 e 11 min cedo.
 
 Em 2022, a projeção de presidente errou em média 0,09 ponto (máximo 0,51) e a faixa de 90% conteve o
 resultado em todos os cenários de ordem de chegada testados; ler o percentual parcial nacional errou
@@ -131,7 +145,7 @@ afirmações sobre os dados são calculadas a partir deles.
 ```
 apuracao/
   coletor/    polling dos JSONs do TSE, snapshots, sincronização (R2 ou pasta)
-  carga/      CSVs do Portal de Dados Abertos e malha do IBGE
+  carga/      CSVs do Portal de Dados Abertos (inclusive boletim de urna) e malha do IBGE
   modelo/     parsers (EA20, EA12), tabelas Parquet, anomalias
   projecao/   modelo de projeção, dados de entrada, backtest
   app/        painel Streamlit (páginas ao vivo e análise, mapas)

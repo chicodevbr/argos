@@ -47,6 +47,7 @@ class Historico(BaseModel):
     votacao: str
     detalhe: str
     dir: Path
+    boletim_pacote: str = ""
 
 
 class Ibge(BaseModel):
