@@ -47,6 +47,10 @@ mini**: é o passo 4 abaixo.
    as duas máquinas juntas fazem até 40 requisições/s pelo mesmo IP, abaixo do limite de 100/s
    do TSE.
 
+**Rede entre as máquinas.** Em 06/10 o Mac mini e o Mac principal não se enxergavam na rede de casa
+(isso não afeta a coleta, que sai pela internet). Para diagnosticar, rode em cada máquina, passando o
+IP da outra: `scripts/diagnostico-rede.sh 192.168.0.78` (no Mac mini). Só lê, não muda nada.
+
 ## Na noite (25/10)
 
 Às **16h30**, junto com o Mac principal:
