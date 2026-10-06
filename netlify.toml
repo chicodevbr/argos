@@ -1,0 +1,8 @@
+# Netlify: publica a pasta site/ como está (HTML já gerado e versionado). Sem build: gerar a página
+# exige os dados do TSE em data/ (fora do git). Para atualizar:
+#   python -m apuracao.pagina --brasilia --site site && git add site && git commit && git push
+[build]
+  publish = "site"
+  command = ""
+  # só publica quando site/ (ou este arquivo) mudou; commits do coletor etc. não gastam deploy
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- site/ netlify.toml"

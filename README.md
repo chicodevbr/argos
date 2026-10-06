@@ -139,8 +139,11 @@ até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixan
 uv run python -m apuracao.pagina    # gera data/pagina/abstencao-1o-turno-2026.html
 uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df   # dados da página de Brasília
 uv run python -m apuracao.pagina --brasilia   # gera data/pagina/abstencao-brasilia-2026.html
-uv run python -m apuracao.pagina --brasilia --site data/pagina/site-brasilia   # + index.html completo (Netlify etc.)
+uv run python -m apuracao.pagina --brasilia --site site   # + site/index.html completo, publicado pelo Netlify
 ```
+
+**Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e
+versionado, sem build no Netlify. Para atualizar, gere com `--site site`, faça commit e push.
 
 **Abstenção em Brasília:** o TSE trata o DF como um único município, então a página usa o detalhe
 por seção (presidente, com os eleitores em trânsito; a soma confere com o total oficial do DF) e
