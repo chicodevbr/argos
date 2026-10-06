@@ -109,14 +109,18 @@ Não extrapole o percentual nacional parcial: a ordem de chegada dos votos varia
 
 ## Comandos
 
+Lista completa, agrupada por uso, no [README.md](README.md). Os mais usados:
+
 ```
 uv run pytest
-uv run python -m apuracao.coletor --config config/eleicoes.toml --ambiente simulado
+AMBIENTE=oficial ELEICOES="2026-t2-federal 2026-t2-estadual" MUNICIPIOS=1 scripts/coleta.sh
 uv run python -m apuracao.modelo construir --loop 15   # data/raw -> data/parquet (painel lê daqui)
-uv run python -m apuracao.carga --ano 2022
+uv run python -m apuracao.carga --ano 2022             # histórico; --malha baixa a malha do IBGE
 uv run streamlit run apuracao/app/main.py
-uv run python -m apuracao.pagina   # página compartilhável de abstenção -> data/pagina/ (publicar como artifact)
+uv run python -m apuracao.pagina                       # página compartilhável -> data/pagina/
 ```
+
+Ao criar ou mudar um comando, atualize o README.
 
 ## Como trabalhar neste repo
 

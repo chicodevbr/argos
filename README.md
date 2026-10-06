@@ -1,0 +1,137 @@
+# Argos — apuração das eleições de 2026
+
+Coleta ao vivo os resultados divulgados pelo TSE, projeta o resultado final durante a apuração
+e analisa os dados por UF e município, comparando 2026 com 2014, 2018 e 2022.
+
+- **Coleta ao vivo:** consulta os arquivos JSON de divulgação do TSE e guarda cada versão nova como
+  um snapshot imutável (nada é sobrescrito). Roda no GitHub Actions e numa cópia local.
+- **Painel:** Streamlit com a apuração ao vivo (números, evolução, projeção com faixa de incerteza,
+  aviso de anomalias nos dados do TSE) e uma página de análise do 1º turno com mapas.
+- **Projeção:** modelo por município (1º turno + deslocamento observado nos já apurados), validado
+  em backtest com 2022.
+- **Página compartilhável:** abstenção no 1º turno de 2026, gerada a partir das tabelas.
+
+O 2º turno é em **25/10/2026**. O passo a passo da noite está em
+[docs/roteiro-noite-eleicao.md](docs/roteiro-noite-eleicao.md).
+
+## Fontes de dados
+
+| Fonte | Uso | Onde fica |
+|---|---|---|
+| Arquivos JSON de divulgação do TSE (`resultados.tse.jus.br`) | coleta ao vivo e 1º turno de 2026 por município | `data/raw/{eleição}/...` |
+| Portal de Dados Abertos do TSE (CSV) | histórico 2014, 2018, 2022 | `data/raw/historico/{ano}/` |
+| API de malhas do IBGE | mapas por município | `data/raw/ibge/` |
+
+As especificações oficiais dos arquivos do TSE estão em [docs/tse/](docs/tse/). Códigos de eleição,
+cargos e URLs ficam em [config/eleicoes.toml](config/eleicoes.toml), nunca no código.
+
+## Instalação
+
+Requer Python 3.12+ e [uv](https://docs.astral.sh/uv/).
+
+```
+uv sync
+uv run pytest
+```
+
+## Comandos
+
+### Coleta
+
+```
+# coletor + sincronização (R2 se R2_BUCKET estiver definida, senão a pasta SYNC_PASTA)
+AMBIENTE=oficial ELEICOES="2026-t2-federal 2026-t2-estadual" MUNICIPIOS=1 scripts/coleta.sh
+
+# só o coletor
+uv run python -m apuracao.coletor --ambiente oficial --eleicao 2026-t2-federal --municipios
+
+# carga única de uma eleição já apurada (busca cada arquivo uma vez e encerra)
+uv run python -m apuracao.coletor --ambiente oficial --eleicao 2026-t1-federal --eleicao 2026-t1-estadual --municipios --uma-vez
+
+# só a sincronização (envia ao R2 o que estiver em data/raw; --destino-pasta copia para uma pasta)
+uv run python -m apuracao.coletor.sync --dir-raw data/raw
+```
+
+| Variável do `coleta.sh` | Significado |
+|---|---|
+| `AMBIENTE` | `oficial` ou `simulado` (obrigatória) |
+| `ELEICOES` | ids de `config/eleicoes.toml`, separados por espaço (obrigatória) |
+| `MUNICIPIOS` | `1` inclui os arquivos de cada município (base da projeção) |
+| `DURACAO` | segundos; padrão `coletor.duracao_max_s` (5h45, cabe nas 6h do Actions) |
+| `DIR_RAW`, `CONFIG` | pasta dos snapshots e arquivo de configuração |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | envio ao Cloudflare R2 |
+| `SYNC_PASTA` | cópia para uma pasta (usada quando `R2_BUCKET` está vazia) |
+
+No GitHub Actions, o workflow **coleta** dispara pela aba Actions (perfis `ensaio` e `segundo-turno`)
+e por um cron reserva às 16h45 de 25/10.
+
+### Tabelas (data/raw → data/parquet)
+
+```
+uv run python -m apuracao.modelo construir                # processa os snapshots novos
+uv run python -m apuracao.modelo construir --loop 15      # repete a cada 15 s (noite da eleição)
+uv run python -m apuracao.modelo municipios --cm "$(ls data/raw/6257/config/mun-e006257-cm/*.json.gz | tail -1)"
+```
+
+A construção também verifica anomalias nos dados do TSE (versão velha servida pelo CDN, votos ou
+seções diminuindo, totais incoerentes) e registra cada uma como evento `anomalia`. Apagar
+`data/parquet/` e rodar de novo reconstrói tudo a partir do bruto.
+
+### Histórico e malha
+
+```
+uv run python -m apuracao.carga --ano 2022 --ano 2018 --ano 2014   # baixa e carrega os CSVs
+uv run python -m apuracao.carga --ano 2022 --sem-download          # usa os zips já baixados
+uv run python -m apuracao.carga --malha                            # malha municipal do IBGE
+```
+
+### Painel
+
+```
+uv run streamlit run apuracao/app/main.py
+```
+
+Abre em http://localhost:8501 com duas páginas: **Apuração ao vivo** e **Análise do 1º turno**.
+Variáveis opcionais: `APURACAO_DIR_PARQUET`, `APURACAO_CONFIG`, `APURACAO_MALHA` e
+`APURACAO_ELEICAO` (id da eleição aberta ao iniciar, ex.: `2026-t2-federal`).
+
+### Projeção e backtest
+
+```
+uv run python -m apuracao.projecao.backtest --ano 2022                         # presidente
+uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador
+uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador --uma-fora
+```
+
+Em 2022, a projeção de presidente errou em média 0,09 ponto (máximo 0,51) e a faixa de 90% conteve o
+resultado em todos os cenários de ordem de chegada testados; ler o percentual parcial nacional errou
+até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixando uma UF de fora).
+
+### Página compartilhável
+
+```
+uv run python -m apuracao.pagina    # gera data/pagina/abstencao-1o-turno-2026.html
+```
+
+O arquivo gerado é autocontido (dados e malha embutidos) e é publicado como página. As frases com
+afirmações sobre os dados são calculadas a partir deles.
+
+## Estrutura
+
+```
+apuracao/
+  coletor/    polling dos JSONs do TSE, snapshots, sincronização (R2 ou pasta)
+  carga/      CSVs do Portal de Dados Abertos e malha do IBGE
+  modelo/     parsers (EA20, EA12), tabelas Parquet, anomalias
+  projecao/   modelo de projeção, dados de entrada, backtest
+  app/        painel Streamlit (páginas ao vivo e análise, mapas)
+  pagina/     gerador da página compartilhável
+config/       eleicoes.toml e lista de municípios de reserva
+docs/         roteiro da noite da eleição e especificações do TSE
+scripts/      coleta.sh (coletor + sincronização)
+tests/        testes e fixtures (JSONs e CSVs reais do TSE)
+data/         dados coletados e derivados (não versionado)
+```
+
+Os testes nunca acessam a rede: o coletor é testado contra um servidor falso e os parsers contra
+fixtures reais.
