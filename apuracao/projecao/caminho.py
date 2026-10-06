@@ -192,7 +192,8 @@ def prever(sim_a: np.ndarray, sim_b: np.ndarray, ufs: list[str], serie: pd.DataF
     com = virou & tem_troca
     if com.any():
         minutos = passos[idx_troca[com]]
-        vt, vi, vs = (agora + pd.Timedelta(minutes=float(np.quantile(minutos, q))) for q in (0.5, 0.1, 0.9))
+        # arredonda ao segundo: quantis dão frações de minuto e to_pydatetime avisaria (log do modelo)
+        vt, vi, vs = ((agora + pd.Timedelta(minutes=float(np.quantile(minutos, q)))).round("s") for q in (0.5, 0.1, 0.9))
         vp = float(np.median(pct_sec[idx_troca[com], np.flatnonzero(com)]))
 
     return Caminho(
