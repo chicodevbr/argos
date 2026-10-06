@@ -62,6 +62,9 @@ uv run python -m apuracao.coletor.sync --dir-raw data/raw
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | envio ao Cloudflare R2 |
 | `SYNC_PASTA` | cópia para uma pasta (usada quando `R2_BUCKET` está vazia) |
 
+Máquina que só coleta (ex.: Mac antigo, sem `pyarrow`): `python3.12 -m venv .venv &&
+.venv/bin/pip install -r requirements-coletor.txt`. Ver [docs/mac-mini-coletor.md](docs/mac-mini-coletor.md).
+
 No GitHub Actions, o workflow **coleta** dispara pela aba Actions (perfis `ensaio` e `segundo-turno`)
 e por dois crons de reserva em 25/10: 16h45 e 21h45 (Brasília), cada run com até 5h40.
 
@@ -150,7 +153,7 @@ apuracao/
   app/        painel Streamlit (páginas ao vivo e análise, mapas)
   pagina/     gerador da página compartilhável
 config/       eleicoes.toml e lista de municípios de reserva
-docs/         roteiro da noite da eleição e especificações do TSE
+docs/         roteiro da noite, coletor reserva (Mac mini) e especificações do TSE
 scripts/      coleta.sh (coletor + sincronização)
 tests/        testes e fixtures (JSONs e CSVs reais do TSE)
 data/         dados coletados e derivados (não versionado)

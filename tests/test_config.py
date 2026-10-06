@@ -71,3 +71,18 @@ def test_codigos_2o_turno_batem_com_config_oficial(cfg):
     cdt2 = {e["cd"]: e["cdt2"] for pl in ele["pl"] if pl["c"] == "ele2026" for e in pl["e"]}
     for t1, t2 in [("2026-t1-federal", "2026-t2-federal"), ("2026-t1-estadual", "2026-t2-estadual")]:
         assert cdt2[str(cfg.eleicao_por_id(t1).codigo)] == str(cfg.eleicao_por_id(t2).codigo)
+
+
+def test_requirements_coletor_igual_ao_lock():
+    """A instalação mínima (Mac antigo, só coleta) usa as mesmas versões do uv.lock."""
+    import tomllib
+    raiz = Path(__file__).parent.parent
+    lock = {p["name"]: p["version"] for p in tomllib.loads((raiz / "uv.lock").read_text())["package"]}
+    fixados = {}
+    for linha in (raiz / "requirements-coletor.txt").read_text().splitlines():
+        linha = linha.split("#")[0].strip()
+        if linha:
+            nome, versao = linha.split("==")
+            fixados[nome] = versao
+    assert {"httpx", "pydantic", "pytest"} <= set(fixados)
+    assert {n: v for n, v in fixados.items() if lock.get(n) != v} == {}

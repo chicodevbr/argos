@@ -7,7 +7,10 @@ Urnas fecham às **17h (Brasília)**. A coleta roda em **dois lugares ao mesmo t
   recebe uma cópia só (~400 mil operações de escrita na noite), longe do limite de 1 milhão/mês
   do plano gratuito.
 
-Se um cair, o outro continua.
+- **Mac mini (reserva, opcional):** só coleta, numa máquina separada. Instalação, teste e
+  junção dos dados: [mac-mini-coletor.md](mac-mini-coletor.md).
+
+Se um cair, os outros continuam.
 
 | Eleição | Código | Cargo | Abrangência |
 |---|---|---|---|
@@ -77,6 +80,8 @@ terminar verde, com o artefato e com arquivos novos no R2. Se falhar, há tempo 
 ---
 
 ## 16h30 — disparar a coleta
+
+(Mac mini, se for usado: mesmo horário, comando em [mac-mini-coletor.md](mac-mini-coletor.md#na-noite-2510).)
 
 ### 1. GitHub Actions
 
@@ -193,4 +198,6 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
    variáveis `R2_*` exportadas, `python -m apuracao.coletor.sync`. Custa ~2 operações de escrita
    por snapshot e, na primeira vez, envia também o 1º turno que já está em `data/raw`
    (~46 mil operações).
-5. Nada de `data/` vai para o git.
+5. Mac mini, se usado: juntar a cópia dele em `data/raw` com `rsync --ignore-existing` e rodar
+   `construir` ([mac-mini-coletor.md](mac-mini-coletor.md#depois-da-noite-juntar-com-o-mac-principal)).
+6. Nada de `data/` vai para o git.
