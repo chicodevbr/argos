@@ -115,6 +115,7 @@ uv run python -m apuracao.coletor --config config/eleicoes.toml --ambiente simul
 uv run python -m apuracao.modelo construir --loop 15   # data/raw -> data/parquet (painel lê daqui)
 uv run python -m apuracao.carga --ano 2022
 uv run streamlit run apuracao/app/main.py
+uv run python -m apuracao.pagina   # página compartilhável de abstenção -> data/pagina/ (publicar como artifact)
 ```
 
 ## Como trabalhar neste repo
