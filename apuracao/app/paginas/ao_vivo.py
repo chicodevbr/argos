@@ -20,7 +20,7 @@ from apuracao.app.saude import ler_saude
 from apuracao.config import carregar
 from apuracao.modelo import consultas
 from apuracao.modelo.anomalias import verificar
-from apuracao.projecao import historico
+from apuracao.projecao import caminho, historico
 from apuracao.projecao.ao_vivo import GOVERNADOR, projecao_por_uf, projetar_ao_vivo
 
 DIR_PARQUET = Path(os.environ.get("APURACAO_DIR_PARQUET", "data/parquet"))
@@ -57,6 +57,11 @@ def conexao(dir_parquet: str):
 def projecao(_con, eleicao_id: str, cargo: int, abrangencia: str, _marca):
     """Recalcula só quando chega snapshot novo (_marca) ou a cada INTERVALO_S."""
     return projetar_ao_vivo(_con, cfg, cfg.eleicao_por_id(eleicao_id), cargo, abrangencia)
+
+
+@st.cache_data(ttl=INTERVALO_S, show_spinner=False)
+def caminho_apuracao(_con, eleicao_codigo: int, _proj, _marca):
+    return caminho.prever_ao_vivo(_con, eleicao_codigo, _proj)
 
 
 @st.cache_data(ttl=INTERVALO_S, show_spinner=False)
@@ -179,9 +184,12 @@ def painel() -> None:
             st.dataframe(an[["tipo", "eleicao", "cargo", "abrangencia", "detalhe", "arquivo_raw"]],
                          hide_index=True, use_container_width=True)
 
-    proj = projecao(con, eleicao.id, cargo, abr, marca_dados(con, eleicao.codigo))
+    marca = marca_dados(con, eleicao.codigo)
+    proj = projecao(con, eleicao.id, cargo, abr, marca)
     if proj:
         mostrar_projecao(proj, cor_de, t, cargo, eleicao.codigo)
+        if cargo != GOVERNADOR:
+            mostrar_caminho(con, eleicao.codigo, cargo, proj, cor_de, t, marca)
 
     esq, dir_ = st.columns([2, 3])
     with esq:
@@ -308,6 +316,119 @@ def mostrar_projecao(proj, cor_de: dict, t: str, cargo: int, eleicao_codigo: int
                    "Backtest com 2022: erro médio de 0,09 ponto; a faixa conteve o resultado real em todos os cenários "
                    "de ordem de chegada testados.")
         mostrar_historico(eleicao_codigo, proj, cor_de, t)
+
+
+def hora(ts) -> str:
+    """Horário UTC (sem fuso) -> 'HHhMM' de Brasília."""
+    return f"{pd.Timestamp(ts) - pd.Timedelta(hours=3):%Hh%M}"
+
+
+def milhoes(v: float) -> str:
+    return f"{v / 1e6:,.1f} milhões".replace(".", ",") if v >= 1e6 else f"{v / 1e3:,.0f} mil".replace(",", ".")
+
+
+def mostrar_caminho(con, eleicao_codigo: int, cargo: int, proj, cor_de: dict, t: str, marca) -> None:
+    """Como a contagem oficial deve evoluir: o que falta, virada (se houver), horário e 2022."""
+    st.markdown("**Caminho da apuração**")
+    a, b = proj.nome_a, proj.nome_b
+    c, falta = caminho_apuracao(con, eleicao_codigo, proj, marca)
+
+    evo = dados.evolucao(con, eleicao_codigo, cargo, "br", [proj.num_a, proj.num_b])
+    obs = pd.DataFrame(columns=["ts", "pct"])
+    if not evo.empty:
+        w = evo.pivot_table(index="ts_brasilia", columns="numero", values="votos", aggfunc="first").dropna()
+        if proj.num_a in w and proj.num_b in w:
+            tot = (w[proj.num_a] + w[proj.num_b]).where(lambda x: x > 0)
+            obs = pd.DataFrame({"ts": w.index, "pct": (100 * w[proj.num_a] / tot).to_numpy()}).dropna()
+    ja = caminho.viradas([f"{x:%Hh%M}" for x in obs["ts"]], obs["pct"].tolist()) if len(obs) > 1 else []
+    if ja:
+        st.caption(f"Nesta noite o líder da contagem já mudou às {', '.join(ja)} (Brasília).")
+
+    # 1) O que falta (só da projeção; não depende de ritmo)
+    if not falta.empty and falta.attrs.get("pct_a_contado") is not None:
+        a_lidera = falta.attrs["pct_a_contado"] >= 50
+        lider, atras = (a, b) if a_lidera else (b, a)
+        br = falta.set_index("regiao").loc["Brasil"]
+        precisa_a = falta.attrs["pct_a_precisa"]
+        if br["votos_falta"] >= 1000 and precisa_a is not None:
+            # fatias do candidato que está atrás
+            precisa = precisa_a if not a_lidera else 100 - precisa_a
+            proj_atras = (br["pct_a_falta"], br["pct_a_falta_inf"], br["pct_a_falta_sup"]) if not a_lidera else \
+                (100 - br["pct_a_falta"], 100 - br["pct_a_falta_sup"], 100 - br["pct_a_falta_inf"])
+            prob = (1 - proj.r.prob_a_vence) if a_lidera else proj.r.prob_a_vence
+            st.markdown(
+                f"{lider} lidera a contagem. Faltam cerca de **{milhoes(br['votos_falta'])}** de votos válidos; "
+                f"para empatar, {atras} precisa de **{pct(precisa)}** deles. A projeção dá a {atras} "
+                f"**{pct(proj_atras[0])}** do que falta (faixa de 90%: {pct(proj_atras[1])} a {pct(proj_atras[2])}). "
+                f"**Chance de virada: {100 * prob:.0f}%.**")
+            # 2) Horário, só com ritmo medido em todas as UFs
+            if c is not None and prob >= 0.5 and c.virada_ts is not None:
+                if c.ufs_sem_ritmo or c.pct_secoes_atual < 10:
+                    motivo = (f"UFs sem ritmo medido ({', '.join(u.upper() for u in c.ufs_sem_ritmo)})"
+                              if c.ufs_sem_ritmo else "menos de 10% das seções apuradas")
+                    st.caption(f"Horário da virada não estimado: {motivo}.")
+                else:
+                    st.markdown(f"Horário provável da virada: **{hora(c.virada_ts)}** "
+                                f"(entre {hora(c.virada_ts_inf)} e {hora(c.virada_ts_sup)}), com cerca de "
+                                f"{c.virada_pct_secoes:.0f}% das seções.")
+                    st.caption("O horário supõe que cada UF segue no ritmo dos últimos 30 min. Em simulações, "
+                               "acertou dentro do intervalo, mas tende a sair 20-30 min cedo quando a virada "
+                               "acontece no fim da apuração (que desacelera).")
+            if c is not None and c.hora_99 is not None and not c.ufs_sem_ritmo and c.pct_secoes_atual >= 10:
+                st.caption(f"Contagem deve chegar a 99% das seções por volta das {hora(c.hora_99)}.")
+            tab = falta[(falta["regiao"] != "Brasil") & (falta["votos_falta"] >= 1000)].sort_values(
+                "votos_falta", ascending=False)
+            if not tab.empty:
+                st.dataframe(
+                    pd.DataFrame({
+                        "Região": tab["regiao"], "Votos válidos a contar": [milhoes(v) for v in tab["votos_falta"]],
+                        f"{a} no que falta": [pct(v) for v in tab["pct_a_falta"]],
+                        "faixa de 90%": [f"{pct(i)} – {pct(s)}" for i, s in
+                                         zip(tab["pct_a_falta_inf"], tab["pct_a_falta_sup"])],
+                    }), hide_index=True, use_container_width=True)
+
+    # 3) Gráfico: contagem até agora, previsão e 2022
+    cor = cor_de.get(proj.num_a, CINZA[t])
+    nome_obs, nome_prev = "2026", "2026 (previsão)"
+    camadas = []
+    linhas = [obs.assign(serie=nome_obs).rename(columns={"pct": "pct_a"})] if len(obs) else []
+    if c is not None and not c.ufs_sem_ritmo:
+        cv = c.curva.assign(ts=c.curva["ts"] - pd.Timedelta(hours=3), serie=nome_prev)
+        camadas.append(alt.Chart(cv).mark_area(opacity=0.15, color=cor).encode(
+            x="ts:T", y="pct_a_inf:Q", y2="pct_a_sup:Q"))
+        linhas.append(cv[["ts", "pct_a", "serie"]])
+    elif c is not None:
+        st.caption("Curva prevista oculta enquanto houver UF sem ritmo medido "
+                   f"({', '.join(u.upper() for u in c.ufs_sem_ritmo)}).")
+    ref = caminho.referencia_2022(proj.num_a)
+    nome_ref = None
+    if not ref.empty and len(obs):
+        dia = pd.Timestamp(obs["ts"].iloc[0]).normalize()
+        nome_ref = "2022"
+        linhas.append(pd.DataFrame({"ts": dia + pd.to_timedelta(ref["hora"] + ":00"),
+                                    "pct_a": ref["pct_validos"], "serie": nome_ref}))
+    if not linhas:
+        return
+    df = pd.concat(linhas, ignore_index=True)
+    dominio = [n for n in (nome_obs, nome_prev, nome_ref) if n and n in set(df["serie"])]
+    estilo = {nome_obs: (cor, [1, 0]), nome_prev: (cor, [6, 4]), nome_ref: (CINZA[t], [1, 0])}
+    camadas.append(alt.Chart(df).mark_line(strokeWidth=2).encode(
+        x=alt.X("ts:T", title="Horário (Brasília)", axis=alt.Axis(format="%H:%M")),
+        y=alt.Y("pct_a:Q", title=f"{a}: % dos válidos contados", scale=alt.Scale(zero=False)),
+        color=alt.Color("serie:N", title=None, legend=alt.Legend(orient="top"),
+                        scale=alt.Scale(domain=dominio, range=[estilo[n][0] for n in dominio])),
+        strokeDash=alt.StrokeDash("serie:N", legend=None,
+                                  scale=alt.Scale(domain=dominio, range=[estilo[n][1] for n in dominio])),
+        tooltip=[alt.Tooltip("ts:T", title="Horário", format="%H:%M"), alt.Tooltip("serie:N", title="Série"),
+                 alt.Tooltip("pct_a:Q", title=f"{a} (%)", format=".2f")],
+    ))
+    camadas.append(alt.Chart(pd.DataFrame({"y": [50]})).mark_rule(strokeDash=[4, 4], color=TEXTO[t]).encode(y="y:Q"))
+    st.altair_chart(alt.layer(*camadas).properties(height=260), use_container_width=True)
+    if nome_ref:
+        v22 = caminho.viradas(ref["hora"].tolist(), ref["pct_validos"].tolist())
+        st.caption(f"Cinza: 2º turno de 2022, candidato de mesmo número ({proj.num_a}), minuto a minuto "
+                   f"(gráfico do g1 com dados do TSE). Em 2022 o líder da contagem mudou às "
+                   f"{' e às '.join(h.replace(':', 'h') for h in v22)}. Faixa: 90% da previsão.")
 
 
 def mostrar_historico(eleicao_codigo: int, proj, cor_de: dict, t: str) -> None:

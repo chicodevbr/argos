@@ -17,6 +17,7 @@ import pandas as pd
 
 from apuracao.config import Config
 from apuracao.modelo import consultas
+from apuracao.projecao import caminho
 from apuracao.projecao.ao_vivo import PRESIDENTE, projetar_ao_vivo
 
 ARQUIVO = Path("data/projecao/historico.jsonl")
@@ -59,11 +60,26 @@ def registrar(con, cfg: Config, caminho: Path = ARQUIVO, n_sim: int = 1000) -> i
             "pct_a_inf": round(p.r.pct_a_inf, 3), "pct_a_sup": round(p.r.pct_a_sup, 3),
             "prob_a_vence": round(p.r.prob_a_vence, 4),
         }
+        linha.update(_caminho(con, e.codigo, p))
         caminho.parent.mkdir(parents=True, exist_ok=True)
         with open(caminho, "a") as f:
             f.write(json.dumps(linha, ensure_ascii=False) + "\n")
         gravadas += 1
     return gravadas
+
+
+def _caminho(con, eleicao: int, p) -> dict:
+    """Previsão de virada (horários em UTC); vazio se não der para prever. Nunca levanta erro."""
+    try:
+        c, _ = caminho.prever_ao_vivo(con, eleicao, p)
+    except Exception:
+        return {}
+    if c is None:
+        return {}
+    iso = lambda ts: ts.isoformat(timespec="minutes") if ts is not None else None  # noqa: E731
+    return {"prob_virada": round(c.prob_virada, 4), "virada_ts": iso(c.virada_ts),
+            "virada_ts_inf": iso(c.virada_ts_inf), "virada_ts_sup": iso(c.virada_ts_sup),
+            "hora_99": iso(c.hora_99), "ufs_sem_ritmo": c.ufs_sem_ritmo}
 
 
 def ler(caminho: Path, eleicao: int) -> pd.DataFrame:

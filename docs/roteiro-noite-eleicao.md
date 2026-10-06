@@ -139,6 +139,10 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
   o gráfico "ao longo da noite" mostra a evolução da projeção; o terminal 2 grava cada cálculo em
   `data/projecao/historico.jsonl` (base para avaliar a projeção depois da eleição).
   Antes de haver municípios contados, a faixa é larga e a projeção ≈ 1º turno — esperado.
+- **Caminho da apuração** (presidente → BR): quanto falta contar por região, quanto o candidato que
+  está atrás precisa do que falta e a chance de virada, além da curva de 2022 (g1/TSE) para comparar.
+  O horário da virada só aparece com ritmo medido em todas as UFs e mais de 10% das seções; ele
+  tende a sair 20-30 min cedo se a virada ocorrer no fim. Confie mais no "quanto falta" que no horário.
 
 ---
 

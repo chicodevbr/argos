@@ -76,6 +76,10 @@ class Projecao:
     votos_b: float
     pct_contado: float         # % dos votos válidos do 1º turno em municípios já com dados
     por_grupo: pd.DataFrame    # projeção por grupo do nível mais fino
+    # votos finais simulados por grupo (n_sim x grupos, na ordem de por_grupo); usados
+    # pelo caminho da apuração (caminho.py)
+    sim_a_grupo: np.ndarray | None = None
+    sim_b_grupo: np.ndarray | None = None
 
 
 @dataclass
@@ -220,9 +224,12 @@ def projetar(base: pd.DataFrame, atual: pd.DataFrame, params: Parametros | None 
     grupos = _rotulo(df, p.niveis) if p.niveis else pd.Series("BR", index=df.index)
     cod, uniq = pd.factorize(grupos)
     por_grupo = []
+    sim_a_grupo = np.zeros((n, len(uniq)))
+    sim_b_grupo = np.zeros((n, len(uniq)))
     for k, nome in enumerate(uniq):
         m = cod == k
         ga, gb = a[:, m].sum(axis=1), b[:, m].sum(axis=1)
+        sim_a_grupo[:, k], sim_b_grupo[:, k] = ga, gb
         gp = 100 * ga / np.where(ga + gb > 0, ga + gb, 1)
         por_grupo.append({
             "grupo": nome, "pct_a": float(np.median(gp)),
@@ -239,6 +246,8 @@ def projetar(base: pd.DataFrame, atual: pd.DataFrame, params: Parametros | None 
         votos_b=float(np.median(vb)),
         pct_contado=float(100 * vv1[contado].sum() / max(vv1.sum(), 1)),
         por_grupo=pd.DataFrame(por_grupo),
+        sim_a_grupo=sim_a_grupo,
+        sim_b_grupo=sim_b_grupo,
     )
 
 

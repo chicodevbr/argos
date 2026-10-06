@@ -106,6 +106,13 @@ uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador
 uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador --uma-fora
 ```
 
+No 2º turno de presidente, o painel mostra também o **caminho da apuração**
+(`apuracao/projecao/caminho.py`): quanto falta contar por região, quanto o candidato que está atrás
+precisa do que falta, a chance de virada e o horário provável, comparados com a curva minuto a minuto
+de 2022 (`config/referencias/apuracao-2022-t2-presidente.csv`, extraída do gráfico do g1 com dados do
+TSE). O horário supõe que cada UF segue no ritmo dos últimos 30 min; em simulações, tende a sair
+20-30 min cedo quando a virada acontece no fim da apuração.
+
 Em 2022, a projeção de presidente errou em média 0,09 ponto (máximo 0,51) e a faixa de 90% conteve o
 resultado em todos os cenários de ordem de chegada testados; ler o percentual parcial nacional errou
 até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixando uma UF de fora).
