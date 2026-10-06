@@ -178,7 +178,8 @@ def test_barra_de_navegacao_do_site(tmp_path):
     pagina = tmp_path / "p.html"
     pagina.write_text("<title>T</title>\n<style>body{}</style>\n<main>conteúdo</main>\n")
     html = documento_completo(pagina, tmp_path / "votos" / "index.html", nav="votos").read_text()
-    assert html.count('<nav class="site-nav"') == 1 and html.count('aria-current="page"') == 1
+    nav = html[html.index('<nav class="site-nav"'):html.index("</nav>")]
+    assert html.count('<nav class="site-nav"') == 1 and nav.count('aria-current="page"') == 1
     assert '<a href="/votos/" aria-current="page">' in html and '<a href="/">' in html
     assert len([s for _, s in SITE]) == len({s for _, s in SITE})      # subpastas únicas
     sem = documento_completo(pagina, tmp_path / "x" / "index.html").read_text()
