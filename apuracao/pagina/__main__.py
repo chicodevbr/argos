@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import regioes
+from apuracao.pagina import regioes, votos
 from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
@@ -26,11 +26,36 @@ ESQUELETO = """<!doctype html>
 """
 
 
-def documento_completo(pagina: Path, destino: Path) -> Path:
-    """Copia a página como documento HTML completo (o <title> e o <style> dela ficam no <head>)."""
+# Páginas do site estático (Netlify), na ordem da barra de navegação: (rótulo, subpasta).
+SITE = [("Abstenção · Brasília", ""), ("Abstenção · Rio", "rio-de-janeiro"),
+        ("Abstenção · Estado do Rio", "estado-do-rio"), ("Votos · Brasília", "votos")]
+
+NAV_CSS = """<style>
+.site-nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; gap: 4px;
+  overflow-x: auto; padding: 8px 20px; background: var(--superficie); border-bottom: 1px solid var(--linha);
+  margin: -32px -20px 28px;  /* de borda a borda: desfaz o padding do body das páginas */
+  font: 500 .85rem var(--texto); }
+.site-nav a { color: var(--tinta-2); text-decoration: none; padding: 6px 10px; border-radius: var(--raio); white-space: nowrap; }
+.site-nav a:hover { background: var(--fundo); color: var(--tinta); }
+.site-nav a[aria-current="page"] { background: var(--tinta); color: var(--superficie); }
+.site-nav a:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+</style>
+"""
+
+
+def barra(atual: str) -> str:
+    links = "".join(f'<a href="/{sub + "/" if sub else ""}"{' aria-current="page"' if sub == atual else ""}>{rot}</a>'
+                    for rot, sub in SITE)
+    return f'<nav class="site-nav" aria-label="Páginas">{links}</nav>\n'
+
+
+def documento_completo(pagina: Path, destino: Path, nav: str | None = None) -> Path:
+    """Copia a página como documento HTML completo (o <title> e o <style> dela ficam no <head>).
+    `nav`: subpasta da página no site; acrescenta a barra com as páginas de SITE."""
     corpo = Path(pagina).read_text()
     i = corpo.index("</style>") + len("</style>")
-    html = ESQUELETO + corpo[:i] + "\n</head>\n<body>\n" + corpo[i:] + "\n</body>\n</html>\n"
+    extra_head, topo = (NAV_CSS, barra(nav)) if nav is not None else ("", "")
+    html = ESQUELETO + corpo[:i] + "\n" + extra_head + "</head>\n<body>\n" + topo + corpo[i:] + "\n</body>\n</html>\n"
     destino = Path(destino)
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(html)
@@ -44,7 +69,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--saida", type=Path, default=None)
     ap.add_argument("--recorte", choices=sorted(RECORTES), help="página por região (Brasília, cidade ou estado do Rio)")
     ap.add_argument("--brasilia", action="store_true", help="atalho para --recorte brasilia")
+    ap.add_argument("--votos", action="store_true", help="com --recorte: página de votos por candidato")
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
+    ap.add_argument("--sem-barra", action="store_true", help="--site sem a barra de navegação entre as páginas")
     ap.add_argument("--site", type=Path, default=None,
                     help="também grava <pasta>/[subpasta do recorte/]index.html como documento completo")
     args = ap.parse_args(argv)
@@ -53,13 +80,18 @@ def main(argv: list[str] | None = None) -> int:
     if recorte:
         cfg = carregar(args.config)
         r = RECORTES[recorte](cfg)
-        sub = r.subpasta
-        saida = regioes.gerar(r, cfg, args.dir_parquet, args.saida or Path("data/pagina") / r.saida)
+        if args.votos:
+            sub = f"{r.subpasta}/votos".lstrip("/") if r.subpasta else "votos"
+            saida = votos.gerar(r, cfg, args.dir_parquet,
+                                args.saida or Path("data/pagina") / r.saida.replace("abstencao", "votos"))
+        else:
+            sub = r.subpasta
+            saida = regioes.gerar(r, cfg, args.dir_parquet, args.saida or Path("data/pagina") / r.saida)
     else:
         saida = gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/abstencao-1o-turno-2026.html"))
     print(f"página gerada: {saida} ({saida.stat().st_size / 1e6:.1f} MB)")
     if args.site:
-        index = documento_completo(saida, args.site / sub / "index.html")
+        index = documento_completo(saida, args.site / sub / "index.html", None if args.sem_barra else sub)
         print(f"site: {index}")
     return 0
 

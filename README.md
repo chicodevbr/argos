@@ -141,10 +141,14 @@ uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df --regioes
 uv run python -m apuracao.pagina --recorte brasilia --site site    # Brasília -> site/index.html
 uv run python -m apuracao.pagina --recorte rio --site site         # cidade do Rio -> site/rio-de-janeiro/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
+uv run python -m apuracao.pagina --recorte brasilia --votos --site site   # votos por candidato -> site/votos/
 ```
 
 **Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e
-versionado, sem build no Netlify. Para atualizar, gere com `--site site`, faça commit e push.
+versionado, sem build no Netlify. Para atualizar, gere com `--site site`, faça commit e push. Com `--site`, cada página
+ganha uma barra de navegação entre as páginas listadas em `SITE` (`apuracao/pagina/__main__.py`);
+`--sem-barra` gera sem ela. Os dados de votos por seção vêm de `votacao_secao_{ano}_BR.zip`
+(Portal de Dados Abertos, baixado em `data/raw/historico/{ano}/`).
 
 **Abstenção por região** (`apuracao/pagina/regioes.py`, lugares em `recortes.py`): detalhe por seção
 (presidente, com os eleitores em trânsito; a soma confere com os totais oficiais). Brasília e a cidade

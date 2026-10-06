@@ -56,6 +56,8 @@ class Recorte:
     extras: dict[str, str] = field(default_factory=dict)      # nome -> texto extra (ex.: bairros)
     metodo: list[str] = field(default_factory=list)           # parágrafos do método
     cortes: list[float] | None = None  # faixas do mapa (5 cortes, 6 cores); None = pelos dados
+    titulo_votos: str = ""      # página de votos por candidato (pagina/votos.py)
+    metodo_votos: list[str] = field(default_factory=list)
     subpasta: str = ""          # no site estático: "" = raiz
     saida: str = ""             # arquivo padrão em data/pagina/
 

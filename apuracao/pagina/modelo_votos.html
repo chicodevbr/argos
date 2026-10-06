@@ -1,0 +1,398 @@
+<title>__TITULO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), irmão das páginas de abstenção: todos os candidatos no
+   lugar (2026 e 2022), mapa da margem 13 x 22, barras por unidade e tabela. Mesmos tokens e paletas;
+   13 e 22 usam os polos do divergente validado (azul / vermelho) em toda a página, para o mapa da
+   margem e as barras falarem a mesma cor; demais candidatos em cinza neutro. */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --dado-atual: #2a78d6;   /* 2026: slot 1 da paleta validada */
+  --dado-base: #8a8883;    /* 2022: referência neutra (validado: contraste e CVD) */
+  --alta: #b4441f;
+  --baixa: #1f6f4f;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --c13: #2a78d6; --c22: #b3302f; --demais: #b5b3ad; --sobre-cor: #ffffff;
+  --seq-1: #b7d3f6; --seq-2: #86b6ef; --seq-3: #5598e7; --seq-4: #2a78d6; --seq-5: #1c5cab; --seq-6: #104281;
+  --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
+  --contorno: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c13: #3987e5; --c22: #e66767; --demais: #5c5b56; --sobre-cor: #111317;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
+    --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
+    --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+    --contorno: #111317;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+    --c13: #3987e5; --c22: #e66767; --demais: #5c5b56; --sobre-cor: #111317;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
+  --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
+  --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+  --contorno: #111317;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.indicador.destaque .valor { color: var(--dado-atual); }
+.variacao { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+.variacao.piora { color: var(--alta); } .variacao.melhora { color: var(--baixa); }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
+svg .grade line { stroke: var(--linha); }
+svg .forte { fill: var(--tinta); font-weight: 600; }
+.legenda { display: flex; flex-wrap: wrap; gap: 16px; font-size: .875rem; color: var(--tinta-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+button:focus-visible, th:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+
+.mapa-grade { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mapa-grade { grid-template-columns: 1fr; } }
+#mapa path { stroke: var(--contorno); stroke-width: 1; cursor: pointer; }
+#mapa path:hover, #mapa path.ativo { stroke: var(--tinta); stroke-width: 2; }
+.legenda-mapa { display: grid; gap: 6px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda-mapa span { display: inline-flex; align-items: center; gap: 8px; }
+.legenda-mapa i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; border: 1px solid var(--linha); }
+.destaques { display: grid; gap: 4px; font-size: .9rem; }
+.destaques b { font-weight: 600; }
+
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+td.forte { font-weight: 600; color: var(--tinta); }
+.pos { color: var(--alta); } .neg { color: var(--baixa); }
+.pequena { color: var(--apagado); font-size: .78rem; display: block; white-space: normal; max-width: 46ch; line-height: 1.35; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 260px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
+
+.colunas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 760px) { .colunas { grid-template-columns: 1fr; } }
+.candidatos { display: grid; gap: 6px; font-size: .9rem; }
+.candidato { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 4.2rem; gap: 10px; align-items: center; }
+.candidato .barra { height: 14px; background: var(--linha); border-radius: 3px; overflow: hidden; }
+.candidato .barra i { display: block; height: 100%; border-radius: 3px; }
+.candidato .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.candidato .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empilhadas text.dentro { fill: var(--sobre-cor); font-weight: 600; }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo" id="sobretitulo">Eleições 2026 · Presidente · 1º turno (4 de outubro)</span>
+    <h1>__TITULO__</h1>
+    <p class="lede" id="lede"></p>
+    <p class="nota" id="comparacao"></p>
+  </header>
+
+  <section class="quadro" aria-labelledby="t-cands">
+    <h2 id="t-cands">Todos os candidatos</h2>
+    <p class="nota" id="nota-demais"></p>
+    <div class="colunas">
+      <div><span class="rotulo">2026</span><div class="candidatos" id="cands-2026"></div><p class="nota" id="bn-2026"></p></div>
+      <div><span class="rotulo">2022</span><div class="candidatos" id="cands-2022"></div><p class="nota" id="bn-2022"></p></div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-mapa">
+    <div class="quadro-topo">
+      <h2 id="t-mapa">Mapa</h2>
+      <div class="segmentado" role="group" aria-label="O que colorir">
+        <button data-m="2026" aria-pressed="true">Margem 2026</button>
+        <button data-m="2022" aria-pressed="false">Margem 2022</button>
+        <button data-m="var" aria-pressed="false">Mudança</button>
+      </div>
+    </div>
+    <p class="nota" id="mapa-nota"></p>
+    <div class="mapa-grade">
+      <svg id="mapa" role="img" aria-label="Mapa da margem entre os candidatos"></svg>
+      <div style="display:grid;gap:20px">
+        <div class="legenda-mapa" id="legenda-mapa"></div>
+        <div class="destaques nota" id="destaques"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-barras">
+    <div class="quadro-topo">
+      <h2 id="t-barras">Divisão dos votos válidos</h2>
+      <div class="segmentado" role="group" aria-label="Ano das barras">
+        <button data-b="2026" aria-pressed="true">2026</button>
+        <button data-b="2022" aria-pressed="false">2022</button>
+      </div>
+    </div>
+    <p class="nota" id="nota-ras"></p>
+    <div class="legenda" id="legenda-barras"></div>
+    <svg id="barras" class="empilhadas" role="img" aria-label="Divisão dos votos válidos por unidade"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <div class="quadro-topo">
+      <h2 id="t-tabela">Tabela</h2>
+      <div class="segmentado" role="group" aria-label="Ano da tabela">
+        <button data-t="2026" aria-pressed="true">2026</button>
+        <button data-t="2022" aria-pressed="false">2022</button>
+      </div>
+    </div>
+    <p class="nota">Percentual dos votos válidos. Clique no cabeçalho para ordenar.</p>
+    <div class="tabela"><table id="tabela"></table></div>
+  </section>
+
+  <footer class="metodo nota" id="metodo">
+    <span class="rotulo">Método e fontes</span>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+const M = D.meta, A = D.A, B = D.B;
+const fmt = (v, c = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : v.toLocaleString("pt-BR");
+const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const varCand = n => n === A ? "--c13" : n === B ? "--c22" : "--demais";
+const corCand = n => cor(varCand(n));   // SVG: valor resolvido (redesenha ao trocar o tema)
+const porChave = new Map(D.ras.map(r => [r.chave, r]));
+const nomeAno = (a, n) => (D.anos[a].candidatos.find(c => c.numero === n) || {}).nome || String(n);
+const fem = M.unidade.startsWith("região");
+
+document.getElementById("sobretitulo").textContent += " · " + M.rotulo;
+document.getElementById("lede").textContent = D.textos.lede;
+document.getElementById("comparacao").textContent = D.textos.comparacao;
+document.getElementById("nota-demais").textContent = D.textos.demais;
+document.getElementById("t-cands").textContent = `Todos os candidatos: ${M.nome_total}`;
+document.getElementById("t-mapa").textContent = D.textos.titulo_mapa;
+document.getElementById("t-tabela").textContent = `${fem ? "Todas as" : "Todos os"} ${M.unidades}`;
+document.getElementById("nota-ras").textContent = D.textos.nota_ras;
+
+// --- Todos os candidatos -----------------------------------------------------------
+for (const a of ["2026", "2022"]) {
+  const alvo = document.getElementById("cands-" + a);
+  const max = Math.max(...D.anos[a].candidatos.map(c => c.pct));
+  for (const c of D.anos[a].candidatos) {
+    const el = document.createElement("div");
+    el.className = "candidato";
+    el.innerHTML = `<span class="n"></span><span class="barra"><i></i></span><span class="v"></span>`;
+    el.querySelector(".n").textContent = c.nome;
+    el.querySelector(".n").title = `${c.nome} (${c.numero}): ${inteiro(c.votos)} votos`;
+    el.querySelector("i").style.width = (100 * c.pct / max) + "%";
+    el.querySelector("i").style.background = `var(${varCand(c.numero)})`;   // HTML: segue o tema sozinho
+    el.querySelector(".v").textContent = fmt(c.pct) + "%";
+    alvo.appendChild(el);
+  }
+  const x = D.anos[a];
+  document.getElementById("bn-" + a).textContent = `${inteiro(x.validos)} votos válidos; ${inteiro(x.brancos)} brancos e ${inteiro(x.nulos)} nulos.`;
+}
+
+// --- Dica ------------------------------------------------------------------------
+const dica = document.getElementById("dica");
+function mostrarDica(ev, r) {
+  dica.hidden = false;
+  const linha = a => r[a] ? `${a}: ${nomeAno(a, A)} ${fmt(r[a].pct[A], 1)}% · ${nomeAno(a, B)} ${fmt(r[a].pct[B], 1)}% · demais ${fmt(r[a].demais, 1)}%` : `${a}: –`;
+  dica.innerHTML = `<b></b><br><span class="l1"></span><br><span class="l2"></span><span class="extra"></span>`;
+  dica.querySelector("b").textContent = r.ra;
+  dica.querySelector(".l1").textContent = linha("2026");
+  dica.querySelector(".l2").textContent = linha("2022");
+  if (r.extra) { const e = dica.querySelector(".extra"); e.textContent = r.extra; e.style.display = "block"; e.style.marginTop = "4px"; e.style.opacity = ".85"; }
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 270) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+const esconderDica = () => { dica.hidden = true; };
+
+// --- Mapa ------------------------------------------------------------------------
+// margem = % do 13 − % do 22 (pontos). Divergente validada: azul = 13 à frente, vermelho = 22 à frente.
+const CORES_DIV = ["--div-5", "--div-4", "--div-3", "--div-2", "--div-1"];
+const MAPAS = {
+  "2026": { cortes: [-20, -5, 5, 20], valor: r => r["2026"]?.margem, nota: () => `Margem em 2026: % de ${nomeAno("2026", A)} menos % de ${nomeAno("2026", B)}, em pontos.` },
+  "2022": { cortes: [-20, -5, 5, 20], valor: r => r["2022"]?.margem, nota: () => `Margem em 2022: % de ${nomeAno("2022", A)} menos % de ${nomeAno("2022", B)}, em pontos.` },
+  "var": { cortes: [-4, -1, 1, 4], valor: r => r["2022"] ? r["2026"].margem - r["2022"].margem : null,
+           nota: () => `Mudança da margem de 2022 para 2026, em pontos. Azul: ${nomeAno("2026", A)} ganhou terreno; vermelho: o nº ${B}.` },
+};
+function rotulosMapa(m) {
+  const c = MAPAS[m].cortes, f = v => fmt(Math.abs(v), 0);
+  if (m === "var") return [`nº ${B} ganhou ${f(c[0])}+ pontos`, `nº ${B} ganhou ${f(c[1])} a ${f(c[0])}`, `praticamente igual (±${f(c[2])})`, `${nomeAno("2026", A)} ganhou ${f(c[2])} a ${f(c[3])}`, `${nomeAno("2026", A)} ganhou ${f(c[3])}+ pontos`];
+  const a = m, na = nomeAno(a, A), nb = nomeAno(a, B);
+  return [`${nb} à frente por ${f(c[0])}+`, `${nb} à frente por ${f(c[1])} a ${f(c[0])}`, `diferença até ${f(c[2])}`, `${na} à frente por ${f(c[2])} a ${f(c[3])}`, `${na} à frente por ${f(c[3])}+`];
+}
+let modo = "2026";
+function desenharMapa() {
+  const svg = d3.select("#mapa");
+  const largura = svg.node().getBoundingClientRect().width || 700;
+  const altura = Math.round(largura * 0.62);
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const caminho = d3.geoPath(d3.geoMercator().fitSize([largura, altura], MALHA));
+  const m = MAPAS[modo];
+  const corDe = v => v == null ? cor("--linha") : cor(CORES_DIV[d3.bisect(m.cortes, v)]);
+  svg.append("g").selectAll("path").data(MALHA.features).join("path")
+    .attr("d", caminho)
+    .attr("fill", f => { const r = porChave.get(f.properties.chave); return r ? corDe(m.valor(r)) : cor("--linha"); })
+    .attr("tabindex", 0)
+    .attr("aria-label", f => { const r = porChave.get(f.properties.chave); return r ? `${r.ra}: margem ${sinal(m.valor(r))}` : f.properties.chave; })
+    .on("mousemove", (ev, f) => { const r = porChave.get(f.properties.chave); if (r) mostrarDica(ev, r); })
+    .on("mouseleave", esconderDica)
+    .on("focus", function (ev, f) { const r = porChave.get(f.properties.chave); const b = this.getBoundingClientRect();
+      if (r) mostrarDica({ clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }, r); d3.select(this).classed("ativo", true); })
+    .on("blur", function () { esconderDica(); d3.select(this).classed("ativo", false); });
+  document.getElementById("mapa-nota").textContent = m.nota();
+  const leg = document.getElementById("legenda-mapa"); leg.innerHTML = "";
+  rotulosMapa(modo).forEach((t, i) => {
+    const n = D.ras.filter(r => { const v = m.valor(r); return v != null && d3.bisect(m.cortes, v) === i; }).length;
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = cor(CORES_DIV[i]); s.querySelector("span").textContent = `${t} (${n})`;
+    leg.appendChild(s);
+  });
+  const ord = D.ras.filter(r => m.valor(r) != null).sort((a, b) => m.valor(a) - m.valor(b));
+  const des = document.getElementById("destaques"); des.innerHTML = "";
+  const titulos = modo === "var" ? [`Mais a favor do nº ${B}`, `Mais a favor de ${nomeAno("2026", A)}`] : [`Maior vantagem de ${nomeAno(modo, B)}`, `Melhor para ${nomeAno(modo, A)}`];
+  for (const [t, lista] of [[titulos[0], ord.slice(0, 3)], [titulos[1], ord.slice(-3).reverse()]]) {
+    const b = document.createElement("b"); b.textContent = t; des.appendChild(b);
+    for (const r of lista) { const d = document.createElement("span"); d.textContent = `${r.ra}: ${sinal(m.valor(r))}`; des.appendChild(d); }
+  }
+}
+for (const b of document.querySelectorAll("[data-m]")) b.addEventListener("click", () => {
+  modo = b.dataset.m; for (const o of document.querySelectorAll("[data-m]")) o.setAttribute("aria-pressed", String(o === b)); desenharMapa(); });
+
+// --- Barras empilhadas -----------------------------------------------------------
+let anoBarras = "2026";
+function desenharBarras() {
+  const a = anoBarras;
+  const leg = document.getElementById("legenda-barras"); leg.innerHTML = "";
+  for (const [n, rot] of [[A, nomeAno(a, A)], [0, "demais candidatos"], [B, nomeAno(a, B)]]) {
+    const s = document.createElement("span"); s.innerHTML = "<i></i><b></b>";
+    s.querySelector("i").style.background = `var(${varCand(n)})`; s.querySelector("b").textContent = rot; s.querySelector("b").style.fontWeight = "500";
+    leg.appendChild(s);
+  }
+  const svg = d3.select("#barras");
+  const largura = svg.node().getBoundingClientRect().width || 900;
+  const linha = D.ras.length > 50 ? 16 : 24, esq = Math.min(190, largura * 0.36), topo = 8;
+  const lista = D.ras.filter(r => r[a]);
+  const altura = topo + lista.length * linha + 24;
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const x = d3.scaleLinear().domain([0, 100]).range([esq, largura - 8]);
+  lista.forEach((r, i) => {
+    const y = topo + i * linha, h = linha - 6, v = r[a];
+    const g = svg.append("g").on("mousemove", ev => mostrarDica(ev, r)).on("mouseleave", esconderDica);
+    g.append("text").attr("x", esq - 10).attr("y", y + h / 2 + 4).attr("text-anchor", "end").text(r.ra);
+    const partes = [[A, v.pct[A]], [0, v.demais], [B, v.pct[B]]];
+    let acc = 0;
+    for (const [n, p] of partes) {
+      const x0 = x(acc), w = Math.max(0, x(acc + p) - x(acc) - (n === B ? 0 : 2));
+      g.append("rect").attr("x", x0).attr("y", y).attr("width", w).attr("height", h).attr("fill", corCand(n)).attr("rx", 2);
+      if (n !== 0 && w > 44) g.append("text").attr("class", "dentro").attr("x", n === A ? x0 + 6 : x0 + w - 6).attr("y", y + h / 2 + 4)
+        .attr("text-anchor", n === A ? "start" : "end").text(fmt(p, 1) + "%");
+      acc += p;
+    }
+  });
+  svg.append("line").attr("x1", x(50)).attr("x2", x(50)).attr("y1", 0).attr("y2", altura - 18).attr("stroke", cor("--tinta-2")).attr("stroke-dasharray", "3 3");
+  svg.append("text").attr("x", x(50)).attr("y", altura - 4).attr("text-anchor", "middle").text("50%");
+}
+for (const b of document.querySelectorAll("[data-b]")) b.addEventListener("click", () => {
+  anoBarras = b.dataset.b; for (const o of document.querySelectorAll("[data-b]")) o.setAttribute("aria-pressed", String(o === b)); desenharBarras(); });
+
+// --- Tabela ----------------------------------------------------------------------
+let anoTabela = "2026", ordem = { id: "margem", desc: false };
+function desenharTabela() {
+  const a = anoTabela;
+  const cands = D.anos[a].candidatos;
+  const colunas = [
+    { id: "ra", rot: M.unidade[0].toUpperCase() + M.unidade.slice(1), v: r => r.ra, texto: true },
+    { id: "validos", rot: "Votos válidos", v: r => r[a]?.validos, f: inteiro },
+    ...cands.map(c => ({ id: "c" + c.numero, rot: c.nome, v: r => r[a]?.pct[c.numero], f: v => fmt(v, 1) + "%", forte: c.numero === A || c.numero === B })),
+    { id: "margem", rot: `Margem (${A} − ${B})`, v: r => r[a]?.margem, f: v => sinal(v) },
+  ];
+  const t = document.getElementById("tabela"); t.innerHTML = "";
+  const thead = t.createTHead().insertRow();
+  for (const c of colunas) {
+    const th = document.createElement("th"); th.textContent = c.rot; th.tabIndex = 0; th.scope = "col";
+    if (ordem.id === c.id) th.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto }; desenharTabela(); };
+    th.addEventListener("click", ordenar);
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    thead.appendChild(th);
+  }
+  const col = colunas.find(c => c.id === ordem.id) || colunas[colunas.length - 1];
+  const linhas = D.ras.filter(r => r[a]).sort((x, y) => {
+    const vx = col.v(x), vy = col.v(y); if (vx == null) return 1; if (vy == null) return -1;
+    const r = col.texto ? String(vx).localeCompare(String(vy), "pt-BR") : vx - vy; return ordem.desc ? -r : r; });
+  const tbody = t.createTBody();
+  for (const r of linhas) {
+    const tr = tbody.insertRow();
+    for (const c of colunas) {
+      const td = tr.insertCell(); const v = c.v(r);
+      td.textContent = c.f ? c.f(v) : v;
+      if (c.id === "ra" && r.extra) { const e = document.createElement("span"); e.className = "pequena"; e.textContent = r.extra; td.appendChild(e); }
+      if (c.forte) td.className = "forte";
+    }
+  }
+  const tf = t.createTFoot().insertRow();
+  const tot = Object.fromEntries(cands.map(c => [c.numero, c.pct]));
+  const vals = [M.nome_total, inteiro(D.anos[a].validos), ...cands.map(c => fmt(c.pct, 1) + "%"), sinal(tot[A] - tot[B])];
+  for (const v of vals) { const td = tf.insertCell(); td.textContent = v; td.className = "forte"; }
+}
+for (const b of document.querySelectorAll("[data-t]")) b.addEventListener("click", () => {
+  anoTabela = b.dataset.t; ordem = { id: "margem", desc: false };
+  for (const o of document.querySelectorAll("[data-t]")) o.setAttribute("aria-pressed", String(o === b)); desenharTabela(); });
+
+// --- Método ----------------------------------------------------------------------
+(function metodo() {
+  const pe = document.getElementById("metodo");
+  const par = t => { const p = document.createElement("p"); p.textContent = t; pe.appendChild(p); };
+  M.metodo.forEach(par);
+  for (const a of ["2026", "2022"]) for (const c of D.anos[a].fora_dos_validos)
+    par(`Em ${a}, ${inteiro(c.votos)} votos no nº ${c.numero} (${c.nome}) aparecem nas seções, mas o resultado oficial não os conta como válidos; ficaram fora, como no TSE.`);
+  if (M.sem_secoes.length) par(`Sem local de votação dentro dos limites (cinza no mapa): ${M.sem_secoes.join(", ")}.`);
+  if (M.pequenas.length) par(`${M.abrev[0].toUpperCase() + M.abrev.slice(1)} com menos de 10 mil votos válidos (${M.pequenas.join(", ")}) têm poucos locais de votação e oscilam mais.`);
+})();
+
+function redesenhar() { desenharMapa(); desenharBarras(); }
+desenharTabela(); redesenhar();
+let pendente;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(redesenhar, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redesenhar);
+new MutationObserver(redesenhar).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

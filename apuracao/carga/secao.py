@@ -94,3 +94,18 @@ def locais(caminho: Path, uf: str, turno: int = 1) -> pd.DataFrame:
             linhas.append((*chave, r["NM_LOCAL_VOTACAO"], r["NM_BAIRRO"],
                            _coordenada(r["NR_LATITUDE"]), _coordenada(r["NR_LONGITUDE"])))
     return pd.DataFrame(linhas, columns=["cod_mun", "zona", "local", "nome", "bairro", "lat", "lon"])
+
+
+def votos(caminho: Path, uf: str, turno: int = 1, cargo: str = PRESIDENTE) -> pd.DataFrame:
+    """votacao_secao_{ano}_BR.zip (presidente) ou _{UF}.zip (cargos estaduais): uma linha por seção e
+    votável: cod_mun, zona, secao, numero, nome, votos. NR_VOTAVEL 95 = branco, 96 = nulo (leiame);
+    os demais números são candidatos (votos válidos)."""
+    with zipfile.ZipFile(caminho) as z:
+        membro = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+        linhas = [
+            (r["CD_MUNICIPIO"].zfill(5), int(r["NR_ZONA"]), int(r["NR_SECAO"]), int(r["NR_VOTAVEL"]),
+             r["NM_VOTAVEL"], int(r["QT_VOTOS"]))
+            for r in _linhas(z, membro, uf)
+            if r["CD_CARGO"] == cargo and int(r["NR_TURNO"]) == turno
+        ]
+    return pd.DataFrame(linhas, columns=["cod_mun", "zona", "secao", "numero", "nome", "votos"])

@@ -120,3 +120,66 @@ def test_gera_pagina_e_site(tmp_path):
     assert '"brasil_2026":null' in html and '"sem_secoes":[]' in html
     site = documento_completo(saida, tmp_path / "site" / "x" / "index.html").read_text()
     assert site.startswith("<!doctype html>") and site.rstrip().endswith("</html>") and site.count("<body>") == 1
+
+
+# --- Página de votos por candidato ---------------------------------------------------------------
+def _historico_votos(tmp_path):
+    h = _historico(tmp_path)
+    for ano in (2026, 2022):
+        shutil.copy(H / f"votacao_secao_{ano}_BR.zip", h / str(ano) / f"votacao_secao_{ano}_BR.zip")
+    return h
+
+
+CANDIDATOS = {2026: {22: "Flávio Bolsonaro", 13: "Lula", 55: "Ronaldo Caiado", 14: "Renan Santos",
+                     70: "Escritor Augusto Cury", 30: "Zema", 80: "Samara", 16: "Hertz Dias", 27: "Clariana Barão",
+                     29: "Rui Costa Pimenta", 21: "Edmilson Costa", 35: "Veterinário Wilson Grassi"},
+              2022: {22: "Jair Bolsonaro", 13: "Lula", 15: "Simone Tebet", 12: "Ciro Gomes", 30: "Felipe d'Avila",
+                     44: "Soraya Thronicke", 14: "Padre Kelmon", 80: "Léo Péricles", 21: "Sofia Manzano",
+                     27: "Constituinte Eymael", 16: "Vera"}}
+
+
+def test_votos_por_secao_so_da_uf():
+    v = secao.votos(H / "votacao_secao_2026_BR.zip", "df")
+    assert (v["cod_mun"] == "97012").all() and v[["zona", "secao"]].drop_duplicates().shape[0] == 28
+    assert {95, 96, 13, 22} <= set(v["numero"])                              # brancos, nulos e candidatos
+
+
+def test_dados_da_pagina_de_votos(tmp_path):
+    from apuracao.pagina import votos
+    h = _historico_votos(tmp_path)
+    r = _df(carregar(CONFIG))
+    sec = regioes.secoes_por_unidade(r, h)
+    vv = {a: secao.votos(h / str(a) / f"votacao_secao_{a}_BR.zip", "df") for a in (2026, 2022)}
+    d = votos.montar_dados(r, sec, vv, CANDIDATOS)
+    for a in ("2026", "2022"):
+        cs = d["anos"][a]["candidatos"]
+        assert abs(sum(c["pct"] for c in cs) - 100) < 0.01 and cs == sorted(cs, key=lambda c: -c["votos"])
+        for u in d["ras"]:
+            assert abs(sum(u[a]["pct"].values()) - 100) < 0.01
+            assert abs(u[a]["margem"] - (u[a]["pct"][13] - u[a]["pct"][22])) < 1e-9
+        assert d["anos"][a]["validos"] == sum(u[a]["validos"] for u in d["ras"])
+    # votos de quem não está entre os válidos oficiais ficam fora e são listados: o nº 28 tem votos reais
+    # nestas seções e não é válido em 2026; tirando o 55 da lista, ele também passa a ficar de fora
+    assert [c["numero"] for c in d["anos"]["2026"]["fora_dos_validos"]] == [28]
+    sem_55 = {**CANDIDATOS, 2026: {k: v for k, v in CANDIDATOS[2026].items() if k != 55}}
+    d2 = votos.montar_dados(r, sec, vv, sem_55)
+    assert [c["numero"] for c in d2["anos"]["2026"]["fora_dos_validos"]] == [28, 55]
+    assert "Lula" in d["textos"]["lede"] and "Flávio Bolsonaro" in d["textos"]["comparacao"]
+    assert [u["2026"]["margem"] for u in d["ras"]] == sorted(u["2026"]["margem"] for u in d["ras"])
+
+
+def test_nome_urna():
+    from apuracao.pagina.votos import nome_urna
+    assert nome_urna("FLAVIO BOLSONARO") == "Flávio Bolsonaro" and nome_urna("ESCRITOR AUGUSTO CURY") == "Escritor Augusto Cury"
+
+
+def test_barra_de_navegacao_do_site(tmp_path):
+    from apuracao.pagina.__main__ import SITE, documento_completo
+    pagina = tmp_path / "p.html"
+    pagina.write_text("<title>T</title>\n<style>body{}</style>\n<main>conteúdo</main>\n")
+    html = documento_completo(pagina, tmp_path / "votos" / "index.html", nav="votos").read_text()
+    assert html.count('<nav class="site-nav"') == 1 and html.count('aria-current="page"') == 1
+    assert '<a href="/votos/" aria-current="page">' in html and '<a href="/">' in html
+    assert len([s for _, s in SITE]) == len({s for _, s in SITE})      # subpastas únicas
+    sem = documento_completo(pagina, tmp_path / "x" / "index.html").read_text()
+    assert "site-nav" not in sem

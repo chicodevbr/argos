@@ -51,6 +51,14 @@ def brasilia(cfg: Config) -> Recorte:
                 "dentro dos limites oficiais das 35 RAs (SISDIA/GDF, camada de 2022). É a RA do local de votação, "
                 "que em geral coincide com a de moradia, mas não sempre."],
         cortes=[16, 17.5, 18.5, 19.5, 21],  # as da página publicada em 06/10
+        titulo_votos="Votos em Brasília",
+        metodo_votos=[
+            "Percentual de cada candidato a presidente sobre os votos válidos, no 1º turno de 2026 e de 2022, seção a "
+            "seção (Portal de Dados Abertos do TSE, \"votação por seção\"). Votos válidos são os dos candidatos que o "
+            "resultado oficial lista como válidos; a soma confere com o total oficial do DF, candidato a candidato.",
+            "O TSE trata o DF como um único município. Cada seção foi atribuída à região administrativa onde fica o seu "
+            "local de votação, pelas coordenadas do local dentro dos limites oficiais das 35 RAs (SISDIA/GDF, 2022). É "
+            "a RA do local de votação, que em geral coincide com a de moradia, mas não sempre."],
         subpasta="", saida="abstencao-brasilia-2026.html",
     )
 
