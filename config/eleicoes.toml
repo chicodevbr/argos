@@ -95,6 +95,10 @@ dir = "data/raw/historico"
 # Boletim de urna (votos por seção + horário de chegada ao TSE): catálogo CKAN do portal,
 # porque o nome de cada zip traz a data de geração. Sai alguns dias depois do turno.
 boletim_pacote = "https://dadosabertos.tse.jus.br/api/3/action/package_show?id=resultados-{ano}-boletim-de-urna"
+# Detalhe por seção (aptos, comparecimento e abstenção de cada seção, com o local de votação) e
+# locais de votação (bairro, latitude e longitude). Saem dias depois do turno.
+secao = "/detalhe_votacao_secao/detalhe_votacao_secao_{ano}.zip"
+locais = "/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip"
 
 # --- Malha municipal do IBGE (mapas) -----------------------------------------
 # API de malhas v3: GeoJSON de todos os municípios, `codarea` = código IBGE (7 dígitos),
@@ -103,3 +107,11 @@ boletim_pacote = "https://dadosabertos.tse.jus.br/api/3/action/package_show?id=r
 [ibge]
 malha = "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo%2Bjson&qualidade=minima&intrarregiao=municipio"
 arquivo = "data/raw/ibge/malha-municipios-minima.json"
+
+# --- Regiões administrativas do DF (página "Abstenção em Brasília") ----------------
+# Malha oficial do GDF (SISDIA/SEDUH), 35 RAs (inclui Arapoanga e Água Quente, de 2022).
+# O TSE trata o DF como um único município; a RA de cada seção vem das coordenadas do
+# seu local de votação.
+[df]
+regioes = "https://sisdia.df.gov.br/server/rest/services/02_CARACTERIZACAO/Regi%C3%B5es_Administrativas_2022/FeatureServer/0/query?where=1%3D1&outFields=ra_cira,ra_nome,ra_codigo&outSR=4326&f=geojson"
+arquivo = "data/raw/df/regioes-administrativas-2022.geojson"

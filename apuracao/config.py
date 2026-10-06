@@ -48,10 +48,18 @@ class Historico(BaseModel):
     detalhe: str
     dir: Path
     boletim_pacote: str = ""
+    secao: str = ""     # detalhe da votação por seção (relativo a `base`)
+    locais: str = ""    # locais de votação, com bairro e coordenadas (relativo a `base`)
 
 
 class Ibge(BaseModel):
     malha: str
+    arquivo: Path
+
+
+class Df(BaseModel):
+    """Regiões administrativas do Distrito Federal (malha oficial do GDF)."""
+    regioes: str
     arquivo: Path
 
 
@@ -63,6 +71,7 @@ class Config(BaseModel):
     coletor: Coletor
     historico: Historico
     ibge: Ibge | None = None
+    df: Df | None = None
 
     @model_validator(mode="after")
     def _valida(self) -> Config:

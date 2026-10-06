@@ -1,0 +1,363 @@
+<title>Abstenção em Brasília</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), irmão da página nacional: números do DF, mapa das RAs,
+   comparação 2022 x 2026 por RA e a tabela completa. Mesmos tokens e paletas validadas. */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --dado-atual: #2a78d6;   /* 2026: slot 1 da paleta validada */
+  --dado-base: #8a8883;    /* 2022: referência neutra (validado: contraste e CVD) */
+  --alta: #b4441f;
+  --baixa: #1f6f4f;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --seq-1: #b7d3f6; --seq-2: #86b6ef; --seq-3: #5598e7; --seq-4: #2a78d6; --seq-5: #1c5cab; --seq-6: #104281;
+  --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
+  --contorno: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
+    --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
+    --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+    --contorno: #111317;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
+  --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
+  --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+  --contorno: #111317;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.indicador.destaque .valor { color: var(--dado-atual); }
+.variacao { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+.variacao.piora { color: var(--alta); } .variacao.melhora { color: var(--baixa); }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
+svg .grade line { stroke: var(--linha); }
+svg .forte { fill: var(--tinta); font-weight: 600; }
+.legenda { display: flex; flex-wrap: wrap; gap: 16px; font-size: .875rem; color: var(--tinta-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+button:focus-visible, th:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+
+.mapa-grade { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mapa-grade { grid-template-columns: 1fr; } }
+#mapa path { stroke: var(--contorno); stroke-width: 1; cursor: pointer; }
+#mapa path:hover, #mapa path.ativo { stroke: var(--tinta); stroke-width: 2; }
+.legenda-mapa { display: grid; gap: 6px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda-mapa span { display: inline-flex; align-items: center; gap: 8px; }
+.legenda-mapa i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; border: 1px solid var(--linha); }
+.destaques { display: grid; gap: 4px; font-size: .9rem; }
+.destaques b { font-weight: 600; }
+
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+td.forte { font-weight: 600; color: var(--tinta); }
+.pos { color: var(--alta); } .neg { color: var(--baixa); }
+.pequena { color: var(--apagado); font-size: .8rem; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 260px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo">Eleições 2026 · Presidente · 1º turno (4 de outubro) · Distrito Federal</span>
+    <h1>Abstenção em Brasília</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <section aria-labelledby="t-df">
+    <h2 id="t-df" class="rotulo" style="font-family:var(--texto);font-size:.78rem">Distrito Federal, comparado a 2022</h2>
+    <div class="indicadores" id="indicadores"></div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-mapa">
+    <div class="quadro-topo">
+      <h2 id="t-mapa">Mapa das regiões administrativas</h2>
+      <div class="segmentado" role="group" aria-label="O que colorir">
+        <button id="m-abst" data-m="abst" aria-pressed="true">Abstenção 2026</button>
+        <button id="m-var" data-m="var" aria-pressed="false">Variação vs 2022</button>
+      </div>
+    </div>
+    <p class="nota" id="mapa-nota"></p>
+    <div class="mapa-grade">
+      <svg id="mapa" role="img" aria-label="Mapa da abstenção por região administrativa do DF"></svg>
+      <div style="display:grid;gap:20px">
+        <div class="legenda-mapa" id="legenda-mapa"></div>
+        <div class="destaques nota" id="destaques"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-ras">
+    <h2 id="t-ras"></h2>
+    <p class="nota" id="nota-ras"></p>
+    <div class="legenda"><span><i style="background:var(--dado-base)"></i>2022</span><span><i style="background:var(--dado-atual)"></i>2026</span></div>
+    <svg id="ras" role="img" aria-label="Abstenção por região administrativa, 2022 e 2026"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <h2 id="t-tabela">Todas as regiões administrativas</h2>
+    <p class="nota">Clique no cabeçalho para ordenar.</p>
+    <div class="tabela"><table id="tabela"></table></div>
+  </section>
+
+  <footer class="metodo nota">
+    <span class="rotulo">Método e fontes</span>
+    <p>Abstenção = eleitores que não votaram ÷ eleitores aptos das seções, a mesma conta do TSE. Dados do 1º turno para
+      presidente, seção a seção (Portal de Dados Abertos do TSE, "detalhe da votação por seção"), incluindo os eleitores em
+      trânsito. A soma das seções confere com o total oficial do DF nos dois anos.</p>
+    <p>O TSE trata o DF como um único município. Cada seção foi atribuída à região administrativa onde fica o seu local de
+      votação, pelas coordenadas do local (cadastro de locais de votação do TSE) dentro dos limites oficiais das 35 RAs
+      (SISDIA/GDF, camada de 2022). É a RA do local de votação, que em geral coincide com a de moradia, mas não sempre.
+      <span id="nota-herdados"></span></p>
+    <p>RAs com poucos eleitores (SIA, Varjão, Park Way, Água Quente) têm um ou dois locais de votação e oscilam mais
+      de uma eleição para outra.</p>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+
+const fmt = (v, c = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : v.toLocaleString("pt-BR");
+const sinal = (v, c = 2) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const porChave = new Map(D.ras.map(r => [r.chave, r]));
+const df26 = D.df["2026"], df22 = D.df["2022"];
+
+document.getElementById("lede").textContent = D.textos.lede;
+document.getElementById("t-ras").textContent = D.textos.titulo_ranking;
+document.getElementById("nota-ras").textContent = D.textos.nota_ranking + " " + (D.textos.titulo_grandes || "");
+if (df22.locais_herdados) {
+  document.getElementById("nota-herdados").textContent =
+    `Em 2022, ${df22.locais_herdados} locais sem coordenadas no cadastro usaram a posição do mesmo local (mesma zona, número e nome) em 2026.`;
+}
+
+// --- Indicadores -----------------------------------------------------------------
+(function indicadores() {
+  const v = df26.pct - df22.pct;
+  const itens = [
+    { rot: "DF 2026", val: fmt(df26.pct) + "%", sub: `${inteiro(df26.abst)} de ${inteiro(df26.aptos)} eleitores`, destaque: true },
+    { rot: "DF 2022", val: fmt(df22.pct) + "%", sub: `${inteiro(df22.abst)} de ${inteiro(df22.aptos)} eleitores` },
+    { rot: "Variação", val: sinal(v), sub: "pontos percentuais", classe: v > 0 ? "piora" : "melhora" },
+  ];
+  if (D.brasil_2026 != null) itens.push({ rot: "Brasil 2026", val: fmt(D.brasil_2026) + "%", sub: D.textos.contexto_brasil.split(": ")[1] });
+  const alvo = document.getElementById("indicadores");
+  for (const it of itens) {
+    const el = document.createElement("div");
+    el.className = "indicador" + (it.destaque ? " destaque" : "");
+    el.innerHTML = `<span class="rotulo"></span><span class="valor"></span><span class="variacao ${it.classe || ""}"></span>`;
+    el.children[0].textContent = it.rot; el.children[1].textContent = it.val; el.children[2].textContent = it.sub;
+    alvo.appendChild(el);
+  }
+})();
+
+// --- Mapa ------------------------------------------------------------------------
+const CLASSES = {
+  abst: { cortes: [16, 17.5, 18.5, 19.5, 21], cores: ["--seq-1", "--seq-2", "--seq-3", "--seq-4", "--seq-5", "--seq-6"],
+          valor: r => r.pct, rotulos: ["abaixo de 16%", "16% a 17,5%", "17,5% a 18,5%", "18,5% a 19,5%", "19,5% a 21%", "21% ou mais"],
+          nota: "Abstenção no 1º turno de 2026. Faixas fixas." },
+  var: { cortes: [-1, -0.25, 0.25, 1.5], cores: ["--div-1", "--div-2", "--div-3", "--div-4", "--div-5"],
+         valor: r => r.pct_2022 == null ? null : r.pct - r.pct_2022,
+         rotulos: ["caiu 1 ponto ou mais", "caiu de 0,25 a 1", "praticamente igual (±0,25)", "subiu de 0,25 a 1,5", "subiu 1,5 ponto ou mais"],
+         nota: "Variação da abstenção de 2022 para 2026, em pontos percentuais. Vermelho: subiu; azul: caiu." },
+};
+let modo = "abst";
+const dica = document.getElementById("dica");
+function mostrarDica(ev, r) {
+  dica.hidden = false;
+  dica.innerHTML = `<b></b><br>Abstenção 2026: ${fmt(r.pct)}%<br>2022: ${fmt(r.pct_2022)}% (${sinal(r.pct_2022 == null ? null : r.pct - r.pct_2022)} p.p.)<br>${inteiro(r.aptos)} eleitores aptos`;
+  dica.querySelector("b").textContent = r.ra;
+  const x = Math.min(ev.clientX + 14, window.innerWidth - 270);
+  dica.style.left = x + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+function esconderDica() { dica.hidden = true; }
+
+function desenharMapa() {
+  const svg = d3.select("#mapa");
+  const largura = svg.node().getBoundingClientRect().width || 700;
+  const altura = Math.round(largura * 0.62);
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const proj = d3.geoMercator().fitSize([largura, altura], MALHA);
+  const caminho = d3.geoPath(proj);
+  const c = CLASSES[modo];
+  const corDe = v => v == null ? cor("--linha") : cor(c.cores[d3.bisect(c.cortes, v)]);
+  svg.append("g").selectAll("path").data(MALHA.features).join("path")
+    .attr("d", caminho)
+    .attr("fill", f => { const r = porChave.get(f.properties.chave); return r ? corDe(c.valor(r)) : cor("--linha"); })
+    .attr("tabindex", 0)
+    .attr("aria-label", f => { const r = porChave.get(f.properties.chave); return r ? `${r.ra}: ${fmt(r.pct)}%` : f.properties.chave; })
+    .on("mousemove", (ev, f) => { const r = porChave.get(f.properties.chave); if (r) mostrarDica(ev, r); })
+    .on("mouseleave", esconderDica)
+    .on("focus", function (ev, f) { const r = porChave.get(f.properties.chave); const b = this.getBoundingClientRect();
+      if (r) mostrarDica({ clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }, r); d3.select(this).classed("ativo", true); })
+    .on("blur", function () { esconderDica(); d3.select(this).classed("ativo", false); });
+
+  document.getElementById("mapa-nota").textContent = c.nota;
+  const leg = document.getElementById("legenda-mapa");
+  leg.innerHTML = "";
+  c.rotulos.forEach((t, i) => {
+    const n = D.ras.filter(r => { const v = c.valor(r); return v != null && d3.bisect(c.cortes, v) === i; }).length;
+    const s = document.createElement("span");
+    s.innerHTML = `<i></i><span></span>`;
+    s.querySelector("i").style.background = cor(c.cores[i]);
+    s.querySelector("span").textContent = `${t} (${n})`;
+    leg.appendChild(s);
+  });
+  const ord = [...D.ras].filter(r => c.valor(r) != null).sort((a, b) => c.valor(b) - c.valor(a));
+  const unid = modo === "abst" ? "%" : " p.p.";
+  const f = r => (modo === "abst" ? fmt(c.valor(r)) : sinal(c.valor(r))) + unid;
+  const des = document.getElementById("destaques");
+  des.innerHTML = "";
+  for (const [titulo, lista] of [[modo === "abst" ? "Maiores" : "Mais subiu", ord.slice(0, 3)], [modo === "abst" ? "Menores" : "Menos subiu", ord.slice(-3).reverse()]]) {
+    const b = document.createElement("b"); b.textContent = titulo; des.appendChild(b);
+    for (const r of lista) { const d = document.createElement("span"); d.textContent = `${r.ra}: ${f(r)}`; des.appendChild(d); }
+  }
+}
+for (const b of document.querySelectorAll("[data-m]")) {
+  b.addEventListener("click", () => {
+    modo = b.dataset.m;
+    for (const o of document.querySelectorAll("[data-m]")) o.setAttribute("aria-pressed", String(o === b));
+    desenharMapa();
+  });
+}
+
+// --- 2022 x 2026 por RA ----------------------------------------------------------
+function desenharRas() {
+  const svg = d3.select("#ras");
+  const largura = svg.node().getBoundingClientRect().width || 900;
+  const linha = 22, topo = 24, esq = Math.min(190, largura * 0.36), dir = 56;
+  const altura = topo + D.ras.length * linha + 8;
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const valores = D.ras.flatMap(r => [r.pct, r.pct_2022]).filter(v => v != null);
+  const x = d3.scaleLinear().domain([Math.floor(d3.min(valores)) - 0.5, Math.ceil(d3.max(valores)) + 0.5]).range([esq, largura - dir]);
+  const y = (i) => topo + i * linha + linha / 2;
+  const grade = svg.append("g").attr("class", "grade");
+  // uma marca a cada ~70 px: no celular sobram 3, sem rótulos encavalados
+  for (const t of x.ticks(Math.max(2, Math.floor((largura - esq - dir) / 70)))) {
+    grade.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y1", topo - 6).attr("y2", altura - 4);
+    svg.append("text").attr("x", x(t)).attr("y", topo - 10).attr("text-anchor", "middle").text(fmt(t, 0) + "%");
+  }
+  svg.append("line").attr("x1", x(df26.pct)).attr("x2", x(df26.pct)).attr("y1", topo - 4).attr("y2", altura - 4)
+    .attr("stroke", cor("--tinta-2")).attr("stroke-dasharray", "4 4");
+  svg.append("text").attr("x", x(df26.pct) + 4).attr("y", altura - 6).attr("class", "forte").text(`DF ${fmt(df26.pct)}%`);
+  D.ras.forEach((r, i) => {
+    const g = svg.append("g")
+      .on("mousemove", ev => mostrarDica(ev, r)).on("mouseleave", esconderDica);
+    g.append("rect").attr("x", 0).attr("y", y(i) - linha / 2).attr("width", largura).attr("height", linha).attr("fill", "transparent");
+    g.append("text").attr("x", esq - 10).attr("y", y(i) + 4).attr("text-anchor", "end").text(r.ra);
+    if (r.pct_2022 != null) {
+      g.append("line").attr("x1", x(r.pct_2022)).attr("x2", x(r.pct)).attr("y1", y(i)).attr("y2", y(i))
+        .attr("stroke", cor("--linha")).attr("stroke-width", 2);
+      g.append("circle").attr("cx", x(r.pct_2022)).attr("cy", y(i)).attr("r", 4.5).attr("fill", cor("--dado-base"));
+    }
+    g.append("circle").attr("cx", x(r.pct)).attr("cy", y(i)).attr("r", 5).attr("fill", cor("--dado-atual"))
+      .attr("stroke", cor("--superficie")).attr("stroke-width", 1.5);
+    g.append("text").attr("x", x(Math.max(r.pct, r.pct_2022 ?? 0)) + 9).attr("y", y(i) + 4).attr("class", "forte").text(fmt(r.pct, 1) + "%");
+  });
+}
+
+// --- Tabela ----------------------------------------------------------------------
+const COLUNAS = [
+  { id: "ra", rot: "Região administrativa", v: r => r.ra, texto: true },
+  { id: "aptos", rot: "Eleitores aptos", v: r => r.aptos, f: inteiro },
+  { id: "pct", rot: "Abstenção 2026", v: r => r.pct, f: v => fmt(v) + "%", forte: true },
+  { id: "pct_2022", rot: "2022", v: r => r.pct_2022, f: v => fmt(v) + "%" },
+  { id: "var", rot: "Variação (p.p.)", v: r => r.pct_2022 == null ? null : r.pct - r.pct_2022, f: v => sinal(v), sinal: true },
+  { id: "locais", rot: "Locais de votação", v: r => r.locais, f: inteiro },
+];
+let ordem = { id: "pct", desc: true };
+function desenharTabela() {
+  const t = document.getElementById("tabela");
+  t.innerHTML = "";
+  const thead = t.createTHead().insertRow();
+  for (const c of COLUNAS) {
+    const th = document.createElement("th");
+    th.textContent = c.rot; th.tabIndex = 0; th.scope = "col";
+    if (ordem.id === c.id) th.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto }; desenharTabela(); };
+    th.addEventListener("click", ordenar);
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    thead.appendChild(th);
+  }
+  const col = COLUNAS.find(c => c.id === ordem.id);
+  const linhas = [...D.ras].sort((a, b) => {
+    const va = col.v(a), vb = col.v(b);
+    if (va == null) return 1; if (vb == null) return -1;
+    const r = col.texto ? String(va).localeCompare(String(vb), "pt-BR") : va - vb;
+    return ordem.desc ? -r : r;
+  });
+  const tbody = t.createTBody();
+  for (const r of linhas) {
+    const tr = tbody.insertRow();
+    for (const c of COLUNAS) {
+      const td = tr.insertCell();
+      const v = c.v(r);
+      td.textContent = c.f ? c.f(v) : v;
+      if (c.forte) td.className = "forte";
+      if (c.sinal && v != null) td.className = v > 0.25 ? "pos" : v < -0.25 ? "neg" : "";
+    }
+  }
+  const tf = t.createTFoot().insertRow();
+  const totais = ["Distrito Federal", inteiro(df26.aptos), fmt(df26.pct) + "%", fmt(df22.pct) + "%", sinal(df26.pct - df22.pct), ""];
+  for (const v of totais) { const td = tf.insertCell(); td.textContent = v; td.className = "forte"; }
+}
+
+function redesenhar() { desenharMapa(); desenharRas(); }
+desenharTabela();
+redesenhar();
+let pendente;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(redesenhar, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redesenhar);
+new MutationObserver(redesenhar).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

@@ -137,7 +137,14 @@ até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixan
 
 ```
 uv run python -m apuracao.pagina    # gera data/pagina/abstencao-1o-turno-2026.html
+uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df   # dados da página de Brasília
+uv run python -m apuracao.pagina --brasilia   # gera data/pagina/abstencao-brasilia-2026.html
 ```
+
+**Abstenção em Brasília:** o TSE trata o DF como um único município, então a página usa o detalhe
+por seção (presidente, com os eleitores em trânsito; a soma confere com o total oficial do DF) e
+atribui cada seção à região administrativa do seu local de votação, pelas coordenadas do local
+dentro da malha oficial das 35 RAs (SISDIA/GDF, 2022).
 
 O arquivo gerado é autocontido (dados e malha embutidos) e é publicado como página. As frases com
 afirmações sobre os dados são calculadas a partir deles.
