@@ -57,6 +57,11 @@ terminar verde, com o artefato e com arquivos novos no R2. Se falhar, há tempo 
    python -m apuracao.modelo municipios --cm "$(ls data/raw/6257/config/mun-e006257-cm/*.json.gz | tail -1)"
    python -m apuracao.modelo construir
    ```
+   Opcional: curva de 2022 para comparar no "Caminho da apuração" (66 MB, ~1 min; não é rede do
+   TSE de resultados, é o CDN de dados abertos):
+   ```
+   ls data/parquet/hist_boletim/2022_t2.parquet || python -m apuracao.carga --boletim 2022:2
+   ```
 6. **Secrets do R2** no GitHub (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
    `R2_BUCKET`). Só o Actions usa; o Mac não precisa das variáveis `R2_*`.
 7. **Pasta da cópia local (`SYNC_PASTA`).** De preferência num **disco externo** (protege contra
@@ -140,7 +145,7 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
   `data/projecao/historico.jsonl` (base para avaliar a projeção depois da eleição).
   Antes de haver municípios contados, a faixa é larga e a projeção ≈ 1º turno — esperado.
 - **Caminho da apuração** (presidente → BR): quanto falta contar por região, quanto o candidato que
-  está atrás precisa do que falta e a chance de virada, além da curva de 2022 (g1/TSE) para comparar.
+  está atrás precisa do que falta e a chance de virada, além da curva de 2022 (boletim de urna) para comparar.
   O horário da virada só aparece com ritmo medido em todas as UFs e mais de 10% das seções; ele
   tende a sair 20-30 min cedo se a virada ocorrer no fim. Confie mais no "quanto falta" que no horário.
 

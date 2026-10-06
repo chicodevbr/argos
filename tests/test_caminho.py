@@ -9,7 +9,7 @@ import pandas as pd
 from apuracao.config import carregar
 from apuracao.modelo import consultas
 from apuracao.projecao.ao_vivo import projetar_ao_vivo
-from apuracao.projecao.caminho import prever, prever_ao_vivo, referencia_2022, viradas
+from apuracao.projecao.caminho import prever, prever_ao_vivo, viradas
 from tests.apoio_2t import montar_pq_2t
 
 T0 = datetime(2026, 10, 25, 21, 0)
@@ -80,12 +80,8 @@ def test_uf_completa_nao_muda_e_sem_ritmo_nenhum_nao_preve():
     assert prever(a, b, ["x"], serie([])) is None
 
 
-def test_referencia_2022_tem_a_virada_das_18h44():
-    lula = referencia_2022(13)
-    assert len(lula) == 200 and lula["hora"].iloc[0] == "17:00"
-    # Lula começou na frente (primeiras urnas), Bolsonaro passou às 17:08, Lula virou às 18:44
-    assert viradas(lula["hora"].tolist(), lula["pct_validos"].tolist()) == ["17:08", "18:44"]
-    assert referencia_2022(99).empty
+def test_viradas_por_rotulo():
+    assert viradas(["17h00", "17h08", "18h44"], [57.3, 47.4, 50.01]) == ["17h08", "18h44"]
 
 
 def test_ao_vivo_sem_arquivos_de_uf_nao_preve(tmp_path):

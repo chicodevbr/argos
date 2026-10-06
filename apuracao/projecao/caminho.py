@@ -38,7 +38,6 @@ Validação anterior, em simulação:
 
 from __future__ import annotations
 
-import csv
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -47,7 +46,6 @@ import duckdb
 import numpy as np
 import pandas as pd
 
-REFERENCIA_2022 = Path(__file__).resolve().parents[2] / "config/referencias/apuracao-2022-t2-presidente.csv"
 COMPLETA = 0.9999  # fração de seções a partir da qual a UF é tratada como apurada
 
 
@@ -254,21 +252,6 @@ def prever_ao_vivo(con: duckdb.DuckDBPyConnection, eleicao: int, proj, cargo: in
     serie = series_uf(con, eleicao, cargo, proj.num_a, proj.num_b)
     return (prever(r.sim_a_grupo, r.sim_b_grupo, ufs, serie, **kw),
             o_que_falta(r.sim_a_grupo, r.sim_b_grupo, ufs, serie))
-
-
-def referencia_2022(numero: int, caminho: Path = REFERENCIA_2022) -> pd.DataFrame:
-    """Curva da apuração do 2º turno de 2022 (presidente), minuto a minuto, para o número dado.
-
-    Fonte: gráfico "evolução da apuração dos votos para presidente" do g1 (30/10/2022),
-    calculado pelo g1 a partir dos dados do TSE; extraído do Flourish 11640341.
-    Colunas: hora (HH:MM, Brasília), pct_validos. Vazio se o número não estava no 2º turno.
-    """
-    if not Path(caminho).exists():
-        return pd.DataFrame(columns=["hora", "pct_validos"])
-    with open(caminho, newline="") as f:
-        linhas = [(l["hora_brasilia"], float(l["pct_validos"])) for l in csv.DictReader(f)
-                  if int(l["numero"]) == numero]
-    return pd.DataFrame(linhas, columns=["hora", "pct_validos"])
 
 
 def viradas(horas: list[str], pct: list[float]) -> list[str]:

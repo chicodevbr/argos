@@ -20,7 +20,7 @@ from apuracao.app.saude import ler_saude
 from apuracao.config import carregar
 from apuracao.modelo import consultas
 from apuracao.modelo.anomalias import verificar
-from apuracao.projecao import caminho, historico
+from apuracao.projecao import caminho, historico, noite
 from apuracao.projecao.ao_vivo import GOVERNADOR, projecao_por_uf, projetar_ao_vivo
 
 DIR_PARQUET = Path(os.environ.get("APURACAO_DIR_PARQUET", "data/parquet"))
@@ -62,6 +62,12 @@ def projecao(_con, eleicao_id: str, cargo: int, abrangencia: str, _marca):
 @st.cache_data(ttl=INTERVALO_S, show_spinner=False)
 def caminho_apuracao(_con, eleicao_codigo: int, _proj, _marca):
     return caminho.prever_ao_vivo(_con, eleicao_codigo, _proj)
+
+
+@st.cache_data(show_spinner=False)
+def referencia(dir_parquet: str, ano_atual: int, num_a: int, num_b: int):
+    """Curva de um 2º turno passado (boletim de urna), se carregada. Não muda durante a noite."""
+    return noite.referencia(Path(dir_parquet), ano_atual, num_a, num_b)
 
 
 @st.cache_data(ttl=INTERVALO_S, show_spinner=False)
@@ -400,13 +406,14 @@ def mostrar_caminho(con, eleicao_codigo: int, cargo: int, proj, cor_de: dict, t:
     elif c is not None:
         st.caption("Curva prevista oculta enquanto houver UF sem ritmo medido "
                    f"({', '.join(u.upper() for u in c.ufs_sem_ritmo)}).")
-    ref = caminho.referencia_2022(proj.num_a)
+    ano_atual = int("".join(ch for ch in eleicao.ciclo if ch.isdigit()))  # "ele2026" -> 2026
+    ref = referencia(str(DIR_PARQUET), ano_atual, proj.num_a, proj.num_b)
     nome_ref = None
-    if not ref.empty and len(obs):
+    if ref is not None and len(obs):
+        ano_ref, rdf = ref
         dia = pd.Timestamp(obs["ts"].iloc[0]).normalize()
-        nome_ref = "2022"
-        linhas.append(pd.DataFrame({"ts": dia + pd.to_timedelta(ref["hora"] + ":00"),
-                                    "pct_a": ref["pct_validos"], "serie": nome_ref}))
+        nome_ref = str(ano_ref)
+        linhas.append(pd.DataFrame({"ts": dia + rdf["hora"], "pct_a": rdf["pct_a"], "serie": nome_ref}))
     if not linhas:
         return
     df = pd.concat(linhas, ignore_index=True)
@@ -425,10 +432,12 @@ def mostrar_caminho(con, eleicao_codigo: int, cargo: int, proj, cor_de: dict, t:
     camadas.append(alt.Chart(pd.DataFrame({"y": [50]})).mark_rule(strokeDash=[4, 4], color=TEXTO[t]).encode(y="y:Q"))
     st.altair_chart(alt.layer(*camadas).properties(height=260), use_container_width=True)
     if nome_ref:
-        v22 = caminho.viradas(ref["hora"].tolist(), ref["pct_validos"].tolist())
-        st.caption(f"Cinza: 2º turno de 2022, candidato de mesmo número ({proj.num_a}), minuto a minuto "
-                   f"(gráfico do g1 com dados do TSE). Em 2022 o líder da contagem mudou às "
-                   f"{' e às '.join(h.replace(':', 'h') for h in v22)}. Faixa: 90% da previsão.")
+        horas = [f"{pd.Timestamp(0) + h:%Hh%M}" for h in rdf["hora"]]
+        mudou = caminho.viradas(horas, rdf["pct_a"].tolist())
+        texto = f" Em {nome_ref} o líder da contagem mudou às {' e às '.join(mudou)}." if mudou else ""
+        st.caption(f"Cinza: 2º turno de {nome_ref}, candidato de mesmo número ({proj.num_a}) contra o de número "
+                   f"{proj.num_b}, minuto a minuto, reconstruído do boletim de urna do TSE.{texto}"
+                   + (" Faixa: 90% da previsão." if c is not None and not c.ufs_sem_ritmo else ""))
 
 
 def mostrar_historico(eleicao_codigo: int, proj, cor_de: dict, t: str) -> None:

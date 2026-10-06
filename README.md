@@ -123,8 +123,7 @@ uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador --uma-
 No 2º turno de presidente, o painel mostra também o **caminho da apuração**
 (`apuracao/projecao/caminho.py`): quanto falta contar por região, quanto o candidato que está atrás
 precisa do que falta, a chance de virada e o horário provável, comparados com a curva minuto a minuto
-de 2022 (`config/referencias/apuracao-2022-t2-presidente.csv`, extraída do gráfico do g1 com dados do
-TSE). O horário supõe que cada UF segue no ritmo dos últimos 30 min. Na noite real de 2022
+do 2º turno de 2022, reconstruída do boletim de urna (exige `--boletim 2022:2` carregado; ver abaixo). O horário supõe que cada UF segue no ritmo dos últimos 30 min. Na noite real de 2022
 (virada às 18h44), a partir de 20% das seções previu entre 5 e 11 min cedo.
 
 Em 2022, a projeção de presidente errou em média 0,09 ponto (máximo 0,51) e a faixa de 90% conteve o

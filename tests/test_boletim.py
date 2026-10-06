@@ -102,3 +102,14 @@ def test_pagina_noite_renderiza(monkeypatch, tmp_path):
     assert not at.exception
     assert any("2026" in i.value for i in at.info)            # aviso: 1º turno de 2026 ainda não carregado
     assert [m.label for m in at.metric][:2] == ["Lula", "Jair Bolsonaro"]
+
+
+def test_referencia_para_o_painel(tmp_path):
+    cfg = carregar(CONFIG)
+    cfg.historico.dir = tmp_path / "raw"
+    boletim.carregar(cfg, 2022, 2, tmp_path / "pq", LogJson(io.StringIO()), transport=_servidor([]))
+    ano, ref = noite.referencia(tmp_path / "pq", 2026, 13, 22)
+    assert ano == 2022 and ref["hora"].iloc[0] == pd.Timedelta(hours=17, minutes=1)
+    assert ref["pct_a"].between(0, 100).all() and ref["pct_secoes"].is_monotonic_increasing
+    assert noite.referencia(tmp_path / "pq", 2022, 13, 22) is None   # só eleições anteriores
+    assert noite.referencia(tmp_path / "pq", 2026, 13, 99) is None   # número que não disputou
