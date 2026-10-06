@@ -137,18 +137,20 @@ até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixan
 
 ```
 uv run python -m apuracao.pagina    # gera data/pagina/abstencao-1o-turno-2026.html
-uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df   # dados da página de Brasília
-uv run python -m apuracao.pagina --brasilia   # gera data/pagina/abstencao-brasilia-2026.html
-uv run python -m apuracao.pagina --brasilia --site site   # + site/index.html completo, publicado pelo Netlify
+uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df --regioes-rio   # dados das páginas por região
+uv run python -m apuracao.pagina --recorte brasilia --site site    # Brasília -> site/index.html
+uv run python -m apuracao.pagina --recorte rio --site site         # cidade do Rio -> site/rio-de-janeiro/
+uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
 ```
 
 **Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e
 versionado, sem build no Netlify. Para atualizar, gere com `--site site`, faça commit e push.
 
-**Abstenção em Brasília:** o TSE trata o DF como um único município, então a página usa o detalhe
-por seção (presidente, com os eleitores em trânsito; a soma confere com o total oficial do DF) e
-atribui cada seção à região administrativa do seu local de votação, pelas coordenadas do local
-dentro da malha oficial das 35 RAs (SISDIA/GDF, 2022).
+**Abstenção por região** (`apuracao/pagina/regioes.py`, lugares em `recortes.py`): detalhe por seção
+(presidente, com os eleitores em trânsito; a soma confere com os totais oficiais). Brasília e a cidade
+do Rio são um município só no TSE: cada seção vai para a região administrativa do seu local de
+votação, pelas coordenadas do local dentro da malha oficial (35 RAs do GDF; 33 RAs do IPP/Prefeitura
+do Rio, com os bairros de cada uma). No estado do Rio, cada seção vai para o seu município.
 
 O arquivo gerado é autocontido (dados e malha embutidos) e é publicado como página. As frases com
 afirmações sobre os dados são calculadas a partir deles.

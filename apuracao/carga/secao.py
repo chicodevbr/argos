@@ -53,17 +53,19 @@ def _linhas(z: zipfile.ZipFile, membro: str, uf: str):
 
 
 def secoes(caminho: Path, uf: str, turno: int = 1, cargo: str = PRESIDENTE) -> pd.DataFrame:
-    """Uma linha por seção: zona, secao, local, aptos, comparecimento, abstencoes."""
+    """Uma linha por seção: cod_mun (TSE, 5 dígitos), zona, secao, local, aptos, comparecimento,
+    abstencoes. A chave da seção é (cod_mun, zona, secao): numa UF, zonas se repetem entre municípios
+    só em casos raros, mas a chave completa não depende disso."""
     with zipfile.ZipFile(caminho) as z:
         membro = _membro(z, uf, preferir_uf=cargo != PRESIDENTE)
         linhas = [
-            (int(r["NR_ZONA"]), int(r["NR_SECAO"]), int(r["NR_LOCAL_VOTACAO"]), int(r["QT_APTOS"]),
+            (r["CD_MUNICIPIO"].zfill(5), int(r["NR_ZONA"]), int(r["NR_SECAO"]), int(r["NR_LOCAL_VOTACAO"]), int(r["QT_APTOS"]),
              int(r["QT_COMPARECIMENTO"]), int(r["QT_ABSTENCOES"]))
             for r in _linhas(z, membro, uf)
             if r["CD_CARGO"] == cargo and int(r["NR_TURNO"]) == turno
         ]
-    df = pd.DataFrame(linhas, columns=["zona", "secao", "local", "aptos", "comparecimento", "abstencoes"])
-    if df.duplicated(["zona", "secao"]).any():
+    df = pd.DataFrame(linhas, columns=["cod_mun", "zona", "secao", "local", "aptos", "comparecimento", "abstencoes"])
+    if df.duplicated(["cod_mun", "zona", "secao"]).any():
         raise ValueError(f"{caminho}: seção repetida para o cargo {cargo}")
     return df
 
@@ -78,17 +80,17 @@ def _coordenada(v: str) -> float | None:
 
 
 def locais(caminho: Path, uf: str, turno: int = 1) -> pd.DataFrame:
-    """Um por local de votação: zona, local, nome, bairro, lat, lon (None se sem coordenada)."""
+    """Um por local de votação: cod_mun, zona, local, nome, bairro, lat, lon (None se sem coordenada)."""
     with zipfile.ZipFile(caminho) as z:
         membro = _membro(z, uf, preferir_uf=True)
         vistos, linhas = set(), []
         for r in _linhas(z, membro, uf):
             if int(r["NR_TURNO"]) != turno:
                 continue
-            chave = (int(r["NR_ZONA"]), int(r["NR_LOCAL_VOTACAO"]))
+            chave = (r["CD_MUNICIPIO"].zfill(5), int(r["NR_ZONA"]), int(r["NR_LOCAL_VOTACAO"]))
             if chave in vistos:
                 continue
             vistos.add(chave)
             linhas.append((*chave, r["NM_LOCAL_VOTACAO"], r["NM_BAIRRO"],
                            _coordenada(r["NR_LATITUDE"]), _coordenada(r["NR_LONGITUDE"])))
-    return pd.DataFrame(linhas, columns=["zona", "local", "nome", "bairro", "lat", "lon"])
+    return pd.DataFrame(linhas, columns=["cod_mun", "zona", "local", "nome", "bairro", "lat", "lon"])

@@ -1,7 +1,7 @@
 """uv run python -m apuracao.pagina [--saida data/pagina/abstencao-1o-turno-2026.html]
-uv run python -m apuracao.pagina --brasilia   (abstenção por região administrativa do DF)
-uv run python -m apuracao.pagina --brasilia --site data/pagina/site-brasilia   (pasta com index.html
-    completo, para hospedar fora do claude.ai, ex.: Netlify)"""
+uv run python -m apuracao.pagina --recorte brasilia|rio|estado-rj   (abstenção por região; ver pagina/recortes.py)
+uv run python -m apuracao.pagina --recorte rio --site site   (também grava site/<subpasta>/index.html completo,
+    para hospedar fora do claude.ai, ex.: Netlify; --brasilia = --recorte brasilia)"""
 
 from __future__ import annotations
 
@@ -10,7 +10,8 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import brasilia
+from apuracao.pagina import regioes
+from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
 
@@ -41,19 +42,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dir-parquet", type=Path, default=Path("data/parquet"))
     ap.add_argument("--malha", type=Path, default=Path("data/raw/ibge/malha-municipios-minima.json"))
     ap.add_argument("--saida", type=Path, default=None)
-    ap.add_argument("--brasilia", action="store_true", help="página por região administrativa do DF")
+    ap.add_argument("--recorte", choices=sorted(RECORTES), help="página por região (Brasília, cidade ou estado do Rio)")
+    ap.add_argument("--brasilia", action="store_true", help="atalho para --recorte brasilia")
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
     ap.add_argument("--site", type=Path, default=None,
-                    help="também grava <pasta>/index.html como documento completo (hospedagem estática)")
+                    help="também grava <pasta>/[subpasta do recorte/]index.html como documento completo")
     args = ap.parse_args(argv)
-    if args.brasilia:
-        saida = brasilia.gerar(carregar(args.config), args.dir_parquet,
-                               args.saida or Path("data/pagina/abstencao-brasilia-2026.html"))
+    recorte = "brasilia" if args.brasilia else args.recorte
+    sub = ""
+    if recorte:
+        cfg = carregar(args.config)
+        r = RECORTES[recorte](cfg)
+        sub = r.subpasta
+        saida = regioes.gerar(r, cfg, args.dir_parquet, args.saida or Path("data/pagina") / r.saida)
     else:
         saida = gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/abstencao-1o-turno-2026.html"))
     print(f"página gerada: {saida} ({saida.stat().st_size / 1e6:.1f} MB)")
     if args.site:
-        index = documento_completo(saida, args.site / "index.html")
+        index = documento_completo(saida, args.site / sub / "index.html")
         print(f"site: {index}")
     return 0
 

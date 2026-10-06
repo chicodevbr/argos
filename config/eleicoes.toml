@@ -115,3 +115,12 @@ arquivo = "data/raw/ibge/malha-municipios-minima.json"
 [df]
 regioes = "https://sisdia.df.gov.br/server/rest/services/02_CARACTERIZACAO/Regi%C3%B5es_Administrativas_2022/FeatureServer/0/query?where=1%3D1&outFields=ra_cira,ra_nome,ra_codigo&outSR=4326&f=geojson"
 arquivo = "data/raw/df/regioes-administrativas-2022.geojson"
+
+# --- Regiões administrativas da cidade do Rio (página "Abstenção no Rio de Janeiro") ---------
+# Malha oficial do Instituto Pereira Passos (IPP/Prefeitura), 33 RAs; a camada de bairros (só os
+# atributos) diz a que RA cada um dos 167 bairros pertence.
+[rio]
+regioes = "https://pgeo3.rio.rj.gov.br/arcgis/rest/services/Cartografia/Limites_administrativos/FeatureServer/3/query?where=1%3D1&outFields=nomera,codra&outSR=4326&f=geojson"
+arquivo = "data/raw/rj/regioes-administrativas-rio.geojson"
+bairros = "https://pgeo3.rio.rj.gov.br/arcgis/rest/services/Cartografia/Limites_administrativos/FeatureServer/4/query?where=1%3D1&outFields=nome,codra&returnGeometry=false&f=json"
+arquivo_bairros = "data/raw/rj/bairros-rio.json"

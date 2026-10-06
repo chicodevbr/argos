@@ -63,6 +63,14 @@ class Df(BaseModel):
     arquivo: Path
 
 
+class Rio(BaseModel):
+    """Regiões administrativas da cidade do Rio de Janeiro (malha oficial do IPP) e bairros."""
+    regioes: str
+    arquivo: Path
+    bairros: str
+    arquivo_bairros: Path
+
+
 class Config(BaseModel):
     ambientes: dict[str, str]
     cargos: dict[str, int]
@@ -72,6 +80,7 @@ class Config(BaseModel):
     historico: Historico
     ibge: Ibge | None = None
     df: Df | None = None
+    rio: Rio | None = None
 
     @model_validator(mode="after")
     def _valida(self) -> Config:
