@@ -32,6 +32,19 @@ def registrar_anomalias(dir_parquet: Path, log: LogJson, vistas: set) -> None:
         log.evento("anomalia_erro_verificacao", erro=repr(e))
 
 
+def registrar_projecao(dir_parquet: Path, config: Path, historico: Path, log: LogJson) -> None:
+    """Grava a projeção da noite (presidente) no histórico; nunca derruba a construção."""
+    try:
+        from apuracao.config import carregar
+        from apuracao.projecao.historico import registrar
+
+        n = registrar(consultas.conectar(dir_parquet), carregar(config), historico)
+        if n:
+            log.evento("projecao_registrada", linhas=n, arquivo=str(historico))
+    except Exception as e:
+        log.evento("projecao_erro", erro=repr(e))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="apuracao.modelo")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -39,6 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--dir-raw", type=Path, default=Path("data/raw"))
     c.add_argument("--dir-parquet", type=Path, default=Path("data/parquet"))
     c.add_argument("--loop", type=float, help="repete a cada N segundos até SIGTERM/SIGINT")
+    c.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
+    c.add_argument("--historico-projecao", type=Path, default=Path("data/projecao/historico.jsonl"),
+                   help="onde gravar a projeção a cada passada com dados novos (presidente, 2º turno)")
     m = sub.add_parser("municipios", help="gera municipios.parquet a partir de um -cm.json (EA12)")
     m.add_argument("--cm", type=Path, required=True)
     m.add_argument("--dir-parquet", type=Path, default=Path("data/parquet"))
@@ -54,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.loop:
         construir(args.dir_raw, args.dir_parquet, log)
         registrar_anomalias(args.dir_parquet, log, vistas)
+        registrar_projecao(args.dir_parquet, args.config, args.historico_projecao, log)
         return 0
 
     parar = threading.Event()
@@ -64,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             if construir(args.dir_raw, args.dir_parquet, log, ignorar=falhas):
                 registrar_anomalias(args.dir_parquet, log, vistas)
+                registrar_projecao(args.dir_parquet, args.config, args.historico_projecao, log)
         except Exception as e:  # nada derruba o laço
             log.evento("modelo_erro_inesperado", erro=repr(e))
         parar.wait(args.loop)

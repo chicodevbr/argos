@@ -8,6 +8,7 @@ Variáveis: APURACAO_DIR_PARQUET (padrão data/parquet), APURACAO_CONFIG
 from __future__ import annotations
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import altair as alt
@@ -15,13 +16,17 @@ import pandas as pd
 import streamlit as st
 
 from apuracao.app import dados
+from apuracao.app.saude import ler_saude
 from apuracao.config import carregar
 from apuracao.modelo import consultas
 from apuracao.modelo.anomalias import verificar
+from apuracao.projecao import historico
 from apuracao.projecao.ao_vivo import GOVERNADOR, projecao_por_uf, projetar_ao_vivo
 
 DIR_PARQUET = Path(os.environ.get("APURACAO_DIR_PARQUET", "data/parquet"))
 CONFIG = Path(os.environ.get("APURACAO_CONFIG", "config/eleicoes.toml"))
+LOG_COLETOR = Path(os.environ.get("APURACAO_LOG_COLETOR", "logs/coletor.jsonl"))
+HISTORICO_PROJECAO = Path(os.environ.get("APURACAO_HISTORICO_PROJECAO", "data/projecao/historico.jsonl"))
 INTERVALO_S = 30
 
 # Paleta categórica validada (slots 1-3), um passo por tema. Ver skill dataviz.
@@ -95,7 +100,33 @@ with st.sidebar:
 
 
 @st.fragment(run_every=INTERVALO_S)
+def mostrar_saude() -> None:
+    """Responde se o NOSSO coletor está vivo (o horário do TSE não diz isso)."""
+    s = ler_saude(LOG_COLETOR)
+    if s.estado == "ausente":
+        st.caption(f"Coleta local não detectada nesta máquina (sem `{LOG_COLETOR}`).")
+        return
+    minutos = (s.segundos_sem_atividade or 0) / 60
+    partes = [f"última atividade há {int(s.segundos_sem_atividade or 0)} s" if minutos < 2
+              else f"última atividade há {minutos:.0f} min"]
+    if s.ultimo_snapshot:
+        partes.append(f"último snapshot às {s.ultimo_snapshot - timedelta(hours=3):%H:%M:%S} (Brasília)")
+    partes.append(f"{s.requisicoes:,} requisições · {s.snapshots:,} snapshots · {s.erros:,} erros".replace(",", "."))
+    if s.ultimo_erro:
+        partes.append(f"último erro: {s.ultimo_erro}")
+    detalhe = " · ".join(partes)
+    if s.estado == "parado":
+        st.error(f"Coleta local parada. {detalhe}. Veja o terminal 1 (roteiro: \"Coleta local parou\").")
+    elif s.estado == "atencao":
+        st.badge("Coleta local sem atividade recente", color="orange")
+        st.caption(detalhe)
+    else:
+        st.badge("Coleta local ativa", color="green")
+        st.caption(detalhe)
+
+
 def painel() -> None:
+    mostrar_saude()
     if not list(DIR_PARQUET.glob("snapshot_totais/*.parquet")):
         st.info(f"Sem dados em `{DIR_PARQUET}` ainda. Rode o coletor e "
                 "`python -m apuracao.modelo construir --loop 15`.")
@@ -150,7 +181,7 @@ def painel() -> None:
 
     proj = projecao(con, eleicao.id, cargo, abr, marca_dados(con, eleicao.codigo))
     if proj:
-        mostrar_projecao(proj, cor_de, t, cargo)
+        mostrar_projecao(proj, cor_de, t, cargo, eleicao.codigo)
 
     esq, dir_ = st.columns([2, 3])
     with esq:
@@ -230,7 +261,7 @@ def painel() -> None:
                      hide_index=True, use_container_width=True)
 
 
-def mostrar_projecao(proj, cor_de: dict, t: str, cargo: int) -> None:
+def mostrar_projecao(proj, cor_de: dict, t: str, cargo: int, eleicao_codigo: int) -> None:
     r = proj.r
     st.markdown("**Projeção do resultado final**")
     pct_b, pct_b_inf, pct_b_sup = 100 - r.pct_a, 100 - r.pct_a_sup, 100 - r.pct_a_inf
@@ -276,6 +307,33 @@ def mostrar_projecao(proj, cor_de: dict, t: str, cargo: int) -> None:
         st.caption("Modelo por município (1º turno + deslocamento observado nos já apurados da mesma UF/região). "
                    "Backtest com 2022: erro médio de 0,09 ponto; a faixa conteve o resultado real em todos os cenários "
                    "de ordem de chegada testados.")
+        mostrar_historico(eleicao_codigo, proj, cor_de, t)
+
+
+def mostrar_historico(eleicao_codigo: int, proj, cor_de: dict, t: str) -> None:
+    """Projeção ao longo da noite (gravada pelo terminal 2 a cada passada com dados novos)."""
+    h = historico.ler(HISTORICO_PROJECAO, eleicao_codigo)
+    if len(h) < 2:
+        return
+    h = h.assign(ts_brasilia=h["ts_dados"] - pd.Timedelta(hours=3))
+    cor = cor_de.get(proj.num_a, CINZA[t])
+    base = alt.Chart(h).encode(x=alt.X("ts_brasilia:T", title="Horário dos dados (Brasília)", axis=alt.Axis(format="%H:%M")))
+    grafico = (
+        base.mark_area(opacity=0.2, color=cor).encode(
+            y=alt.Y("pct_a_inf:Q", title="% dos válidos", scale=alt.Scale(zero=False)),
+            y2="pct_a_sup:Q")
+        + base.mark_line(strokeWidth=2, color=cor).encode(
+            y="pct_a:Q",
+            tooltip=[alt.Tooltip("ts_brasilia:T", title="Dados de", format="%H:%M:%S"),
+                     alt.Tooltip("pct_contado:Q", title="Eleitorado com dados (%)", format=".1f"),
+                     alt.Tooltip("pct_a:Q", title="Mediana (%)", format=".2f"),
+                     alt.Tooltip("pct_a_inf:Q", title="Faixa de", format=".2f"),
+                     alt.Tooltip("pct_a_sup:Q", title="até", format=".2f"),
+                     alt.Tooltip("prob_a_vence:Q", title=f"Prob. {proj.nome_a} vencer", format=".0%")])
+        + alt.Chart(pd.DataFrame({"y": [50]})).mark_rule(strokeDash=[4, 4], color=TEXTO[t]).encode(y="y:Q")
+    ).properties(height=220)
+    st.markdown(f"**Projeção de {proj.nome_a} ao longo da noite**")
+    st.altair_chart(grafico, use_container_width=True)
 
 
 painel()

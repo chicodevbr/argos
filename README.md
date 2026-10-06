@@ -63,7 +63,7 @@ uv run python -m apuracao.coletor.sync --dir-raw data/raw
 | `SYNC_PASTA` | cópia para uma pasta (usada quando `R2_BUCKET` está vazia) |
 
 No GitHub Actions, o workflow **coleta** dispara pela aba Actions (perfis `ensaio` e `segundo-turno`)
-e por um cron reserva às 16h45 de 25/10.
+e por dois crons de reserva em 25/10: 16h45 e 21h45 (Brasília), cada run com até 5h40.
 
 ### Tabelas (data/raw → data/parquet)
 
@@ -74,7 +74,8 @@ uv run python -m apuracao.modelo municipios --cm "$(ls data/raw/6257/config/mun-
 ```
 
 A construção também verifica anomalias nos dados do TSE (versão velha servida pelo CDN, votos ou
-seções diminuindo, totais incoerentes) e registra cada uma como evento `anomalia`. Apagar
+seções diminuindo, totais incoerentes) e registra cada uma como evento `anomalia`. Com dados novos de
+2º turno, grava a projeção de presidente em `data/projecao/historico.jsonl` (`--historico-projecao`). Apagar
 `data/parquet/` e rodar de novo reconstrói tudo a partir do bruto.
 
 ### Histórico e malha
@@ -92,8 +93,10 @@ uv run streamlit run apuracao/app/main.py
 ```
 
 Abre em http://localhost:8501 com duas páginas: **Apuração ao vivo** e **Análise do 1º turno**.
-Variáveis opcionais: `APURACAO_DIR_PARQUET`, `APURACAO_CONFIG`, `APURACAO_MALHA` e
-`APURACAO_ELEICAO` (id da eleição aberta ao iniciar, ex.: `2026-t2-federal`).
+No topo da página ao vivo, um selo mostra se a coleta local está ativa (lê `logs/coletor.jsonl`).
+Variáveis opcionais: `APURACAO_DIR_PARQUET`, `APURACAO_CONFIG`, `APURACAO_MALHA`,
+`APURACAO_LOG_COLETOR`, `APURACAO_HISTORICO_PROJECAO` e `APURACAO_ELEICAO` (id da eleição aberta
+ao iniciar, ex.: `2026-t2-federal`).
 
 ### Projeção e backtest
 

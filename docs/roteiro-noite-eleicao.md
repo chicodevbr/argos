@@ -84,11 +84,11 @@ Aba **Actions → coleta → Run workflow**:
 | duracao | `20400` (5h40, o máximo que cabe nas 6h do Actions) |
 | municipios | marcado |
 
-O cron de reserva dispara sozinho às **16h45** com `segundo-turno`. Se os dois rodarem,
-não tem problema: snapshots têm nome por horário de coleta e nunca se sobrescrevem.
-
-5h40 a partir de 16h30 cobre até ~22h10. Se a apuração atrasar, disparar **um novo run**
-por volta das 21h30 (os dois se sobrepõem um pouco; não há perda).
+Dois crons de reserva disparam sozinhos com `segundo-turno`: às **16h45** e às **21h45**
+(este cobre a apuração depois das ~22h10, quando o primeiro run atinge o limite de 5h40).
+Se rodarem junto com o disparo manual, não tem problema: snapshots têm nome por horário de
+coleta e nunca se sobrescrevem. Se o cron das 21h45 não aparecer na aba Actions até ~21h50
+(o cron do GitHub pode atrasar), disparar um run manualmente.
 
 ### 2. Cópia local (3 terminais)
 
@@ -116,6 +116,9 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
 
 ## O que é normal ver
 
+- **Selo no topo do painel ("Apuração ao vivo"):** verde = coleta local ativa; amarelo = de 2 a 5 min
+  sem atividade; vermelho = parada (ver "Coleta local parou" abaixo). Ele lê `logs/coletor.jsonl`.
+
 - **Antes das 17h:** os 36 arquivos de BR/exterior/UF dão `404` (evento `"ausente"` no log)
   e o intervalo entre tentativas cresce até 5 min. **Nenhum município é consultado** até o
   arquivo da UF dele existir (porteiro): isso evita milhares de 404, que podem bloquear o IP.
@@ -132,7 +135,9 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
   ```
   grep '"anomalia"' logs/modelo.jsonl | tail -5
   ```
-- **Painel:** a projeção aparece em *presidente → BR* e em *governador → cada UF*.
+- **Painel:** a projeção aparece em *presidente → BR* e em *governador → cada UF*. Em presidente,
+  o gráfico "ao longo da noite" mostra a evolução da projeção; o terminal 2 grava cada cálculo em
+  `data/projecao/historico.jsonl` (base para avaliar a projeção depois da eleição).
   Antes de haver municípios contados, a faixa é larga e a projeção ≈ 1º turno — esperado.
 
 ---
@@ -141,7 +146,7 @@ tenham ficado exportadas no terminal. Ao iniciar, o log não pode mostrar
 
 | Sintoma | O que fazer |
 |---|---|
-| Coleta local parou (erro, terminal fechado, Mac reiniciou) | Rodar o mesmo comando de novo. Retoma ETag e hash do disco; não duplica nem sobrescreve nada. |
+| Coleta local parou (selo vermelho no painel; erro, terminal fechado, Mac reiniciou) | Rodar o mesmo comando de novo. Retoma ETag e hash do disco; não duplica nem sobrescreve nada. |
 | Run do Actions falhou ou foi cancelado | Disparar novo run (`segundo-turno`). Verificar a anotação de erro no resumo do run. A cópia local segue enquanto isso. |
 | Muitos erros seguidos, `429`/`403`, ou nenhum snapshot com o site do TSE no ar | Possível bloqueio de IP (o TSE bloqueia **10 min** e reinicia o prazo a cada tentativa). Não reiniciar em sequência. Baixar `max_req_s` no toml (ex.: 10) e reiniciar a coleta **uma vez** depois de 10 min. O Actions usa outro IP. |
 | `"config_municipios_reserva"` no log | O `-cm.json` do 2º turno ainda não existia: usou a lista do repositório. Normal. |

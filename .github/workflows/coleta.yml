@@ -23,6 +23,10 @@ on:
     # 25/10, 19:45 UTC = 16:45 em Brasília. Cron do GitHub pode atrasar ou
     # falhar em horário de pico: é só reserva. O disparo principal é manual.
     - cron: "45 19 25 10 *"
+    # 26/10, 00:45 UTC = 21:45 de 25/10 em Brasília: segundo run, para a coleta
+    # seguir se a apuração passar das ~22h10 (cada run dura no máximo 5h40).
+    # Sobrepõe-se ao primeiro por alguns minutos; snapshots nunca se sobrescrevem.
+    - cron: "45 0 26 10 *"
 
 permissions:
   contents: read
