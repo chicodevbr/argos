@@ -144,6 +144,7 @@ uv run python -m apuracao.pagina --recorte rio --site site         # cidade do R
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
 uv run python -m apuracao.pagina --recorte brasilia --votos --site site   # votos por candidato -> site/votos/
 uv run python -m apuracao.pagina --perdas --site site   # "Onde Lula perdeu votos" -> site/onde-lula-perdeu/
+uv run python -m apuracao.pagina --perdas --recorte brasilia --site site   # por RA do DF -> site/onde-lula-perdeu/brasilia/
 ```
 
 **Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e

@@ -1,4 +1,4 @@
-<title>Onde Lula perdeu votos</title>
+<title>__TITULO__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -23,7 +23,7 @@
   --raio: 6px;
   /* mapa: fixas nos dois temas (azul = queda, vermelho = alta; mais escuro = mudança maior) */
   --m-queda-4: #104281; --m-queda-3: #1c5cab; --m-queda-2: #5598e7; --m-queda-1: #b7d3f6;
-  --m-alta-1: #f2a3a2; --m-alta-2: #b3302f;
+  --m-alta-1: #f2a3a2; --m-alta-2: #e47e7d; --m-alta-3: #cf5554; --m-alta-4: #b3302f;
   --seq-1: #b7d3f6; --seq-2: #86b6ef; --seq-3: #5598e7; --seq-4: #2a78d6; --seq-5: #1c5cab; --seq-6: #104281;
   --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
   --contorno: #ffffff;
@@ -127,8 +127,8 @@ td.uf, th.uf { text-align: left; }
 
 <main class="pagina">
   <header class="cabeca">
-    <span class="rotulo">Eleições 2026 · Presidente · 1º turno · Brasil, por município</span>
-    <h1>Onde Lula perdeu votos</h1>
+    <span class="rotulo" id="sobretitulo">Eleições 2026 · Presidente · 1º turno</span>
+    <h1>__TITULO__</h1>
     <div class="base-topo">
       <span class="nota">Comparar 2026 com</span>
       <div class="segmentado" role="group" aria-label="Ano de comparação">
@@ -144,25 +144,25 @@ td.uf, th.uf { text-align: left; }
   </section>
 
   <section class="quadro" aria-labelledby="t-mapa">
-    <h2 id="t-mapa">Variação por município, em pontos dos votos válidos</h2>
+    <h2 id="t-mapa">Variação</h2>
     <p class="nota" id="mapa-nota"></p>
     <div class="mapa-grade">
-      <svg id="mapa" role="img" aria-label="Mapa da variação do percentual do número 13 por município"></svg>
+      <svg id="mapa" role="img" aria-label="Mapa da variação do percentual do número 13"></svg>
       <div class="legenda-mapa" id="legenda-mapa"></div>
     </div>
   </section>
 
   <section class="quadro" aria-labelledby="t-ufs">
-    <h2 id="t-ufs">Por UF</h2>
+    <h2 id="t-ufs">Por grupo</h2>
     <p class="nota" id="nota-ufs"></p>
-    <svg id="ufs" role="img" aria-label="Variação do percentual por UF"></svg>
+    <svg id="ufs" role="img" aria-label="Variação do percentual por grupo"></svg>
   </section>
 
   <section class="quadro" aria-labelledby="t-tabela">
-    <h2 id="t-tabela">Todos os municípios</h2>
+    <h2 id="t-tabela">Tabela</h2>
     <p class="nota" id="nota-votos"></p>
     <div class="filtros">
-      <input id="busca" type="search" placeholder="Buscar município (ex.: Campinas)" aria-label="Buscar município">
+      <input id="busca" type="search" placeholder="Buscar" aria-label="Buscar">
       <select id="filtro-uf" aria-label="Filtrar por UF"><option value="">Todas as UFs</option></select>
       <select id="filtro-tam" aria-label="Filtrar por tamanho">
         <option value="0">Todos os tamanhos</option><option value="10000">10 mil eleitores ou mais</option>
@@ -176,16 +176,8 @@ td.uf, th.uf { text-align: left; }
     <button class="mais" id="mais" hidden>Mostrar mais 300</button>
   </section>
 
-  <footer class="metodo nota">
+  <footer class="metodo nota" id="metodo">
     <span class="rotulo">Método e fontes</span>
-    <p>Percentual do número 13 (PT) sobre os votos válidos no 1º turno para presidente: Lula em 2026 e 2022, Dilma
-      em 2014. 2026: arquivos de resultado por município publicados pelo TSE; 2022 e 2014: Portal de Dados Abertos do
-      TSE. Os totais nacionais conferem com os resultados oficiais. Só municípios do Brasil; os votos do exterior ficam
-      fora, por isso os percentuais nacionais podem diferir dos oficiais na segunda casa.</p>
-    <p>Pontos percentuais medem a mudança no eleitorado de cada cidade, independente do tamanho; votos absolutos
-      mostram de onde saíram os votos, mas também mudam com o crescimento do eleitorado entre as eleições.</p>
-    <p>Mapa: malha municipal do IBGE (qualidade mínima), projeção cônica equivalente de Albers. Faixas fixas para cada
-      ano de comparação. Municípios que não existiam no ano de comparação aparecem em cinza.</p>
   </footer>
 </main>
 <div class="dica" id="dica" hidden></div>
@@ -195,6 +187,15 @@ td.uf, th.uf { text-align: left; }
 const D = __DADOS__;
 const MALHA = __MALHA__;
 const C = Object.fromEntries(D.colunas.map((c, i) => [c, i]));
+const M = D.meta;
+document.getElementById("sobretitulo").textContent += " · " + M.rotulo;
+document.getElementById("t-mapa").textContent = M.titulo_mapa;
+document.getElementById("t-ufs").textContent = M.titulo_grupos;
+document.getElementById("t-tabela").textContent = M.titulo_tabela;
+document.getElementById("busca").placeholder = M.busca;
+document.getElementById("busca").setAttribute("aria-label", M.busca);
+document.getElementById("filtro-uf").hidden = !M.mostrar_uf;
+for (const t of M.metodo) { const p = document.createElement("p"); p.textContent = t; document.getElementById("metodo").appendChild(p); }
 const fmt = (v, c = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
 const inteiro = v => v == null ? "–" : v.toLocaleString("pt-BR");
 const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
@@ -213,7 +214,7 @@ const varVotos = m => m[C["votos" + base]] == null ? null : m[C.votos2026] - m[C
 function cabecalho() {
   const x = D.bases[base], t = D.textos[base];
   document.getElementById("lede").textContent = t.lede;
-  document.getElementById("nota-ufs").textContent = t.ufs;
+  document.getElementById("nota-ufs").textContent = t.grupos;
   document.getElementById("nota-votos").textContent = t.votos + " " + t.grandes;
   const dif = x.pct_atual - x.pct_base, dv = x.votos_atual - x.votos_base;
   const itens = [
@@ -237,7 +238,7 @@ function mostrarDica(ev, m) {
   const x = D.bases[base];
   dica.hidden = false;
   dica.innerHTML = `<b></b><br><span class="a"></span><br><span class="b"></span><br><span class="c"></span>`;
-  dica.querySelector("b").textContent = `${m[C.nome]} (${m[C.uf]})`;
+  dica.querySelector("b").textContent = M.mostrar_uf ? `${m[C.nome]} (${m[C.uf]})` : m[C.nome];
   dica.querySelector(".a").textContent = `${x.nome_atual} 2026: ${fmt(m[C.pct2026], 1)}% · ${inteiro(m[C.votos2026])} votos`;
   dica.querySelector(".b").textContent = `${x.nome_base} ${base}: ${fmt(m[C["pct" + base]], 1)}% · ${inteiro(m[C["votos" + base]])} votos`;
   dica.querySelector(".c").textContent = `Variação: ${sinal(varPct(m))} pontos · ${sinalInt(varVotos(m))} votos`;
@@ -247,23 +248,23 @@ const esconderDica = () => { dica.hidden = true; };
 
 // --- Mapa ------------------------------------------------------------------------
 // queda: azul sequencial (mais escuro = mais queda); alta: vermelho do divergente validado (cor do Lula)
-const FAIXAS = {
-  "2022": { cortes: [-10, -6, -3, 0, 3], rotulos: ["caiu 10 pontos ou mais", "caiu de 6 a 10", "caiu de 3 a 6", "caiu até 3", "subiu até 3", "subiu 3 ou mais"] },
-  "2014": { cortes: [-15, -8, -3, 0, 8], rotulos: ["caiu 15 pontos ou mais", "caiu de 8 a 15", "caiu de 3 a 8", "caiu até 3", "subiu até 8", "subiu 8 ou mais"] },
-};
-const CORES_MAPA = ["--m-queda-4", "--m-queda-3", "--m-queda-2", "--m-queda-1", "--m-alta-1", "--m-alta-2"];
+// faixas e cores vêm dos dados (perdas.py: FAIXAS_BRASIL ou faixas()); q = queda, a = alta, 1 a 4 = do mais
+// claro ao mais escuro (mudança maior = mais escuro)
+const corFaixa = c => `--m-${c[0] === "q" ? "queda" : "alta"}-${c[1]}`;
 function desenharMapa() {
   const svg = d3.select("#mapa");
-  const W = svg.node().getBoundingClientRect().width || 700, H = Math.round(W * 0.95);
+  const W = svg.node().getBoundingClientRect().width || 700, H = Math.round(W * (M.projecao === "albers" ? 0.95 : 0.62));
   svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
-  const proj = d3.geoConicEqualArea().parallels([-2, -22]).rotate([54, 0]).fitSize([W, H], MALHA);
+  const proj = M.projecao === "albers"
+    ? d3.geoConicEqualArea().parallels([-2, -22]).rotate([54, 0]).fitSize([W, H], MALHA)   // Albers do IBGE para o Brasil
+    : d3.geoMercator().fitSize([W, H], MALHA);
   const caminho = d3.geoPath(proj);
-  const f = FAIXAS[base];
-  const corDe = v => v == null ? cor("--linha") : cor(CORES_MAPA[d3.bisect(f.cortes, v)]);
+  const f = D.faixas[base];
+  const corDe = v => v == null ? cor("--linha") : cor(corFaixa(f.cores[d3.bisect(f.cortes, v)]));
   svg.append("g").selectAll("path").data(MALHA.features).join("path")
     .attr("d", caminho)
-    .attr("fill", g => { const m = porIbge.get(String(g.properties.codarea)); return m ? corDe(varPct(m)) : cor("--linha"); })
-    .on("mousemove", (ev, g) => { const m = porIbge.get(String(g.properties.codarea)); if (m) mostrarDica(ev, m); })
+    .attr("fill", g => { const m = porIbge.get(String(g.properties[M.chave_malha])); return m ? corDe(varPct(m)) : cor("--linha"); })
+    .on("mousemove", (ev, g) => { const m = porIbge.get(String(g.properties[M.chave_malha])); if (m) mostrarDica(ev, m); })
     .on("mouseleave", esconderDica);
   const x = D.bases[base];
   document.getElementById("mapa-nota").textContent =
@@ -272,7 +273,7 @@ function desenharMapa() {
   f.rotulos.forEach((t, i) => {
     const n = D.municipios.filter(m => { const v = varPct(m); return v != null && d3.bisect(f.cortes, v) === i; }).length;
     const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
-    s.querySelector("i").style.background = cor(CORES_MAPA[i]);
+    s.querySelector("i").style.background = cor(corFaixa(f.cores[i]));
     s.querySelector("span").textContent = `${t} (${inteiro(n)})`;
     leg.appendChild(s);
   });
@@ -282,9 +283,11 @@ function desenharMapa() {
 function desenharUfs() {
   const svg = d3.select("#ufs");
   const W = svg.node().getBoundingClientRect().width || 900;
-  const lista = Object.entries(D.ufs).map(([u, v]) => ({ uf: u, v: v.pct2026 - v["pct" + base], a: v.pct2026, b: v["pct" + base] }))
-    .sort((p, q) => p.v - q.v);
-  const linha = 20, topo = 8, esq = 90, dir = 60, H = topo + lista.length * linha + 8;  // esq: rótulo da UF + valor da maior queda
+  const lista = Object.entries(D.grupos).filter(([, v]) => v["pct" + base] != null)
+    .map(([u, v]) => ({ uf: u, v: v.pct2026 - v["pct" + base], a: v.pct2026, b: v["pct" + base] })).sort((p, q) => p.v - q.v);
+  // largura do rótulo: siglas de UF (curtas) ou nomes de região; mais o valor da maior queda à esquerda da barra
+  const rotulo = M.mostrar_uf ? 30 : Math.min(180, 7 * Math.max(...lista.map(d => d.uf.length)));
+  const linha = 20, topo = 8, esq = rotulo + 60, dir = 60, H = topo + lista.length * linha + 8;
   svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
   const ext = Math.max(...lista.map(d => Math.abs(d.v))) * 1.05;
   const x = d3.scaleLinear().domain([-ext, ext]).range([esq, W - dir]);
@@ -292,7 +295,7 @@ function desenharUfs() {
   lista.forEach((d, i) => {
     const y = topo + i * linha;
     const g = svg.append("g");
-    g.append("text").attr("x", 30).attr("y", y + 13).attr("text-anchor", "end").text(d.uf);
+    g.append("text").attr("x", rotulo).attr("y", y + 13).attr("text-anchor", "end").text(d.uf);
     g.append("rect").attr("x", Math.min(x(0), x(d.v))).attr("y", y + 3).attr("width", Math.abs(x(d.v) - x(0)))
       .attr("height", linha - 6).attr("rx", 2).attr("fill", cor(d.v < 0 ? "--seq-4" : "--div-5"));
     g.append("text").attr("x", d.v < 0 ? x(d.v) - 6 : x(d.v) + 6).attr("y", y + 13)
@@ -309,8 +312,8 @@ const normal = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 function desenharTabela() {
   const x = D.bases[base];
   const colunas = [
-    { id: "nome", rot: "Município", v: m => m[C.nome], texto: true },
-    { id: "uf", rot: "UF", v: m => m[C.uf], texto: true, cls: "uf" },
+    { id: "nome", rot: M.unidade, v: m => m[C.nome], texto: true },
+    ...(M.mostrar_uf ? [{ id: "uf", rot: "UF", v: m => m[C.uf], texto: true, cls: "uf" }] : []),
     { id: "eleitores", rot: "Eleitores", v: m => m[C.eleitores], f: inteiro },
     { id: "pb", rot: `${x.nome_base} ${base}`, v: m => m[C["pct" + base]], f: v => fmt(v, 1) + "%" },
     { id: "pa", rot: `${x.nome_atual} 2026`, v: m => m[C.pct2026], f: v => fmt(v, 1) + "%", forte: true },
@@ -331,7 +334,7 @@ function desenharTabela() {
   filtrados.sort((a, b) => { const va = col.v(a), vb = col.v(b);
     const r = col.texto ? String(va).localeCompare(String(vb), "pt-BR") : va - vb; return ordem.desc ? -r : r; });
   document.getElementById("contagem").textContent =
-    `${inteiro(filtrados.length)} municípios${filtrados.length > limite ? `; mostrando os ${inteiro(limite)} primeiros` : ""}.`;
+    `${inteiro(filtrados.length)} ${M.unidades}${filtrados.length > limite ? `; mostrando os ${inteiro(limite)} primeiros` : ""}.`;
   const t = document.getElementById("tabela"); t.innerHTML = "";
   const th = t.createTHead().insertRow();
   for (const c of colunas) {

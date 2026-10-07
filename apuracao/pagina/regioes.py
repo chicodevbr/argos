@@ -56,6 +56,7 @@ class Recorte:
     extras: dict[str, str] = field(default_factory=dict)      # nome -> texto extra (ex.: bairros)
     metodo: list[str] = field(default_factory=list)           # parágrafos do método
     cortes: list[float] | None = None  # faixas do mapa (5 cortes, 6 cores); None = pelos dados
+    nome_curto: str = ""        # "Brasília" (títulos curtos)
     titulo_votos: str = ""      # página de votos por candidato (pagina/votos.py)
     metodo_votos: list[str] = field(default_factory=list)
     subpasta: str = ""          # no site estático: "" = raiz
@@ -82,22 +83,25 @@ def _completar_coordenadas(loc: pd.DataFrame, outro: pd.DataFrame) -> pd.DataFra
     return m.drop(columns=["lat_ref", "lon_ref"])
 
 
-def secoes_por_unidade(r: Recorte, dir_historico: Path, municipios: pd.DataFrame | None = None
-                       ) -> dict[int, pd.DataFrame]:
+def secoes_por_unidade(r: Recorte, dir_historico: Path, municipios: pd.DataFrame | None = None,
+                       anos: tuple[int, ...] = ANOS) -> dict[int, pd.DataFrame]:
     """Por ano: uma linha por seção, com aptos, abstenções e `unidade` (a chave do agrupamento)."""
     saida = {}
     if r.agrupar == "coordenadas":
         regs = regioes.ler(r.malha, r.campo)
-        locs = {a: secao.locais(dir_historico / str(a) / f"eleitorado_local_votacao_{a}.zip", r.uf) for a in ANOS}
+        locs = {a: secao.locais(dir_historico / str(a) / f"eleitorado_local_votacao_{a}.zip", r.uf) for a in anos}
         if r.cod_mun:
             locs = {a: l[l["cod_mun"] == r.cod_mun] for a, l in locs.items()}
-    for a in ANOS:
+    for a in anos:
         s = secao.secoes(dir_historico / str(a) / f"detalhe_votacao_secao_{a}.zip", r.uf)
         if r.cod_mun:
             s = s[s["cod_mun"] == r.cod_mun]
         if r.agrupar == "coordenadas":
-            outro = locs[ANOS[1] if a == ANOS[0] else ANOS[0]]
-            loc = _completar_coordenadas(locs[a], outro)
+            # sem coordenada num ano: herda a do mesmo local em outro ano (o mais próximo primeiro)
+            loc = locs[a]
+            for b in sorted((b for b in anos if b != a), key=lambda b: abs(b - a)):
+                loc = _completar_coordenadas(loc.drop(columns=["herdou"], errors="ignore"), locs[b]).assign(
+                    herdou=lambda x, prev=loc: x["herdou"] | prev.get("herdou", False))
             loc["unidade"] = regioes.regiao_de(loc["lon"], loc["lat"], regs)
             m = s.merge(loc[["cod_mun", "zona", "local", "unidade", "herdou"]], on=["cod_mun", "zona", "local"], how="left")
             m.attrs["locais_herdados"] = int(loc["herdou"].sum())

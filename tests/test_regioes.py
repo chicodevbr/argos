@@ -186,3 +186,47 @@ def test_barra_de_navegacao_do_site(tmp_path):
     assert '<a href="/">Início</a>' in html
     sem = documento_completo(pagina, tmp_path / "x" / "index.html").read_text()
     assert "site-nav" not in sem
+
+
+# --- "Onde Lula perdeu votos" por região -----------------------------------------------------------
+def test_faixas_do_mapa_pelos_dados():
+    from apuracao.pagina.perdas import faixas
+    misto = faixas([-3.3, -2.6, -2.2, -1.3, -1.2, -1.0, -0.9, -0.3, -0.2, -0.1, -0.1, -0.05,
+                    0.1, 0.3, 0.4, 0.5, 0.7, 1.2, 1.3, 1.7, 2.0, 2.4, 2.8, 3.6, 4.5, 5.8])
+    assert 0 in misto["cortes"] and misto["cores"][0] == "q4" and misto["cores"][-1] == "a4"
+    for f in (misto, faixas([2, 3, 12, 14, 16, 18, 22, 25, 27, 29, 11, 13]), faixas([-2]), faixas([1, 2])):
+        assert len(f["rotulos"]) == len(f["cores"]) == len(f["cortes"]) + 1
+        assert f["cortes"] == sorted(f["cortes"])
+    so_altas = faixas([2, 3, 12, 14, 16, 18, 22, 25, 27, 29, 11, 13])
+    assert all(c.startswith("a") for c in so_altas["cores"]) and not any("caiu" in r for r in so_altas["rotulos"])
+    assert faixas([-2]) == {"cortes": [], "cores": ["q4"], "rotulos": ["caiu"]}
+    # mediana das quedas ~0,95 -> corte em 1: singular "1 ponto"
+    um = faixas([-2, -1.8, -1.5, -1.2, -1.1, -1.0, -0.9, -0.8, -0.5, -0.4, -0.3, -0.2])
+    assert um["cortes"] == [-1.0] and um["rotulos"][0] == "caiu 1 ponto ou mais"
+
+
+def test_onde_lula_perdeu_por_ra(tmp_path, monkeypatch):
+    from apuracao.pagina import perdas, votos
+    h = _historico_votos(tmp_path)
+    (h / "2014").mkdir()
+    for n in ("detalhe_votacao_secao_2014.zip", "eleitorado_local_votacao_2014.zip", "votacao_secao_2014_BR.zip"):
+        shutil.copy(H / n, h / "2014" / n)
+    cand_2014 = {13: "Dilma", 45: "Aécio Neves", 40: "Marina Silva", 50: "Luciana Genro", 20: "Pastor Everaldo",
+                 43: "Eduardo Jorge", 28: "Levy Fidelix", 16: "Zé Maria", 27: "Eymael", 21: "Mauro Iasi", 29: "Rui Costa Pimenta"}
+    monkeypatch.setattr(votos, "candidatos_validos", lambda *a: {**CANDIDATOS, 2014: cand_2014})
+    cfg = carregar(CONFIG)
+    cfg.historico.dir = h
+    r = _df(cfg)
+    d = perdas.montar_dados_regioes(r, cfg, tmp_path / "sem_parquet")
+    col = {c: i for i, c in enumerate(d["colunas"])}
+    assert {m[col["nome"]] for m in d["municipios"]} == {"Cruzeiro", "Candangolândia", "Varjão"}
+    assert d["bases"]["2014"]["nome_base"] == "Dilma" and d["bases"]["2022"]["nome_base"] == "Lula"
+    for b in ("2022", "2014"):
+        x = d["bases"][b]
+        assert x["votos_atual"] == sum(m[col["votos2026"]] for m in d["municipios"])
+        assert x["votos_base"] == sum(m[col[f"votos{b}"]] for m in d["municipios"])
+        f = d["faixas"][b]
+        assert len(f["rotulos"]) == len(f["cores"]) == len(f["cortes"]) + 1
+        assert d["textos"][b]["lede"].startswith("No Distrito Federal, Lula teve")
+    assert d["meta"]["titulo"] == "Onde Lula perdeu votos em Brasília" and d["meta"]["mostrar_uf"] is False
+    assert set(d["grupos"]) == {m[col["nome"]] for m in d["municipios"]}

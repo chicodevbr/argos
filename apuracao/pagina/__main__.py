@@ -115,7 +115,13 @@ def main(argv: list[str] | None = None) -> int:
         index = inicio(args.site / "index.html")
         print(f"site: {index}")
         return 0
-    if args.perdas:
+    if args.perdas and recorte:
+        cfg = carregar(args.config)
+        r = RECORTES[recorte](cfg)
+        sub = f"onde-lula-perdeu/{r.subpasta}"
+        saida = perdas.gerar_regioes(r, cfg, args.dir_parquet,
+                                     args.saida or Path(f"data/pagina/onde-lula-perdeu-{r.id}-2026.html"))
+    elif args.perdas:
         sub = "onde-lula-perdeu"
         saida = perdas.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/onde-lula-perdeu-2026.html"))
     elif recorte:

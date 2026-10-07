@@ -50,7 +50,13 @@ def candidatos_validos(dir_parquet: Path, cfg: Config) -> dict[int, dict[int, st
     c22 = con.execute(
         """SELECT numero, any_value(nome) FROM hist_votacao WHERE ano = 2022 AND turno = 1 AND cargo = 1
            AND destinacao = 'Válido' GROUP BY numero""").fetchall()
-    return {2026: {int(n): nome_urna(s) for n, s in c26}, 2022: {int(n): nome_urna(s) for n, s in c22}}
+    # 2014: o CSV não tem a destinação do voto; a carga conferiu que os votos nominais somam o total de
+    # válidos de cada UF (carga/tse_csv.py), então todos os candidatos com votos nominais são válidos.
+    c14 = con.execute(
+        """SELECT numero, any_value(nome) FROM hist_votacao WHERE ano = 2014 AND turno = 1 AND cargo = 1
+           GROUP BY numero HAVING sum(votos_validos) > 0""").fetchall()
+    return {2026: {int(n): nome_urna(s) for n, s in c26}, 2022: {int(n): nome_urna(s) for n, s in c22},
+            2014: {int(n): nome_urna(s) for n, s in c14}}
 
 
 def montar_dados(r: Recorte, secoes_por_ano: dict[int, pd.DataFrame], votos_por_ano: dict[int, pd.DataFrame],
