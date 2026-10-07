@@ -67,3 +67,18 @@ def test_frases_com_dado_ausente():
     t = abstencao._textos(_base({2022: 20.9, 2026: 21.1}, exterior=None), _municipios(20, 10))
     assert t["titulo_exterior"] == "Abstenção no exterior"
     assert abstencao._r(pd.NA) is None and abstencao._r(float("nan")) is None and abstencao._r(1.234) == 1.23
+
+
+def test_pagina_onde_lula_perdeu(pq, tmp_path):  # noqa: F811
+    from apuracao.pagina import perdas
+    html = perdas.gerar(pq, FIX / "malha-amostra.json", tmp_path / "perdas.html").read_text()
+    d = _dados_da_pagina(html)
+    assert set(d["bases"]) == {"2022"}                # só 2022 na base de teste: o botão de 2014 some
+    col = {c: i for i, c in enumerate(d["colunas"])}
+    m = d["municipios"][0]
+    assert m[col["ibge"]] == "1200013" and m[col["pct2014"]] is None
+    x = d["bases"]["2022"]
+    assert x["votos_atual"] == sum(r[col["votos2026"]] for r in d["municipios"])
+    lede = d["textos"]["2022"]["lede"]
+    assert ("a menos" in lede) == (x["pct_atual"] < x["pct_base"]) and "." not in lede.split("%")[0][-3:]
+    assert d["textos"]["2022"]["grandes"] == ""      # nenhuma cidade de 100 mil+: sem a frase

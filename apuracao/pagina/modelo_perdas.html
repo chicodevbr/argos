@@ -1,0 +1,370 @@
+<title>Onde Lula perdeu votos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), da mesma série das páginas de abstenção e votos: o número 13
+   no Brasil, mapa por município, UFs, rankings e a tabela de TODOS os municípios. Base 2022 ou 2014.
+   Lula/PT subiu = vermelho (cor dele na página de votos); caiu = azul sequencial (mais escuro, mais queda). */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --dado-atual: #2a78d6;   /* 2026: slot 1 da paleta validada */
+  --dado-base: #8a8883;    /* 2022: referência neutra (validado: contraste e CVD) */
+  --alta: #b4441f;
+  --baixa: #1f6f4f;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --seq-1: #b7d3f6; --seq-2: #86b6ef; --seq-3: #5598e7; --seq-4: #2a78d6; --seq-5: #1c5cab; --seq-6: #104281;
+  --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
+  --contorno: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
+    --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
+    --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+    --contorno: #111317;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
+  --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
+  --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+  --contorno: #111317;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.indicador.destaque .valor { color: var(--dado-atual); }
+.variacao { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+.variacao.piora { color: var(--alta); } .variacao.melhora { color: var(--baixa); }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
+svg .grade line { stroke: var(--linha); }
+svg .forte { fill: var(--tinta); font-weight: 600; }
+.legenda { display: flex; flex-wrap: wrap; gap: 16px; font-size: .875rem; color: var(--tinta-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+button:focus-visible, th:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+
+.mapa-grade { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mapa-grade { grid-template-columns: 1fr; } }
+#mapa path { stroke: var(--contorno); stroke-width: 1; cursor: pointer; }
+#mapa path:hover, #mapa path.ativo { stroke: var(--tinta); stroke-width: 2; }
+.legenda-mapa { display: grid; gap: 6px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda-mapa span { display: inline-flex; align-items: center; gap: 8px; }
+.legenda-mapa i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; border: 1px solid var(--linha); }
+.destaques { display: grid; gap: 4px; font-size: .9rem; }
+.destaques b { font-weight: 600; }
+
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+td.forte { font-weight: 600; color: var(--tinta); }
+.pos { color: var(--alta); } .neg { color: var(--baixa); }
+.pequena { color: var(--apagado); font-size: .78rem; display: block; white-space: normal; max-width: 46ch; line-height: 1.35; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 260px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
+
+.base-topo { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.filtros input { flex: 1 1 220px; min-width: 0; }
+input, select { font: 400 .95rem var(--texto); color: var(--tinta); background: var(--superficie); border: 1px solid var(--linha);
+  border-radius: var(--raio); padding: 8px 10px; }
+input:focus-visible, select:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+.mais { justify-self: start; background: var(--superficie); color: var(--tinta); border: 1px solid var(--linha);
+  border-radius: var(--raio); padding: 8px 14px; font: 500 .9rem var(--texto); cursor: pointer; }
+.mais:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+#mapa path { stroke: var(--contorno); stroke-width: .15; cursor: default; }
+#mapa path:hover { stroke: var(--tinta); stroke-width: 1; }
+td.uf, th.uf { text-align: left; }
+/* sinal da variação na tabela: queda no azul do mapa, alta no vermelho (cor do Lula) */
+.neg { color: var(--seq-5); } .pos { color: var(--div-5); }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo">Eleições 2026 · Presidente · 1º turno · Brasil, por município</span>
+    <h1>Onde Lula perdeu votos</h1>
+    <div class="base-topo">
+      <span class="nota">Comparar 2026 com</span>
+      <div class="segmentado" role="group" aria-label="Ano de comparação">
+        <button data-base="2022" aria-pressed="true">2022 (Lula)</button>
+        <button data-base="2014" aria-pressed="false">2014 (Dilma)</button>
+      </div>
+    </div>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <section aria-label="Brasil">
+    <div class="indicadores" id="indicadores"></div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-mapa">
+    <h2 id="t-mapa">Variação por município, em pontos dos votos válidos</h2>
+    <p class="nota" id="mapa-nota"></p>
+    <div class="mapa-grade">
+      <svg id="mapa" role="img" aria-label="Mapa da variação do percentual do número 13 por município"></svg>
+      <div class="legenda-mapa" id="legenda-mapa"></div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-ufs">
+    <h2 id="t-ufs">Por UF</h2>
+    <p class="nota" id="nota-ufs"></p>
+    <svg id="ufs" role="img" aria-label="Variação do percentual por UF"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <h2 id="t-tabela">Todos os municípios</h2>
+    <p class="nota" id="nota-votos"></p>
+    <div class="filtros">
+      <input id="busca" type="search" placeholder="Buscar município (ex.: Campinas)" aria-label="Buscar município">
+      <select id="filtro-uf" aria-label="Filtrar por UF"><option value="">Todas as UFs</option></select>
+      <select id="filtro-tam" aria-label="Filtrar por tamanho">
+        <option value="0">Todos os tamanhos</option><option value="10000">10 mil eleitores ou mais</option>
+        <option value="100000">100 mil eleitores ou mais</option></select>
+      <select id="filtro-sinal" aria-label="Quais municípios">
+        <option value="perdeu-pct">Onde o percentual caiu</option><option value="perdeu-votos">Onde perdeu votos</option>
+        <option value="ganhou">Onde o percentual subiu</option><option value="todos">Todos</option></select>
+    </div>
+    <p class="nota" id="contagem"></p>
+    <div class="tabela"><table id="tabela"></table></div>
+    <button class="mais" id="mais" hidden>Mostrar mais 300</button>
+  </section>
+
+  <footer class="metodo nota">
+    <span class="rotulo">Método e fontes</span>
+    <p>Percentual do número 13 (PT) sobre os votos válidos no 1º turno para presidente: Lula em 2026 e 2022, Dilma
+      em 2014. 2026: arquivos de resultado por município publicados pelo TSE; 2022 e 2014: Portal de Dados Abertos do
+      TSE. Os totais nacionais conferem com os resultados oficiais. Só municípios do Brasil; os votos do exterior ficam
+      fora, por isso os percentuais nacionais podem diferir dos oficiais na segunda casa.</p>
+    <p>Pontos percentuais medem a mudança no eleitorado de cada cidade, independente do tamanho; votos absolutos
+      mostram de onde saíram os votos, mas também mudam com o crescimento do eleitorado entre as eleições.</p>
+    <p>Mapa: malha municipal do IBGE (qualidade mínima), projeção cônica equivalente de Albers. Faixas fixas para cada
+      ano de comparação. Municípios que não existiam no ano de comparação aparecem em cinza.</p>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+const C = Object.fromEntries(D.colunas.map((c, i) => [c, i]));
+const fmt = (v, c = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : v.toLocaleString("pt-BR");
+const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const sinalInt = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + inteiro(Math.abs(v));
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const porIbge = new Map(D.municipios.map(m => [String(m[C.ibge]), m]));
+let base = Object.keys(D.bases).sort().reverse()[0];   // o mais recente disponível
+for (const b of document.querySelectorAll("[data-base]")) {
+  b.hidden = !(b.dataset.base in D.bases);
+  b.setAttribute("aria-pressed", String(b.dataset.base === base));
+}
+const varPct = m => m[C["pct" + base]] == null ? null : m[C.pct2026] - m[C["pct" + base]];
+const varVotos = m => m[C["votos" + base]] == null ? null : m[C.votos2026] - m[C["votos" + base]];
+
+// --- Abertura e indicadores --------------------------------------------------------
+function cabecalho() {
+  const x = D.bases[base], t = D.textos[base];
+  document.getElementById("lede").textContent = t.lede;
+  document.getElementById("nota-ufs").textContent = t.ufs;
+  document.getElementById("nota-votos").textContent = t.votos + " " + t.grandes;
+  const dif = x.pct_atual - x.pct_base, dv = x.votos_atual - x.votos_base;
+  const itens = [
+    [`${x.nome_base} ${base}`, fmt(x.pct_base) + "%", `${inteiro(x.votos_base)} votos`],
+    [`${x.nome_atual} 2026`, fmt(x.pct_atual) + "%", `${inteiro(x.votos_atual)} votos`],
+    ["Variação", sinal(dif, 2), "pontos percentuais"],
+    ["Votos", sinalInt(dv), dv < 0 ? "a menos" : "a mais"],
+  ];
+  const alvo = document.getElementById("indicadores"); alvo.innerHTML = "";
+  itens.forEach(([r, v, s], i) => {
+    const el = document.createElement("div"); el.className = "indicador";   // sem azul: aqui Lula é vermelho
+    el.innerHTML = `<span class="rotulo"></span><span class="valor"></span><span class="variacao"></span>`;
+    el.children[0].textContent = r; el.children[1].textContent = v; el.children[2].textContent = s;
+    alvo.appendChild(el);
+  });
+}
+
+// --- Dica ------------------------------------------------------------------------
+const dica = document.getElementById("dica");
+function mostrarDica(ev, m) {
+  const x = D.bases[base];
+  dica.hidden = false;
+  dica.innerHTML = `<b></b><br><span class="a"></span><br><span class="b"></span><br><span class="c"></span>`;
+  dica.querySelector("b").textContent = `${m[C.nome]} (${m[C.uf]})`;
+  dica.querySelector(".a").textContent = `${x.nome_atual} 2026: ${fmt(m[C.pct2026], 1)}% · ${inteiro(m[C.votos2026])} votos`;
+  dica.querySelector(".b").textContent = `${x.nome_base} ${base}: ${fmt(m[C["pct" + base]], 1)}% · ${inteiro(m[C["votos" + base]])} votos`;
+  dica.querySelector(".c").textContent = `Variação: ${sinal(varPct(m))} pontos · ${sinalInt(varVotos(m))} votos`;
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 270) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+const esconderDica = () => { dica.hidden = true; };
+
+// --- Mapa ------------------------------------------------------------------------
+// queda: azul sequencial (mais escuro = mais queda); alta: vermelho do divergente validado (cor do Lula)
+const FAIXAS = {
+  "2022": { cortes: [-10, -6, -3, 0, 3], rotulos: ["caiu 10 pontos ou mais", "caiu de 6 a 10", "caiu de 3 a 6", "caiu até 3", "subiu até 3", "subiu 3 ou mais"] },
+  "2014": { cortes: [-15, -8, -3, 0, 8], rotulos: ["caiu 15 pontos ou mais", "caiu de 8 a 15", "caiu de 3 a 8", "caiu até 3", "subiu até 8", "subiu 8 ou mais"] },
+};
+const CORES_MAPA = ["--seq-6", "--seq-4", "--seq-3", "--seq-1", "--div-4", "--div-5"];
+function desenharMapa() {
+  const svg = d3.select("#mapa");
+  const W = svg.node().getBoundingClientRect().width || 700, H = Math.round(W * 0.95);
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const proj = d3.geoConicEqualArea().parallels([-2, -22]).rotate([54, 0]).fitSize([W, H], MALHA);
+  const caminho = d3.geoPath(proj);
+  const f = FAIXAS[base];
+  const corDe = v => v == null ? cor("--linha") : cor(CORES_MAPA[d3.bisect(f.cortes, v)]);
+  svg.append("g").selectAll("path").data(MALHA.features).join("path")
+    .attr("d", caminho)
+    .attr("fill", g => { const m = porIbge.get(String(g.properties.codarea)); return m ? corDe(varPct(m)) : cor("--linha"); })
+    .on("mousemove", (ev, g) => { const m = porIbge.get(String(g.properties.codarea)); if (m) mostrarDica(ev, m); })
+    .on("mouseleave", esconderDica);
+  const x = D.bases[base];
+  document.getElementById("mapa-nota").textContent =
+    `${x.nome_atual} em 2026 menos ${x.nome_base} em ${base}, em pontos percentuais dos votos válidos. Faixas fixas para esta comparação.`;
+  const leg = document.getElementById("legenda-mapa"); leg.innerHTML = "";
+  f.rotulos.forEach((t, i) => {
+    const n = D.municipios.filter(m => { const v = varPct(m); return v != null && d3.bisect(f.cortes, v) === i; }).length;
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = cor(CORES_MAPA[i]);
+    s.querySelector("span").textContent = `${t} (${inteiro(n)})`;
+    leg.appendChild(s);
+  });
+}
+
+// --- UFs -------------------------------------------------------------------------
+function desenharUfs() {
+  const svg = d3.select("#ufs");
+  const W = svg.node().getBoundingClientRect().width || 900;
+  const lista = Object.entries(D.ufs).map(([u, v]) => ({ uf: u, v: v.pct2026 - v["pct" + base], a: v.pct2026, b: v["pct" + base] }))
+    .sort((p, q) => p.v - q.v);
+  const linha = 20, topo = 8, esq = 90, dir = 60, H = topo + lista.length * linha + 8;  // esq: rótulo da UF + valor da maior queda
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const ext = Math.max(...lista.map(d => Math.abs(d.v))) * 1.05;
+  const x = d3.scaleLinear().domain([-ext, ext]).range([esq, W - dir]);
+  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", 0).attr("y2", H).attr("stroke", cor("--tinta-2"));
+  lista.forEach((d, i) => {
+    const y = topo + i * linha;
+    const g = svg.append("g");
+    g.append("text").attr("x", 30).attr("y", y + 13).attr("text-anchor", "end").text(d.uf);
+    g.append("rect").attr("x", Math.min(x(0), x(d.v))).attr("y", y + 3).attr("width", Math.abs(x(d.v) - x(0)))
+      .attr("height", linha - 6).attr("rx", 2).attr("fill", cor(d.v < 0 ? "--seq-4" : "--div-5"));
+    g.append("text").attr("x", d.v < 0 ? x(d.v) - 6 : x(d.v) + 6).attr("y", y + 13)
+      .attr("text-anchor", d.v < 0 ? "end" : "start").attr("class", "forte").text(sinal(d.v, Math.abs(d.v) < 0.05 ? 2 : 1));
+    g.append("title").text(`${d.uf}: ${fmt(d.b, 1)}% → ${fmt(d.a, 1)}%`);
+  });
+}
+
+// --- Tabela de todos os municípios --------------------------------------------------
+const ufs = [...new Set(D.municipios.map(m => m[C.uf]))].sort();
+for (const u of ufs) { const o = document.createElement("option"); o.value = u; o.textContent = u; document.getElementById("filtro-uf").appendChild(o); }
+let limite = 300, ordem = { id: "var", desc: false };
+const normal = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function desenharTabela() {
+  const x = D.bases[base];
+  const colunas = [
+    { id: "nome", rot: "Município", v: m => m[C.nome], texto: true },
+    { id: "uf", rot: "UF", v: m => m[C.uf], texto: true, cls: "uf" },
+    { id: "eleitores", rot: "Eleitores", v: m => m[C.eleitores], f: inteiro },
+    { id: "pb", rot: `${x.nome_base} ${base}`, v: m => m[C["pct" + base]], f: v => fmt(v, 1) + "%" },
+    { id: "pa", rot: `${x.nome_atual} 2026`, v: m => m[C.pct2026], f: v => fmt(v, 1) + "%", forte: true },
+    { id: "var", rot: "Variação (pontos)", v: varPct, f: v => sinal(v), sinal: true },
+    { id: "vb", rot: `Votos ${base}`, v: m => m[C["votos" + base]], f: inteiro },
+    { id: "va", rot: "Votos 2026", v: m => m[C.votos2026], f: inteiro },
+    { id: "dv", rot: "Diferença de votos", v: varVotos, f: sinalInt, sinal: true },
+  ];
+  const q = normal(document.getElementById("busca").value.trim());
+  const uf = document.getElementById("filtro-uf").value;
+  const tam = +document.getElementById("filtro-tam").value;
+  const sinalF = document.getElementById("filtro-sinal").value;
+  const filtrados = D.municipios.filter(m => varPct(m) != null
+    && (!q || normal(m[C.nome]).includes(q)) && (!uf || m[C.uf] === uf) && m[C.eleitores] >= tam
+    && (sinalF === "todos" || (sinalF === "perdeu-pct" && varPct(m) < 0) || (sinalF === "perdeu-votos" && varVotos(m) < 0)
+        || (sinalF === "ganhou" && varPct(m) > 0)));
+  const col = colunas.find(c => c.id === ordem.id) || colunas[5];
+  filtrados.sort((a, b) => { const va = col.v(a), vb = col.v(b);
+    const r = col.texto ? String(va).localeCompare(String(vb), "pt-BR") : va - vb; return ordem.desc ? -r : r; });
+  document.getElementById("contagem").textContent =
+    `${inteiro(filtrados.length)} municípios${filtrados.length > limite ? `; mostrando os ${inteiro(limite)} primeiros` : ""}.`;
+  const t = document.getElementById("tabela"); t.innerHTML = "";
+  const th = t.createTHead().insertRow();
+  for (const c of colunas) {
+    const h = document.createElement("th"); h.textContent = c.rot; h.tabIndex = 0; h.scope = "col"; if (c.cls) h.className = c.cls;
+    if (ordem.id === c.id) h.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto && !c.sinal }; desenharTabela(); };
+    h.addEventListener("click", ordenar);
+    h.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    th.appendChild(h);
+  }
+  const tb = t.createTBody();
+  for (const m of filtrados.slice(0, limite)) {
+    const tr = tb.insertRow();
+    tr.addEventListener("mousemove", ev => mostrarDica(ev, m)); tr.addEventListener("mouseleave", esconderDica);
+    for (const c of colunas) {
+      const td = tr.insertCell(); const v = c.v(m);
+      td.textContent = c.f ? c.f(v) : v;
+      if (c.cls) td.className = c.cls;
+      if (c.forte) td.className = "forte";
+      if (c.sinal && v != null) td.className = v < 0 ? "neg" : v > 0 ? "pos" : "";
+    }
+  }
+  const mais = document.getElementById("mais"); mais.hidden = filtrados.length <= limite;
+}
+document.getElementById("mais").addEventListener("click", () => { limite += 300; desenharTabela(); });
+for (const id of ["busca", "filtro-uf", "filtro-tam", "filtro-sinal"])
+  document.getElementById(id).addEventListener("input", () => { limite = 300; desenharTabela(); });
+
+for (const b of document.querySelectorAll("[data-base]")) b.addEventListener("click", () => {
+  base = b.dataset.base;
+  for (const o of document.querySelectorAll("[data-base]")) o.setAttribute("aria-pressed", String(o === b));
+  tudo();
+});
+function tudo() { cabecalho(); desenharMapa(); desenharUfs(); desenharTabela(); }
+tudo();
+let pendente;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(() => { desenharMapa(); desenharUfs(); }, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { desenharMapa(); desenharUfs(); });
+new MutationObserver(() => { desenharMapa(); desenharUfs(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

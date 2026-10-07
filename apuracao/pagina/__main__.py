@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import regioes, votos
+from apuracao.pagina import perdas, regioes, votos
 from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
@@ -70,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--recorte", choices=sorted(RECORTES), help="página por região (Brasília, cidade ou estado do Rio)")
     ap.add_argument("--brasilia", action="store_true", help="atalho para --recorte brasilia")
     ap.add_argument("--votos", action="store_true", help="com --recorte: página de votos por candidato")
+    ap.add_argument("--perdas", action="store_true", help="página \"Onde Lula perdeu votos\" (municípios, 2022 e 2014)")
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
     ap.add_argument("--sem-barra", action="store_true", help="--site sem a barra de navegação entre as páginas")
     ap.add_argument("--site", type=Path, default=None,
@@ -77,7 +78,10 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     recorte = "brasilia" if args.brasilia else args.recorte
     sub = ""
-    if recorte:
+    if args.perdas:
+        sub = "onde-lula-perdeu"
+        saida = perdas.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/onde-lula-perdeu-2026.html"))
+    elif recorte:
         cfg = carregar(args.config)
         r = RECORTES[recorte](cfg)
         if args.votos:
