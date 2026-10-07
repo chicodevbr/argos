@@ -138,11 +138,12 @@ até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixan
 ```
 uv run python -m apuracao.pagina    # gera data/pagina/abstencao-1o-turno-2026.html
 uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df --regioes-rio   # dados das páginas por região
-uv run python -m apuracao.pagina --recorte brasilia --site site    # Brasília -> site/index.html
+uv run python -m apuracao.pagina --inicio --site site              # página inicial (links) -> site/index.html
+uv run python -m apuracao.pagina --recorte brasilia --site site    # Brasília -> site/brasilia/
 uv run python -m apuracao.pagina --recorte rio --site site         # cidade do Rio -> site/rio-de-janeiro/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
 uv run python -m apuracao.pagina --recorte brasilia --votos --site site   # votos por candidato -> site/votos/
-uv run python -m apuracao.pagina --perdas   # "Onde Lula perdeu votos": nº 13 por município, 2026 x 2022 e x 2014
+uv run python -m apuracao.pagina --perdas --site site   # "Onde Lula perdeu votos" -> site/onde-lula-perdeu/
 ```
 
 **Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e

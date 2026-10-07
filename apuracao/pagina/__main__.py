@@ -26,9 +26,21 @@ ESQUELETO = """<!doctype html>
 """
 
 
-# Páginas do site estático (Netlify), na ordem da barra de navegação: (rótulo, subpasta).
-SITE = [("Abstenção · Brasília", ""), ("Abstenção · Rio", "rio-de-janeiro"),
-        ("Abstenção · Estado do Rio", "estado-do-rio"), ("Votos · Brasília", "votos")]
+# Páginas do site estático (Netlify): (rótulo na barra, subpasta, grupo, título, descrição). A raiz é a
+# página inicial (--inicio). Endereços já divulgados não mudam: rio-de-janeiro/, estado-do-rio/, votos/.
+# Brasília foi a raiz até 07/10/2026 e passou para brasilia/.
+SITE = [
+    ("Abstenção · Brasília", "brasilia", "Abstenção", "Abstenção em Brasília",
+     "As 35 regiões administrativas do DF no 1º turno de 2026, comparadas a 2022."),
+    ("Abstenção · Rio", "rio-de-janeiro", "Abstenção", "Abstenção no Rio de Janeiro",
+     "As 33 regiões administrativas da cidade, com os bairros de cada uma."),
+    ("Abstenção · Estado do Rio", "estado-do-rio", "Abstenção", "Abstenção no Estado do Rio",
+     "Os 92 municípios do estado, comparados a 2022."),
+    ("Votos · Brasília", "votos", "Votos", "Votos em Brasília",
+     "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022."),
+    ("Onde Lula perdeu", "onde-lula-perdeu", "Votos", "Onde Lula perdeu votos",
+     "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma)."),
+]
 
 NAV_CSS = """<style>
 .site-nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; gap: 4px;
@@ -44,8 +56,9 @@ NAV_CSS = """<style>
 
 
 def barra(atual: str) -> str:
+    itens = [("Início", "")] + [(rot, sub) for rot, sub, *_ in SITE]
     links = "".join(f'<a href="/{sub + "/" if sub else ""}"{' aria-current="page"' if sub == atual else ""}>{rot}</a>'
-                    for rot, sub in SITE)
+                    for rot, sub in itens)
     return f'<nav class="site-nav" aria-label="Páginas">{links}</nav>\n'
 
 
@@ -62,6 +75,23 @@ def documento_completo(pagina: Path, destino: Path, nav: str | None = None) -> P
     return destino
 
 
+def inicio(destino: Path) -> Path:
+    """Página inicial do site (estilo lista de links), a partir de SITE. Documento completo, com a barra."""
+    import json
+    modelo = Path(__file__).with_name("modelo_inicio.html").read_text()
+    paginas = [{"sub": sub, "grupo": g, "titulo": tit, "descricao": desc} for _, sub, g, tit, desc in SITE]
+    corpo = modelo.replace("const PAGINAS = __PAGINAS__;", "const PAGINAS = " + json.dumps(paginas, ensure_ascii=False) + ";")
+    if "__PAGINAS__" in corpo:
+        raise RuntimeError("modelo da página inicial sem o marcador")
+    tmp = Path(destino).with_name(".inicio-corpo.html")
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    tmp.write_text(corpo)
+    try:
+        return documento_completo(tmp, destino)   # sem a barra: os botões já são a navegação
+    finally:
+        tmp.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="apuracao.pagina")
     ap.add_argument("--dir-parquet", type=Path, default=Path("data/parquet"))
@@ -70,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--recorte", choices=sorted(RECORTES), help="página por região (Brasília, cidade ou estado do Rio)")
     ap.add_argument("--brasilia", action="store_true", help="atalho para --recorte brasilia")
     ap.add_argument("--votos", action="store_true", help="com --recorte: página de votos por candidato")
+    ap.add_argument("--inicio", action="store_true", help="com --site: página inicial com os links (raiz do site)")
     ap.add_argument("--perdas", action="store_true", help="página \"Onde Lula perdeu votos\" (municípios, 2022 e 2014)")
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
     ap.add_argument("--sem-barra", action="store_true", help="--site sem a barra de navegação entre as páginas")
@@ -78,6 +109,12 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     recorte = "brasilia" if args.brasilia else args.recorte
     sub = ""
+    if args.inicio:
+        if not args.site:
+            ap.error("--inicio precisa de --site")
+        index = inicio(args.site / "index.html")
+        print(f"site: {index}")
+        return 0
     if args.perdas:
         sub = "onde-lula-perdeu"
         saida = perdas.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/onde-lula-perdeu-2026.html"))
@@ -85,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg = carregar(args.config)
         r = RECORTES[recorte](cfg)
         if args.votos:
-            sub = f"{r.subpasta}/votos".lstrip("/") if r.subpasta else "votos"
+            sub = "votos" if r.id == "brasilia" else f"{r.subpasta}/votos"   # /votos/ já divulgado
             saida = votos.gerar(r, cfg, args.dir_parquet,
                                 args.saida or Path("data/pagina") / r.saida.replace("abstencao", "votos"))
         else:

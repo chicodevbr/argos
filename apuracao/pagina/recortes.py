@@ -59,7 +59,7 @@ def brasilia(cfg: Config) -> Recorte:
             "O TSE trata o DF como um único município. Cada seção foi atribuída à região administrativa onde fica o seu "
             "local de votação, pelas coordenadas do local dentro dos limites oficiais das 35 RAs (SISDIA/GDF, 2022). É "
             "a RA do local de votação, que em geral coincide com a de moradia, mas não sempre."],
-        subpasta="", saida="abstencao-brasilia-2026.html",
+        subpasta="brasilia", saida="abstencao-brasilia-2026.html",
     )
 
 

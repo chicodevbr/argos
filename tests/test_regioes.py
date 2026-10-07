@@ -181,6 +181,8 @@ def test_barra_de_navegacao_do_site(tmp_path):
     nav = html[html.index('<nav class="site-nav"'):html.index("</nav>")]
     assert html.count('<nav class="site-nav"') == 1 and nav.count('aria-current="page"') == 1
     assert '<a href="/votos/" aria-current="page">' in html and '<a href="/">' in html
-    assert len([s for _, s in SITE]) == len({s for _, s in SITE})      # subpastas únicas
+    subs = [p[1] for p in SITE]
+    assert len(subs) == len(set(subs)) and "" not in subs           # subpastas únicas; a raiz é a página inicial
+    assert '<a href="/">Início</a>' in html
     sem = documento_completo(pagina, tmp_path / "x" / "index.html").read_text()
     assert "site-nav" not in sem
