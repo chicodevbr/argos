@@ -110,8 +110,19 @@ td.forte { font-weight: 600; color: var(--tinta); }
 .metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
 @media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
 </style>
+<style>
+.site-nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; gap: 4px;
+  overflow-x: auto; padding: 8px 20px; background: var(--superficie); border-bottom: 1px solid var(--linha);
+  margin: -32px -20px 28px;  /* de borda a borda: desfaz o padding do body das páginas */
+  font: 500 .85rem var(--texto); }
+.site-nav a { color: var(--tinta-2); text-decoration: none; padding: 6px 10px; border-radius: var(--raio); white-space: nowrap; }
+.site-nav a:hover { background: var(--fundo); color: var(--tinta); }
+.site-nav a[aria-current="page"] { background: var(--tinta); color: var(--superficie); }
+.site-nav a:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+</style>
 </head>
 <body>
+<nav class="site-nav" aria-label="Páginas"><a href="/">Abstenção · Brasília</a><a href="/rio-de-janeiro/" aria-current="page">Abstenção · Rio</a><a href="/estado-do-rio/">Abstenção · Estado do Rio</a><a href="/votos/">Votos · Brasília</a></nav>
 
 
 <main class="pagina">
