@@ -40,6 +40,8 @@ SITE = [
      "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022."),
     ("Onde Lula perdeu", "onde-lula-perdeu", "Votos", "Onde Lula perdeu votos",
      "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma)."),
+    ("Onde Lula perdeu · Brasília", "onde-lula-perdeu/brasilia", "Votos", "Onde Lula perdeu votos em Brasília",
+     "As 35 RAs do DF, comparadas a 2022 (Lula) e a 2014 (Dilma)."),
 ]
 
 NAV_CSS = """<style>
