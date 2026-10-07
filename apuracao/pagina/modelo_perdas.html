@@ -5,7 +5,8 @@
 <style>
 /* Layout: relatório de uma coluna (~1080px), da mesma série das páginas de abstenção e votos: o número 13
    no Brasil, mapa por município, UFs, rankings e a tabela de TODOS os municípios. Base 2022 ou 2014.
-   Lula/PT subiu = vermelho (cor dele na página de votos); caiu = azul sequencial (mais escuro, mais queda). */
+   Lula/PT subiu = vermelho (cor dele na página de votos); caiu = azul. No mapa, quanto maior a mudança, mais
+   escura a cor, nos dois sentidos e nos dois temas (pedido do usuário): as cores do mapa não invertem no escuro. */
 :root {
   --fundo: #f5f6f8;
   --superficie: #ffffff;
@@ -20,6 +21,9 @@
   --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
   --raio: 6px;
+  /* mapa: fixas nos dois temas (azul = queda, vermelho = alta; mais escuro = mudança maior) */
+  --m-queda-4: #104281; --m-queda-3: #1c5cab; --m-queda-2: #5598e7; --m-queda-1: #b7d3f6;
+  --m-alta-1: #f2a3a2; --m-alta-2: #b3302f;
   --seq-1: #b7d3f6; --seq-2: #86b6ef; --seq-3: #5598e7; --seq-4: #2a78d6; --seq-5: #1c5cab; --seq-6: #104281;
   --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
   --contorno: #ffffff;
@@ -247,7 +251,7 @@ const FAIXAS = {
   "2022": { cortes: [-10, -6, -3, 0, 3], rotulos: ["caiu 10 pontos ou mais", "caiu de 6 a 10", "caiu de 3 a 6", "caiu até 3", "subiu até 3", "subiu 3 ou mais"] },
   "2014": { cortes: [-15, -8, -3, 0, 8], rotulos: ["caiu 15 pontos ou mais", "caiu de 8 a 15", "caiu de 3 a 8", "caiu até 3", "subiu até 8", "subiu 8 ou mais"] },
 };
-const CORES_MAPA = ["--seq-6", "--seq-4", "--seq-3", "--seq-1", "--div-4", "--div-5"];
+const CORES_MAPA = ["--m-queda-4", "--m-queda-3", "--m-queda-2", "--m-queda-1", "--m-alta-1", "--m-alta-2"];
 function desenharMapa() {
   const svg = d3.select("#mapa");
   const W = svg.node().getBoundingClientRect().width || 700, H = Math.round(W * 0.95);
