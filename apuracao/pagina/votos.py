@@ -9,7 +9,7 @@ candidatos que o resultado oficial lista como válidos (2026: arquivo do TSE do 
 Dados Abertos). Em 2026, o nº 28 recebeu votos nas seções mas não está entre os válidos oficiais (o
 total de válidos do DF, 1.772.808, é a soma dos outros 12); esses votos ficam fora, como no TSE.
 
-Comparação por NÚMERO: 13 é Lula nos dois anos; 22 é Flávio Bolsonaro em 2026 e Jair Bolsonaro em
+Cores: 13 vermelho, 22 azul (polos do divergente validado). Comparação por NÚMERO: 13 é Lula nos dois anos; 22 é Flávio Bolsonaro em 2026 e Jair Bolsonaro em
 2022 (ambos pelo PL). Os demais candidatos são outros nos dois anos.
 """
 

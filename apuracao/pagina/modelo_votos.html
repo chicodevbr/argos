@@ -5,8 +5,8 @@
 <style>
 /* Layout: relatório de uma coluna (~1080px), irmão das páginas de abstenção: todos os candidatos no
    lugar (2026 e 2022), mapa da margem 13 x 22, barras por unidade e tabela. Mesmos tokens e paletas;
-   13 e 22 usam os polos do divergente validado (azul / vermelho) em toda a página, para o mapa da
-   margem e as barras falarem a mesma cor; demais candidatos em cinza neutro. */
+   13 e 22 usam os polos do divergente validado em toda a página (13 = vermelho, 22 = azul, a pedido
+   do usuário), para o mapa da margem e as barras falarem a mesma cor; demais em cinza neutro. */
 :root {
   --fundo: #f5f6f8;
   --superficie: #ffffff;
@@ -21,7 +21,7 @@
   --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
   --raio: 6px;
-  --c13: #2a78d6; --c22: #b3302f; --demais: #b5b3ad; --sobre-cor: #ffffff;
+  --c13: #b3302f; --c22: #2a78d6; --demais: #b5b3ad; --sobre-cor: #ffffff;
   --seq-1: #b7d3f6; --seq-2: #86b6ef; --seq-3: #5598e7; --seq-4: #2a78d6; --seq-5: #1c5cab; --seq-6: #104281;
   --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
   --contorno: #ffffff;
@@ -29,7 +29,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --c13: #3987e5; --c22: #e66767; --demais: #5c5b56; --sobre-cor: #111317;
+    --c13: #e66767; --c22: #3987e5; --demais: #5c5b56; --sobre-cor: #111317;
     --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
     --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
     --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
@@ -39,7 +39,7 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-    --c13: #3987e5; --c22: #e66767; --demais: #5c5b56; --sobre-cor: #111317;
+    --c13: #e66767; --c22: #3987e5; --demais: #5c5b56; --sobre-cor: #111317;
   --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
   --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e; --alta: #e38a68; --baixa: #6cc39a;
   --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #5598e7; --seq-5: #86b6ef; --seq-6: #b7d3f6;
@@ -245,13 +245,14 @@ function mostrarDica(ev, r) {
 const esconderDica = () => { dica.hidden = true; };
 
 // --- Mapa ------------------------------------------------------------------------
-// margem = % do 13 − % do 22 (pontos). Divergente validada: azul = 13 à frente, vermelho = 22 à frente.
-const CORES_DIV = ["--div-5", "--div-4", "--div-3", "--div-2", "--div-1"];
+// margem = % do 13 − % do 22 (pontos). Divergente validada: vermelho = 13 à frente, azul = 22 à frente
+// (as mesmas cores dos candidatos nas barras e na lista).
+const CORES_DIV = ["--div-1", "--div-2", "--div-3", "--div-4", "--div-5"];
 const MAPAS = {
   "2026": { cortes: [-20, -5, 5, 20], valor: r => r["2026"]?.margem, nota: () => `Margem em 2026: % de ${nomeAno("2026", A)} menos % de ${nomeAno("2026", B)}, em pontos.` },
   "2022": { cortes: [-20, -5, 5, 20], valor: r => r["2022"]?.margem, nota: () => `Margem em 2022: % de ${nomeAno("2022", A)} menos % de ${nomeAno("2022", B)}, em pontos.` },
   "var": { cortes: [-4, -1, 1, 4], valor: r => r["2022"] ? r["2026"].margem - r["2022"].margem : null,
-           nota: () => `Mudança da margem de 2022 para 2026, em pontos. Azul: ${nomeAno("2026", A)} ganhou terreno; vermelho: o nº ${B}.` },
+           nota: () => `Mudança da margem de 2022 para 2026, em pontos. Vermelho: ${nomeAno("2026", A)} ganhou terreno; azul: o nº ${B}.` },
 };
 function rotulosMapa(m) {
   const c = MAPAS[m].cortes, f = v => fmt(Math.abs(v), 0);
