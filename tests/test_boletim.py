@@ -112,12 +112,27 @@ def test_pagina_noite_renderiza(monkeypatch, tmp_path):
     assert [m.label for m in at.metric][:2] == ["Lula", "Jair Bolsonaro"]
 
 
-def test_referencia_para_o_painel(tmp_path):
+def test_referencias_para_o_painel(tmp_path):
     cfg = carregar(CONFIG)
     cfg.historico.dir = tmp_path / "raw"
     boletim.carregar(cfg, 2022, 2, tmp_path / "pq", LogJson(io.StringIO()), transport=_servidor([]))
-    ano, ref = noite.referencia(tmp_path / "pq", 2026, 13, 22)
-    assert ano == 2022 and ref["hora"].iloc[0] == pd.Timedelta(hours=17, minutes=1)
+    [(ano, turno, ref)] = noite.referencias(tmp_path / "pq", 2026, 2, 13, 22)
+    assert (ano, turno) == (2022, 2) and ref["hora"].iloc[0] == pd.Timedelta(hours=17, minutes=1)
     assert ref["pct_a"].between(0, 100).all() and ref["pct_secoes"].is_monotonic_increasing
-    assert noite.referencia(tmp_path / "pq", 2022, 13, 22) is None   # só eleições anteriores
-    assert noite.referencia(tmp_path / "pq", 2026, 13, 99) is None   # número que não disputou
+    assert noite.referencias(tmp_path / "pq", 2022, 2, 13, 22) == []   # só eleições anteriores
+    assert noite.referencias(tmp_path / "pq", 2026, 2, 13, 99) == []   # número que não disputou
+
+
+def test_referencias_poe_o_1o_turno_do_ano_antes(tmp_path):
+    # 1º turno de 2026 "carregado" = cópia do 2º turno de 2022 com o ano trocado.
+    cfg = carregar(CONFIG)
+    cfg.historico.dir = tmp_path / "raw"
+    pq = tmp_path / "pq"
+    arq = boletim.carregar(cfg, 2022, 2, pq, LogJson(io.StringIO()), transport=_servidor([]))
+    df = pd.read_parquet(arq)
+    df["recebido"] = df["recebido"] + (pd.Timestamp("2026-10-04") - pd.Timestamp("2022-10-30"))
+    df.assign(ano=2026, turno=1).to_parquet(pq / "hist_boletim" / "2026_t1.parquet")
+    refs = noite.referencias(pq, 2026, 2, 13, 22)
+    assert [(a, t) for a, t, _ in refs] == [(2026, 1), (2022, 2)]
+    assert refs[0][2]["pct_a"].tolist() == refs[1][2]["pct_a"].tolist()
+    assert noite.referencias(pq, 2026, 1, 13, 22)[0][:2] == (2022, 2)  # no 1º turno, não compara consigo

@@ -65,9 +65,10 @@ def caminho_apuracao(_con, eleicao_codigo: int, _proj, _marca):
 
 
 @st.cache_data(show_spinner=False)
-def referencia(dir_parquet: str, ano_atual: int, num_a: int, num_b: int):
-    """Curva de um 2º turno passado (boletim de urna), se carregada. Não muda durante a noite."""
-    return noite.referencia(Path(dir_parquet), ano_atual, num_a, num_b)
+def referencias(dir_parquet: str, ano_atual: int, turno_atual: int, num_a: int, num_b: int):
+    """Curvas de comparação (boletim de urna): 1º turno do mesmo ano e 2º turno anterior,
+    se carregados. Não mudam durante a noite."""
+    return noite.referencias(Path(dir_parquet), ano_atual, turno_atual, num_a, num_b)
 
 
 @st.cache_data(ttl=INTERVALO_S, show_spinner=False)
@@ -393,7 +394,7 @@ def mostrar_caminho(con, eleicao_codigo: int, cargo: int, proj, cor_de: dict, t:
                                          zip(tab["pct_a_falta_inf"], tab["pct_a_falta_sup"])],
                     }), hide_index=True, use_container_width=True)
 
-    # 3) Gráfico: contagem até agora, previsão e 2022
+    # 3) Gráfico: contagem até agora, previsão e referências (1º turno e 2º turno anterior)
     cor = cor_de.get(proj.num_a, CINZA[t])
     nome_obs, nome_prev = "2026", "2026 (previsão)"
     camadas = []
@@ -407,36 +408,43 @@ def mostrar_caminho(con, eleicao_codigo: int, cargo: int, proj, cor_de: dict, t:
         st.caption("Curva prevista oculta enquanto houver UF sem ritmo medido "
                    f"({', '.join(u.upper() for u in c.ufs_sem_ritmo)}).")
     ano_atual = int("".join(ch for ch in eleicao.ciclo if ch.isdigit()))  # "ele2026" -> 2026
-    ref = referencia(str(DIR_PARQUET), ano_atual, proj.num_a, proj.num_b)
-    nome_ref = None
-    if ref is not None and len(obs):
-        ano_ref, rdf = ref
+    refs = referencias(str(DIR_PARQUET), ano_atual, eleicao.turno, proj.num_a, proj.num_b) if len(obs) else []
+    # Cinza nas duas referências, diferenciadas pelo traço (a legenda mostra cor e traço).
+    tracos_ref = [[1, 0], [2, 3]]
+    nomes_ref = []
+    estilo = {nome_obs: (cor, [1, 0]), nome_prev: (cor, [6, 4])}
+    for (ano_ref, turno_ref, rdf), traco in zip(refs, tracos_ref):
         dia = pd.Timestamp(obs["ts"].iloc[0]).normalize()
-        nome_ref = str(ano_ref)
+        nome_ref = f"{turno_ref}º turno {ano_ref}"
+        nomes_ref.append((nome_ref, rdf))
+        estilo[nome_ref] = (CINZA[t], traco)
         linhas.append(pd.DataFrame({"ts": dia + rdf["hora"], "pct_a": rdf["pct_a"], "serie": nome_ref}))
     if not linhas:
         return
     df = pd.concat(linhas, ignore_index=True)
-    dominio = [n for n in (nome_obs, nome_prev, nome_ref) if n and n in set(df["serie"])]
-    estilo = {nome_obs: (cor, [1, 0]), nome_prev: (cor, [6, 4]), nome_ref: (CINZA[t], [1, 0])}
+    dominio = [n for n in estilo if n in set(df["serie"])]
     camadas.append(alt.Chart(df).mark_line(strokeWidth=2).encode(
         x=alt.X("ts:T", title="Horário (Brasília)", axis=alt.Axis(format="%H:%M")),
         y=alt.Y("pct_a:Q", title=f"{a}: % dos válidos contados", scale=alt.Scale(zero=False)),
         color=alt.Color("serie:N", title=None, legend=alt.Legend(orient="top"),
                         scale=alt.Scale(domain=dominio, range=[estilo[n][0] for n in dominio])),
-        strokeDash=alt.StrokeDash("serie:N", legend=None,
+        strokeDash=alt.StrokeDash("serie:N", title=None, legend=alt.Legend(orient="top"),
                                   scale=alt.Scale(domain=dominio, range=[estilo[n][1] for n in dominio])),
         tooltip=[alt.Tooltip("ts:T", title="Horário", format="%H:%M"), alt.Tooltip("serie:N", title="Série"),
                  alt.Tooltip("pct_a:Q", title=f"{a} (%)", format=".2f")],
     ))
     camadas.append(alt.Chart(pd.DataFrame({"y": [50]})).mark_rule(strokeDash=[4, 4], color=TEXTO[t]).encode(y="y:Q"))
     st.altair_chart(alt.layer(*camadas).properties(height=260), use_container_width=True)
-    if nome_ref:
-        horas = [f"{pd.Timestamp(0) + h:%Hh%M}" for h in rdf["hora"]]
-        mudou = caminho.viradas(horas, rdf["pct_a"].tolist())
-        texto = f" Em {nome_ref} o líder da contagem mudou às {' e às '.join(mudou)}." if mudou else ""
-        st.caption(f"Cinza: 2º turno de {nome_ref}, candidato de mesmo número ({proj.num_a}) contra o de número "
-                   f"{proj.num_b}, minuto a minuto, reconstruído do boletim de urna do TSE.{texto}"
+    if nomes_ref:
+        textos = []
+        for nome_ref, rdf in nomes_ref:
+            horas = [f"{pd.Timestamp(0) + h:%Hh%M}" for h in rdf["hora"]]
+            mudou = caminho.viradas(horas, rdf["pct_a"].tolist())
+            if mudou:
+                textos.append(f" No {nome_ref} o líder da contagem mudou às {' e às '.join(mudou)}.")
+        st.caption(f"Cinza: {' e '.join(n for n, _ in nomes_ref)}, candidato de mesmo número ({proj.num_a}) "
+                   f"contra o de número {proj.num_b} (só os dois, mesmo no 1º turno), minuto a minuto, "
+                   f"reconstruídos do boletim de urna do TSE.{''.join(textos)}"
                    + (" Faixa: 90% da previsão." if c is not None and not c.ufs_sem_ritmo else ""))
 
 

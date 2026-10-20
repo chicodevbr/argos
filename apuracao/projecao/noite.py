@@ -9,7 +9,8 @@ Validação com o 2º turno de 2022: totais iguais aos oficiais (60.345.999 x 58
 conferido em 06/10/2026) com 1 min de defasagem (tempo entre receber e divulgar): erro médio
 0,007 ponto depois das 17h30; virada às 18h43 no boletim, 18h44 no g1.
 
-`referencia` dá ao painel ao vivo a curva de um 2º turno passado para comparar.
+`referencias` dá ao painel ao vivo curvas para comparar: o 1º turno do mesmo ano e o
+2º turno anterior mais recente.
 """
 
 from __future__ import annotations
@@ -118,23 +119,40 @@ def viradas(c: pd.DataFrame, num_a: int, num_b: int) -> list[pd.Timestamp]:
     return list(frente.index[frente.diff().fillna(0) != 0])
 
 
-def referencia(dir_parquet: Path, ano_atual: int, num_a: int, num_b: int) -> tuple[int, pd.DataFrame] | None:
-    """Curva do 2º turno mais recente carregado (antes de `ano_atual`) em que A e B disputaram,
-    para comparar com a noite atual: (ano, DataFrame com hora = horário do dia como timedelta,
-    pct_a = fatia de A em A + B, pct_secoes). Vai até 30 min depois de 99% das seções.
-    None se não houver boletim carregado com os dois números."""
-    for ano, turno in disponiveis(dir_parquet):
+def _referencia(dir_parquet: Path, ano: int, turno: int, num_a: int, num_b: int) -> pd.DataFrame | None:
+    """Curva de A contra B numa eleição carregada: hora = horário do dia como timedelta,
+    pct_a = fatia de A em A + B, pct_secoes. Vai até 30 min depois de 99% das seções.
+    None se A e B não estão os dois nela."""
+    c = curva(dir_parquet, ano, turno, [num_a, num_b])
+    if set(c["numero"]) != {num_a, num_b}:
+        return None
+    w = c.pivot_table(index="ts", columns="numero", values="votos")
+    sec = c.drop_duplicates("ts").set_index("ts")["pct_secoes"]
+    df = pd.DataFrame({"ts": w.index, "pct_a": (100 * w[num_a] / (w[num_a] + w[num_b])).to_numpy(),
+                       "pct_secoes": sec.reindex(w.index).to_numpy()}).dropna()
+    fim = df.loc[df["pct_secoes"] >= 99, "ts"].min() + pd.Timedelta(minutes=30)
+    df = df[df["ts"] <= fim]
+    df["hora"] = df["ts"] - df["ts"].dt.normalize()
+    return df.drop(columns="ts").reset_index(drop=True)
+
+
+def referencias(dir_parquet: Path, ano_atual: int, turno_atual: int, num_a: int,
+                num_b: int) -> list[tuple[int, int, pd.DataFrame]]:
+    """Curvas para comparar com a noite atual, cada uma como (ano, turno, DataFrame de
+    `_referencia`), na ordem: o 1º turno do mesmo ano (no 2º turno: mesmos candidatos e
+    mesmo ritmo de chegada das seções) e o 2º turno anterior mais recente em que A e B
+    disputaram. Só entra o que estiver carregado; lista vazia se nada servir."""
+    saida = []
+    disp = disponiveis(dir_parquet)
+    if turno_atual == 2 and (ano_atual, 1) in disp:
+        df = _referencia(dir_parquet, ano_atual, 1, num_a, num_b)
+        if df is not None:
+            saida.append((ano_atual, 1, df))
+    for ano, turno in disp:
         if turno != 2 or ano >= ano_atual:
             continue
-        c = curva(dir_parquet, ano, turno, [num_a, num_b])
-        if set(c["numero"]) != {num_a, num_b}:
-            continue
-        w = c.pivot_table(index="ts", columns="numero", values="votos")
-        sec = c.drop_duplicates("ts").set_index("ts")["pct_secoes"]
-        df = pd.DataFrame({"ts": w.index, "pct_a": (100 * w[num_a] / (w[num_a] + w[num_b])).to_numpy(),
-                           "pct_secoes": sec.reindex(w.index).to_numpy()}).dropna()
-        fim = df.loc[df["pct_secoes"] >= 99, "ts"].min() + pd.Timedelta(minutes=30)
-        df = df[df["ts"] <= fim]
-        df["hora"] = df["ts"] - df["ts"].dt.normalize()
-        return ano, df.drop(columns="ts").reset_index(drop=True)
-    return None
+        df = _referencia(dir_parquet, ano, turno, num_a, num_b)
+        if df is not None:
+            saida.append((ano, turno, df))
+            break
+    return saida
