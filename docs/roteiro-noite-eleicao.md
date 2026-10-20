@@ -15,7 +15,7 @@ Se um cair, os outros continuam.
 | Eleição | Código | Cargo | Abrangência |
 |---|---|---|---|
 | `2026-t2-federal` | 6258 | presidente (Flávio Bolsonaro × Lula) | BR, exterior, 27 UFs, todos os municípios |
-| `2026-t2-estadual` | 6260 | governador | só AC, AM, DF, ES, RJ, RN, TO |
+| `2026-t2-estadual` | 6260 | governador | só AC, AM, DF, ES, RN, TO (RJ sem 2º turno, conferido em 19/10) |
 
 ---
 

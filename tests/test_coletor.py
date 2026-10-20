@@ -316,7 +316,7 @@ def test_montar_alvos_2o_turno_so_ufs_com_disputa():
     cfg = carregar(CONFIG)
     gov = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t2-estadual")])
     pres = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t2-federal")])
-    assert sorted(a.uf for a in gov) == ["ac", "am", "df", "es", "rj", "rn", "to"]
+    assert sorted(a.uf for a in gov) == ["ac", "am", "df", "es", "rn", "to"]
     assert len(pres) == 29  # presidente: br, zz e as 27 UFs
 
 
@@ -374,7 +374,7 @@ def test_montar_alvos_municipios():
     assert {"sp71072-c0001-e006257-u", "ac01120-c0001-e006257-u"} <= nomes  # = nomes reais das fixtures
     assert all(a.espera == f"6257/{a.uf}" for a in pres)
     gov2 = montar_alvos_municipios(cfg, "oficial", cfg.eleicao_por_id("2026-t2-estadual"), ms)
-    ufs2 = {"ac", "am", "df", "es", "rj", "rn", "to"}
+    ufs2 = {"ac", "am", "df", "es", "rn", "to"}
     assert {a.uf for a in gov2} == ufs2 and len(gov2) == sum(m.uf in ufs2 for m in ms)
     # todo portão aguardado por município é aberto por algum alvo de UF
     uf_alvos = montar_alvos(cfg, "oficial", [cfg.eleicao_por_id("2026-t1-federal")])

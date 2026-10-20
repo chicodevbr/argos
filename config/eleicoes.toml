@@ -38,15 +38,15 @@ confirmado = true
 # --- 2026, 2º turno -------------------------------------------------------
 # Códigos = campo `cdt2` ("código da eleição para o segundo turno", spec EA11)
 # das eleições 6257/6259 em /oficial/comum/config/ele-c.json (cópia em
-# tests/fixtures/ele-c.json). `confirmado = false` até os arquivos do 2º turno
-# responderem 200 no ambiente oficial (em 05/10 ainda dão 404, o que é esperado).
+# tests/fixtures/ele-c.json). Confirmados em 19/10/2026: br (6258) e as UFs
+# abaixo (6260) respondem 200 no ambiente oficial, assim como os -cm.json.
 [[eleicao]]
 id = "2026-t2-federal"
 ciclo = "ele2026"
 turno = 2
 codigo = 6258
 cargos = ["presidente"]
-confirmado = false
+confirmado = true
 
 [[eleicao]]
 id = "2026-t2-estadual"
@@ -54,12 +54,13 @@ ciclo = "ele2026"
 turno = 2
 codigo = 6260
 cargos = ["governador"]
-confirmado = false
+confirmado = true
 # Só UFs com 2º turno para governador: as demais dariam 404 a noite toda, e o
 # TSE avisa que muitos 404 podem bloquear o IP. Lista tirada do 1º turno
 # (candidatos com st = "2º turno" nos arquivos UF da 6259, tf = s, 05/10/2026).
-# Conferir com o `abr` da eleição 6260 no ele-c.json quando for publicado.
-ufs = ["ac", "am", "df", "es", "rj", "rn", "to"]
+# Conferido em 19/10/2026 com o `abr` da 6260 no ele-c.json oficial: o RJ não
+# tem 2º turno (rj-c0003-e006260-u.json dá 404) e saiu da lista.
+ufs = ["ac", "am", "df", "es", "rn", "to"]
 
 [coletor]
 intervalo_uf_s = 30
