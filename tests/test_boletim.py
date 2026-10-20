@@ -1,5 +1,5 @@
 """Boletim de urna: leitura do zip real, download pelo catálogo (servidor falso) e a
-reconstrução da curva da noite. Fixtures: seções reais do 2º turno de 2022 (AC, AL, ZZ)."""
+reconstrução da curva da noite. Fixtures: seções reais do 2º turno de 2022 (AC, AL, ZZ) e do 1º turno de 2026 (AC)."""
 
 import io
 import json
@@ -26,6 +26,14 @@ def test_le_so_presidente_com_codigos_normalizados():
     ac = boletim.ler_zip(FIX / "bweb_2t_AC_311020221535.zip")
     assert ac.groupby(["cod_mun", "zona", "secao"]).ngroups == 4
     assert set(ac["tipo"]) <= {"Nominal", "Branco", "Nulo"}
+
+
+def test_le_datas_no_formato_de_2026():
+    # 2026 publica DT_BU_RECEBIDO em ISO; fixture = 2 seções reais do AC, 1º turno.
+    ac = boletim.ler_zip(FIX / "bweb_1t_AC_051020261403.zip")
+    assert ac.groupby(["cod_mun", "zona", "secao"]).ngroups == 2
+    assert ac["recebido"].notna().all()
+    assert ac["recebido"].dt.date.astype(str).eq("2026-10-04").all()
 
 
 def test_mais_recente_por_uf():

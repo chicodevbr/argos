@@ -94,7 +94,7 @@ uv run python -m apuracao.carga --malha                            # malha munic
 
 ```
 uv run python -m apuracao.carga --boletim 2022:2                     # 66 MB de zips
-uv run python -m apuracao.carga --boletim 2026:1 --sem-guardar-zip   # ~1,4 GB; apaga cada zip depois de ler
+uv run python -m apuracao.carga --boletim 2026:1 --sem-guardar-zip   # 4,7 GB (2026); apaga cada zip depois de ler
 ```
 
 O boletim de urna (Portal de Dados Abertos) traz os votos de cada seção e o horário em que o

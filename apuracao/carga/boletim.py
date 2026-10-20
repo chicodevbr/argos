@@ -101,15 +101,23 @@ def ler_zip(caminho: Path) -> pd.DataFrame:
                 ))
     df = pd.DataFrame(linhas, columns=["uf", "cod_mun", "zona", "secao", "recebido", "aptos",
                                        "tipo", "numero", "nome", "votos"])
-    df["recebido"] = pd.to_datetime(df["recebido"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+    df["recebido"] = _data_hora(df["recebido"])
     return df
+
+
+def _data_hora(s: pd.Series) -> pd.Series:
+    """2022 publica "30/10/2022 17:23:32"; 2026 passou a "2026-10-04 18:25:49". Com um
+    formato só, o outro virava NaT em silêncio (carga de 20/10/2026 saiu sem horários)."""
+    br = pd.to_datetime(s, format="%d/%m/%Y %H:%M:%S", errors="coerce")
+    iso = pd.to_datetime(s, format="%Y-%m-%d %H:%M:%S", errors="coerce")
+    return br.fillna(iso)
 
 
 def carregar(cfg: Config, ano: int, turno: int, dir_parquet: Path, log: LogJson, baixar: bool = True,
              guardar_zip: bool = True, transport: httpx.BaseTransport | None = None) -> Path | None:
     """Baixa (se `baixar`) e lê os zips, um por vez, e grava
     data/parquet/hist_boletim/{ano}_t{turno}.parquet. Com guardar_zip=False cada zip é apagado
-    depois de lido: o 1º turno tem ~1,4 GB de zips (todos os cargos) e o Parquet só uns MB."""
+    depois de lido: o 1º turno de 2026 tem 4,7 GB de zips (todos os cargos; SP sozinho 1,4 GB) e o Parquet só uns MB."""
     dir_zip = Path(cfg.historico.dir) / str(ano) / "boletim"
     dir_zip.mkdir(parents=True, exist_ok=True)
     partes = []
