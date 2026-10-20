@@ -1,7 +1,7 @@
 """Página "A noite da apuração": como a contagem evoluiu em eleições passadas, reconstruída
 a partir do boletim de urna (horário em que cada seção chegou ao TSE).
 
-Carga: uv run python -m apuracao.carga --boletim 2022:2   (e 2026:1 quando o TSE publicar)
+Carga: uv run python -m apuracao.carga --boletim 2022:2   (e 2026:1 --sem-guardar-zip; carregado em 20/10/2026)
 """
 
 from __future__ import annotations
