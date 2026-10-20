@@ -48,7 +48,8 @@ uv run python -m apuracao.coletor --ambiente oficial --eleicao 2026-t2-federal -
 # carga única de uma eleição já apurada (busca cada arquivo uma vez e encerra)
 uv run python -m apuracao.coletor --ambiente oficial --eleicao 2026-t1-federal --eleicao 2026-t1-estadual --municipios --uma-vez
 
-# só a sincronização (envia ao R2 o que estiver em data/raw; --destino-pasta copia para uma pasta)
+# só a sincronização (envia ao R2 o que estiver em data/raw; --destino-pasta copia para uma pasta;
+# --workers = envios simultâneos, padrão 32)
 uv run python -m apuracao.coletor.sync --dir-raw data/raw
 ```
 

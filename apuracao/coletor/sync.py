@@ -33,10 +33,17 @@ class Destino(Protocol):
     def enviar(self, chave: str, caminho: Path) -> None: ...
 
 
+# Envios simultâneos. Cada upload pequeno leva ~0,45 s até o R2; com 8 o
+# ensaio de 19/10 ficou em ~18 arquivos/s, abaixo dos ~20/s médios esperados
+# na noite (2 arquivos por snapshot).
+WORKERS = 32
+
+
 class DestinoR2:
     """R2 via API compatível com S3 (boto3)."""
 
-    def __init__(self, account_id: str, access_key: str, secret_key: str, bucket: str):
+    def __init__(self, account_id: str, access_key: str, secret_key: str, bucket: str,
+                 conexoes: int = WORKERS):
         import boto3
         from botocore.config import Config
 
@@ -47,22 +54,27 @@ class DestinoR2:
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name="auto",
+            # Pool padrão do botocore é 10: com mais workers, as threads
+            # ficariam esperando conexão.
             config=Config(retries={"max_attempts": 3, "mode": "standard"},
-                          connect_timeout=10, read_timeout=30),
+                          connect_timeout=10, read_timeout=30,
+                          max_pool_connections=conexoes),
         )
 
     @classmethod
-    def do_ambiente(cls) -> DestinoR2:
+    def do_ambiente(cls, conexoes: int = WORKERS) -> DestinoR2:
         faltando = [v for v in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET")
                     if not os.environ.get(v)]
         if faltando:
             raise SystemExit(f"variáveis de ambiente ausentes: {', '.join(faltando)}")
         return cls(os.environ["R2_ACCOUNT_ID"], os.environ["R2_ACCESS_KEY_ID"],
-                   os.environ["R2_SECRET_ACCESS_KEY"], os.environ["R2_BUCKET"])
+                   os.environ["R2_SECRET_ACCESS_KEY"], os.environ["R2_BUCKET"], conexoes)
 
     def enviar(self, chave: str, caminho: Path) -> None:
         tipo = "application/gzip" if caminho.name.endswith(".gz") else "application/json"
-        self.s3.upload_file(str(caminho), self.bucket, chave, ExtraArgs={"ContentType": tipo})
+        # put_object direto: snapshots têm poucos KB, e upload_file monta um
+        # TransferManager (threads, multipart) a cada chamada.
+        self.s3.put_object(Bucket=self.bucket, Key=chave, Body=caminho.read_bytes(), ContentType=tipo)
 
 
 class DestinoPasta:
@@ -81,21 +93,27 @@ class DestinoPasta:
 
 def pendentes(dir_raw: Path, enviados: set[str]) -> list[tuple[str, Path]]:
     """Arquivos publicados pelo coletor ainda não enviados, do mais antigo ao mais novo."""
+    # os.walk + strings em vez de Path.rglob/relative_to: com 200 mil arquivos
+    # a varredura caiu de ~25 s para ~1 s (medido em 19/10), e ela roda a cada
+    # passada sobre a árvore inteira.
+    base = os.fspath(dir_raw)
+    corte = len(base.rstrip(os.sep)) + 1
     saida = []
-    for p in Path(dir_raw).rglob("*"):
-        nome = p.name
-        if nome.startswith(".") or not (nome.endswith(SUFIXO_DADO) or nome.endswith(SUFIXO_META)):
-            continue  # ignora .tmp do coletor, o registro e qualquer outra coisa
-        chave = p.relative_to(dir_raw).as_posix()
-        if chave not in enviados:
-            saida.append((chave, p))
+    for pasta, _subpastas, nomes in os.walk(base):
+        for nome in nomes:
+            if nome.startswith(".") or not (nome.endswith(SUFIXO_DADO) or nome.endswith(SUFIXO_META)):
+                continue  # ignora .tmp do coletor, o registro e qualquer outra coisa
+            caminho = os.path.join(pasta, nome)
+            chave = caminho[corte:].replace(os.sep, "/")
+            if chave not in enviados:
+                saida.append((chave, Path(caminho)))
     saida.sort(key=lambda x: x[1].name)
     return saida
 
 
 class Sincronizador:
     def __init__(self, dir_raw: Path, destino: Destino, log: LogJson,
-                 prefixo: str = "", workers: int = 8):
+                 prefixo: str = "", workers: int = WORKERS):
         self.dir_raw = Path(dir_raw)
         self.destino = destino
         self.log = log
@@ -164,10 +182,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--prefixo", default="raw", help="prefixo das chaves no bucket")
     ap.add_argument("--intervalo", type=float, default=15.0)
     ap.add_argument("--destino-pasta", type=Path, help="copia para uma pasta em vez do R2")
+    ap.add_argument("--workers", type=int, default=WORKERS, help="envios simultâneos")
     args = ap.parse_args(argv)
 
-    destino = DestinoPasta(args.destino_pasta) if args.destino_pasta else DestinoR2.do_ambiente()
-    sinc = Sincronizador(args.dir_raw, destino, LogJson(), prefixo=args.prefixo)
+    destino = (DestinoPasta(args.destino_pasta) if args.destino_pasta
+               else DestinoR2.do_ambiente(args.workers))
+    sinc = Sincronizador(args.dir_raw, destino, LogJson(), prefixo=args.prefixo, workers=args.workers)
     parar = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda s, _f: (sinc.log.evento("sinal", sinal=signal.Signals(s).name), parar.set()))

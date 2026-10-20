@@ -7,7 +7,7 @@ from pathlib import Path
 
 from apuracao.coletor import snapshot
 from apuracao.coletor.log import LogJson
-from apuracao.coletor.sync import DestinoPasta, Sincronizador, pendentes
+from apuracao.coletor.sync import DestinoPasta, DestinoR2, Sincronizador, pendentes
 
 
 class DestinoFalso:
@@ -79,3 +79,42 @@ def test_destino_pasta(tmp_path):
     s.passada()
     assert len(list((tmp_path / "copia").rglob("*.json.gz"))) == 1
     assert pendentes(tmp_path / "raw", s.enviados) == []
+
+
+def test_passada_envia_em_paralelo(tmp_path):
+    # 40 snapshots = 80 arquivos a 0,2 s cada: em série levaria 16 s.
+    class DestinoLento(DestinoFalso):
+        def enviar(self, chave, caminho):
+            threading.Event().wait(0.2)
+            super().enviar(chave, caminho)
+
+    gravar(tmp_path, 40)
+    destino = DestinoLento()
+    sinc = Sincronizador(tmp_path, destino, LogJson(io.StringIO()))
+    t0 = datetime.now()
+    assert sinc.passada() == (80, 0)
+    assert (datetime.now() - t0).total_seconds() < 3
+
+
+def test_destino_r2_usa_put_object(tmp_path):
+    class S3Falso:
+        def __init__(self):
+            self.chamadas = []
+
+        def put_object(self, **kw):
+            self.chamadas.append(kw)
+
+    r2 = DestinoR2.__new__(DestinoR2)  # sem boto3 nem rede
+    r2.bucket, r2.s3 = "b", S3Falso()
+    gz = tmp_path / "x.json.gz"
+    gz.write_bytes(b"\x1f\x8b dado")
+    r2.enviar("raw/6257/br/x.json.gz", gz)
+    assert r2.s3.chamadas == [{"Bucket": "b", "Key": "raw/6257/br/x.json.gz",
+                               "Body": b"\x1f\x8b dado", "ContentType": "application/gzip"}]
+
+
+def test_pendentes_chave_relativa_com_barra_no_fim(tmp_path):
+    gravar(tmp_path, 1)
+    chaves = {k for k, _ in pendentes(str(tmp_path) + "/", set())}
+    assert chaves == {k for k, _ in pendentes(tmp_path, set())}
+    assert all(k.startswith("6257/br/br-c0001-e006257-u/") for k in chaves)
