@@ -109,6 +109,9 @@ turno; enquanto não sai, o comando avisa `boletim_indisponivel`. Saída em `dat
 uv run streamlit run apuracao/app/main.py
 ```
 
+No Codespace, `scripts/retomar-codespace.sh` religa o que estiver parado (coletor do 2º turno,
+`construir --loop 15` e painel) sem duplicar o que já roda; use depois que o Codespace for retomado.
+
 Abre em http://localhost:8501 com três páginas: **Apuração ao vivo**, **Análise do 1º turno** e
 **A noite da apuração** (curva e ritmo por região de noites passadas, a partir do boletim de urna).
 No topo da página ao vivo, um selo mostra se a coleta local está ativa (lê `logs/coletor.jsonl`).
