@@ -1,5 +1,6 @@
 """uv run python -m apuracao.pagina [--saida data/pagina/abstencao-1o-turno-2026.html]
 uv run python -m apuracao.pagina --recorte brasilia|rio|estado-rj   (abstenção por região; ver pagina/recortes.py)
+uv run python -m apuracao.pagina --recorte brasilia|rio --turnos --site site   (1º x 2º turno por região; pagina/turnos.py)
 uv run python -m apuracao.pagina --pesquisas --site site   (pesquisas do 2º turno x resultado; ver pagina/pesquisas.py)
 uv run python -m apuracao.pagina --recorte rio --site site   (também grava site/<subpasta>/index.html completo,
     para hospedar fora do claude.ai, ex.: Netlify; --brasilia = --recorte brasilia)"""
@@ -11,7 +12,7 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import perdas, pesquisas, regioes, vitoria, votos
+from apuracao.pagina import perdas, pesquisas, regioes, turnos, vitoria, votos
 from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
@@ -30,7 +31,8 @@ ESQUELETO = """<!doctype html>
 # Páginas do site estático (Netlify): (rótulo na barra, subpasta, grupo, título, descrição, tema). A raiz é a
 # página inicial (--inicio), que mostra DESTAQUE em cima, com o placar, e as outras agrupadas por turno e lugar,
 # na ordem desta lista. Endereços já divulgados não mudam: rio-de-janeiro/, estado-do-rio/, votos/.
-# Brasília foi a raiz até 07/10/2026 e passou para brasilia/.
+# Brasília foi a raiz até 07/10/2026 e passou para brasilia/. Em brasilia/ e rio-de-janeiro/, a abstenção do
+# 1º turno deu lugar ao 1º x 2º turno (pagina/turnos.py), a pedido do usuário em 26/10/2026.
 DESTAQUE = "como-lula-venceu"
 SITE = [
     ("Como Lula venceu", "como-lula-venceu", "2º turno · Brasil", "Como Lula venceu em 2026",
@@ -38,17 +40,17 @@ SITE = [
      "Votos"),
     ("Pesquisas", "pesquisas", "2º turno · Brasil", "As pesquisas do 2º turno",
      "As 30 pesquisas dos cinco dias antes da votação, de 20 institutos, comparadas ao resultado.", "Pesquisas"),
+    ("1º x 2º turno · Brasília", "brasilia", "2º turno · Brasília", "Do 1º ao 2º turno em Brasília",
+     "Votos de Lula e Flávio e abstenção nas 35 RAs do DF, no 1º e no 2º turno.", "Votos"),
+    ("1º x 2º turno · Rio", "rio-de-janeiro", "2º turno · Rio de Janeiro", "Do 1º ao 2º turno no Rio",
+     "Votos de Lula e Flávio e abstenção nas RAs da cidade, no 1º e no 2º turno, com os bairros.", "Votos"),
     ("Onde Lula perdeu no 1º turno", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos no 1º turno",
      "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
-    ("Abstenção · Brasília", "brasilia", "1º turno · Brasília", "Abstenção em Brasília",
-     "As 35 regiões administrativas do DF, comparadas a 2022.", "Abstenção"),
     ("Votos · Brasília", "votos", "1º turno · Brasília", "Votos em Brasília",
      "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022.", "Votos"),
     ("Onde Lula perdeu no 1º turno · Brasília", "onde-lula-perdeu/brasilia", "1º turno · Brasília",
      "Onde Lula perdeu votos em Brasília no 1º turno",
      "As 35 RAs do DF, comparadas a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
-    ("Abstenção · Rio", "rio-de-janeiro", "1º turno · Rio de Janeiro", "Abstenção na cidade do Rio",
-     "As 33 regiões administrativas da cidade, com os bairros de cada uma.", "Abstenção"),
     ("Abstenção · Estado do Rio", "estado-do-rio", "1º turno · Rio de Janeiro", "Abstenção no Estado do Rio",
      "Os 92 municípios do estado, comparados a 2022.", "Abstenção"),
 ]
@@ -115,6 +117,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--recorte", choices=sorted(RECORTES), help="página por região (Brasília, cidade ou estado do Rio)")
     ap.add_argument("--brasilia", action="store_true", help="atalho para --recorte brasilia")
     ap.add_argument("--votos", action="store_true", help="com --recorte: página de votos por candidato")
+    ap.add_argument("--turnos", action="store_true", help="com --recorte: 1º x 2º turno por região")
+    ap.add_argument("--ano", type=int, default=2026, help="com --turnos: ano (2022 para conferir)")
     ap.add_argument("--inicio", action="store_true", help="com --site: página inicial com os links (raiz do site)")
     ap.add_argument("--perdas", action="store_true", help="página \"Onde Lula perdeu votos\" (municípios, 2022 e 2014)")
     ap.add_argument("--vitoria", action="store_true", help="página \"Como Lula venceu em 2026\" (2º turno, municípios)")
@@ -154,7 +158,11 @@ def main(argv: list[str] | None = None) -> int:
     elif recorte:
         cfg = carregar(args.config)
         r = RECORTES[recorte](cfg)
-        if args.votos:
+        if args.turnos:
+            sub = r.subpasta   # substitui a página de abstenção do 1º turno (endereço já divulgado)
+            saida = turnos.gerar(r, cfg, args.dir_parquet,
+                                 args.saida or Path(f"data/pagina/turnos-{r.id}-{args.ano}.html"), args.ano)
+        elif args.votos:
             sub = "votos" if r.id == "brasilia" else f"{r.subpasta}/votos"   # /votos/ já divulgado
             saida = votos.gerar(r, cfg, args.dir_parquet,
                                 args.saida or Path("data/pagina") / r.saida.replace("abstencao", "votos"))

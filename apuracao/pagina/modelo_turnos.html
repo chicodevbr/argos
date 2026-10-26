@@ -1,0 +1,517 @@
+<title>__TITULO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), irmão das páginas de votos e abstenção por região: o 1º e o
+   2º turno no mesmo lugar, por unidade. Mesmos tokens; 13 e 22 usam os polos do divergente validado
+   (13 = vermelho, 22 = azul) em toda a página; outros candidatos, brancos/nulos e abstenção em neutros
+   (a abstenção ainda leva hachura, para não depender só do tom de cinza). */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --dado-atual: #2a78d6;
+  --dado-base: #8a8883;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --c13: #b3302f; --c22: #2a78d6; --demais: #b5b3ad; --bn: #dcdad5; --abst: #f0efec; --hachura: #a3a19b; --sobre-cor: #ffffff;
+  --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #f0efec; --div-4: #f2a3a2; --div-5: #b3302f;
+  --contorno: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c13: #e66767; --c22: #3987e5; --demais: #6e6d68; --bn: #4a4945; --abst: #26282d; --hachura: #6e6d68; --sobre-cor: #111317;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e;
+    --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+    --contorno: #111317;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c13: #e66767; --c22: #3987e5; --demais: #6e6d68; --bn: #4a4945; --abst: #26282d; --hachura: #6e6d68; --sobre-cor: #111317;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --dado-atual: #3987e5; --dado-base: #76746e;
+  --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #383835; --div-4: #8f3433; --div-5: #e66767;
+  --contorno: #111317;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .nome { display: inline-flex; align-items: center; gap: 6px; }
+.indicador .nome i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.variacao { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
+svg .forte { fill: var(--tinta); font-weight: 600; }
+svg .dentro { fill: var(--sobre-cor); font-weight: 600; }
+svg .dentro-escuro { fill: var(--tinta); font-weight: 600; }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .875rem; color: var(--tinta-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid var(--linha); }
+.legenda i.hach { background: repeating-linear-gradient(135deg, var(--hachura) 0 1.5px, var(--abst) 1.5px 5px) !important; }
+.legenda i.ponto { border-radius: 50%; }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+button:focus-visible, th:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+
+.mapa-grade { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mapa-grade { grid-template-columns: 1fr; } }
+#mapa path { stroke: var(--contorno); stroke-width: 1; cursor: pointer; }
+#mapa path:hover, #mapa path.ativo { stroke: var(--tinta); stroke-width: 2; }
+.legenda-mapa { display: grid; gap: 6px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda-mapa span { display: inline-flex; align-items: center; gap: 8px; }
+.legenda-mapa i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; border: 1px solid var(--linha); }
+.destaques { display: grid; gap: 4px; font-size: .9rem; }
+.destaques b { font-weight: 600; }
+
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 9rem; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+td.forte { font-weight: 600; color: var(--tinta); }
+td.grupo { border-left: 1px solid var(--linha); }
+.pequena { color: var(--apagado); font-size: .78rem; display: block; white-space: normal; max-width: 46ch; line-height: 1.35; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 280px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo" id="sobretitulo"></span>
+    <h1>__TITULO__</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="indicadores" id="indicadores"></div>
+
+  <section class="quadro" aria-labelledby="t-eleitores">
+    <h2 id="t-eleitores">Os eleitores nos dois turnos</h2>
+    <p class="nota" id="nota-eleitores"></p>
+    <div class="legenda" id="legenda-eleitores"></div>
+    <svg id="eleitores" role="img" aria-label="Divisão dos eleitores aptos no 1º e no 2º turno"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-mapa">
+    <div class="quadro-topo">
+      <h2 id="t-mapa">Mapa</h2>
+      <div class="segmentado" role="group" aria-label="O que colorir">
+        <button data-m="t2" aria-pressed="true">Margem no 2º turno</button>
+        <button data-m="var" aria-pressed="false">Mudança da margem</button>
+      </div>
+    </div>
+    <p class="nota" id="mapa-nota"></p>
+    <div class="mapa-grade">
+      <svg id="mapa" role="img" aria-label="Mapa da margem entre os candidatos"></svg>
+      <div style="display:grid;gap:20px">
+        <div class="legenda-mapa" id="legenda-mapa"></div>
+        <div class="destaques nota" id="destaques"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-cresc">
+    <div class="quadro-topo">
+      <h2 id="t-cresc">Onde cada um cresceu</h2>
+      <div class="segmentado" role="group" aria-label="Medida do crescimento">
+        <button data-c="pct" aria-pressed="true">Em %</button>
+        <button data-c="votos" aria-pressed="false">Em votos</button>
+      </div>
+    </div>
+    <p class="nota" id="nota-cresc"></p>
+    <div class="legenda" id="legenda-cresc"></div>
+    <svg id="cresc" role="img" aria-label="Votos ganhos ou perdidos do 1º para o 2º turno, por unidade"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-abst">
+    <h2 id="t-abst">Abstenção no 1º e no 2º turno</h2>
+    <p class="nota" id="nota-abst"></p>
+    <div class="legenda" id="legenda-abst"></div>
+    <svg id="abst" role="img" aria-label="Abstenção no 1º e no 2º turno, por unidade"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <div class="quadro-topo">
+      <h2 id="t-tabela">Tabela</h2>
+      <div class="segmentado" role="group" aria-label="Votos ou percentual">
+        <button data-t="votos" aria-pressed="true">Votos</button>
+        <button data-t="pct" aria-pressed="false">% dos válidos</button>
+      </div>
+    </div>
+    <p class="nota">Clique no cabeçalho para ordenar.</p>
+    <div class="tabela"><table id="tabela"></table></div>
+  </section>
+
+  <footer class="metodo nota" id="metodo">
+    <span class="rotulo">Método e fontes</span>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+const M = D.meta, A = D.A, B = D.B, T = D.total;
+const NA = D.nomes[A], NB = D.nomes[B];
+const curto = n => n.split(" ")[0];   // "Flávio Bolsonaro" -> "Flávio" (rótulos apertados)
+const fmt = (v, c = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : Math.round(v).toLocaleString("pt-BR");
+const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const sinalInt = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + inteiro(Math.abs(v));
+const mil = v => Math.abs(v) >= 1e6 ? fmt(v / 1e6, 2) + " mi" : Math.abs(v) >= 1e4 ? fmt(v / 1e3, 0) + " mil" : inteiro(v);
+const sinalMil = v => (v > 0 ? "+" : v < 0 ? "−" : "") + mil(Math.abs(v));
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const porChave = new Map(D.ras.map(r => [r.chave, r]));
+const fem = M.unidade.startsWith("região");
+const pontos = v => Math.abs(Math.round(v * 10) / 10) < 2 ? "ponto" : "pontos";
+
+document.getElementById("sobretitulo").textContent =
+  `Eleições ${D.ano} · Presidente · 1º turno (${M.datas[0]}) e 2º turno (${M.datas[1]}) · ${M.rotulo}`;
+document.getElementById("lede").textContent = D.textos.lede;
+document.getElementById("nota-cresc").textContent = D.textos.crescimento;
+document.getElementById("nota-abst").textContent = D.textos.abstencao;
+document.getElementById("t-tabela").textContent = `${fem ? "Todas as" : "Todos os"} ${M.unidades}`;
+
+// --- Indicadores -------------------------------------------------------------------
+(function indicadores() {
+  const alvo = document.getElementById("indicadores");
+  const t1 = T.t1, t2 = T.t2;
+  const itens = [
+    { nome: NA, cor: "--c13", valor: fmt(t2.a_pct, 1) + "%",
+      v: `${inteiro(t2.a)} votos · ${sinalMil(T.dif_a)} (${sinal(T.cresc_a)}%) desde o 1º turno, quando teve ${fmt(t1.a_pct, 1)}%` },
+    { nome: NB, cor: "--c22", valor: fmt(t2.b_pct, 1) + "%",
+      v: `${inteiro(t2.b)} votos · ${sinalMil(T.dif_b)} (${sinal(T.cresc_b)}%) desde o 1º turno, quando teve ${fmt(t1.b_pct, 1)}%` },
+    { nome: "Abstenção no 2º turno", valor: fmt(t2.abst_pct, 1) + "%",
+      v: `${inteiro(t2.abstencoes)} eleitores · 1º turno: ${fmt(t1.abst_pct, 1)}% (${sinal(t2.abst_pct - t1.abst_pct)} ${pontos(t2.abst_pct - t1.abst_pct)})` },
+    { nome: "Brancos e nulos no 2º turno", valor: mil(t2.brancos + t2.nulos),
+      v: `${inteiro(t2.brancos)} brancos e ${inteiro(t2.nulos)} nulos · 1º turno: ${mil(t1.brancos + t1.nulos)}` },
+  ];
+  for (const it of itens) {
+    const el = document.createElement("div"); el.className = "indicador";
+    el.innerHTML = `<span class="rotulo nome"></span><span class="valor"></span><span class="variacao"></span>`;
+    const n = el.querySelector(".nome");
+    if (it.cor) { const i = document.createElement("i"); i.style.background = `var(${it.cor})`; n.appendChild(i); }
+    n.appendChild(document.createTextNode(it.nome));
+    el.querySelector(".valor").textContent = it.valor;
+    el.querySelector(".variacao").textContent = it.v;
+    alvo.appendChild(el);
+  }
+})();
+
+// --- Dica ------------------------------------------------------------------------
+const dica = document.getElementById("dica");
+function posDica(ev) {
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 290) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+function mostrarDica(ev, r) {
+  dica.hidden = false;
+  const l = t => `${t === "t1" ? "1º" : "2º"} turno: ${curto(NA)} ${fmt(r[t].a_pct, 1)}% · ${curto(NB)} ${fmt(r[t].b_pct, 1)}%` +
+    (t === "t1" ? ` · outros ${fmt(100 - r[t].a_pct - r[t].b_pct, 1)}%` : "") + ` · abstenção ${fmt(r[t].abst_pct, 1)}%`;
+  dica.innerHTML = `<b></b><br><span></span><br><span></span><br><span></span><span class="extra"></span>`;
+  const s = dica.querySelectorAll("span");
+  dica.querySelector("b").textContent = r.ra;
+  s[0].textContent = l("t1"); s[1].textContent = l("t2");
+  s[2].textContent = `Votos: ${curto(NA)} ${sinalInt(r.dif_a)} (${sinal(r.cresc_a)}%) · ${curto(NB)} ${sinalInt(r.dif_b)} (${sinal(r.cresc_b)}%)`;
+  if (r.extra) { const e = s[3]; e.textContent = r.extra; e.style.display = "block"; e.style.marginTop = "4px"; e.style.opacity = ".85"; }
+  posDica(ev);
+}
+function dicaTexto(ev, linhas) {
+  dica.hidden = false; dica.innerHTML = "";
+  linhas.forEach((t, i) => { const e = document.createElement(i ? "span" : "b"); e.textContent = t; dica.appendChild(e); if (i < linhas.length - 1) dica.appendChild(document.createElement("br")); });
+  posDica(ev);
+}
+const esconderDica = () => { dica.hidden = true; };
+
+// --- Os eleitores nos dois turnos ------------------------------------------------
+// Barra de 100% dos aptos: 13 | outros candidatos | brancos e nulos | abstenção | 22.
+const PARTES = [
+  { id: "a", rot: NA, cor: "--c13", v: t => t.a, claro: true },
+  { id: "outros", rot: "outros candidatos", cor: "--demais", v: t => t.outros },
+  { id: "bn", rot: "brancos e nulos", cor: "--bn", v: t => t.brancos + t.nulos },
+  { id: "abst", rot: "abstenção", cor: "--abst", v: t => t.abstencoes, hachura: true },
+  { id: "b", rot: NB, cor: "--c22", v: t => t.b, claro: true },
+];
+(function legendaEleitores() {
+  const leg = document.getElementById("legenda-eleitores");
+  for (const p of PARTES) {
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = `var(${p.cor})`; if (p.hachura) s.querySelector("i").className = "hach";
+    s.querySelector("span").textContent = p.rot; leg.appendChild(s);
+  }
+  const t1 = T.t1, t2 = T.t2;
+  document.getElementById("nota-eleitores").textContent =
+    `Cada barra soma todos os ${inteiro(t2.aptos)} eleitores aptos do 2º turno (${inteiro(t1.aptos)} no 1º).`;
+})();
+function desenharEleitores() {
+  const svg = d3.select("#eleitores");
+  const largura = svg.node().getBoundingClientRect().width || 900;
+  const estreito = largura < 560, esq = estreito ? 0 : 80, alt = 34, passo = estreito ? 72 : 58;
+  const altura = 2 * passo;
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const defs = svg.append("defs");
+  defs.append("pattern").attr("id", "hach").attr("patternUnits", "userSpaceOnUse").attr("width", 6).attr("height", 6)
+    .attr("patternTransform", "rotate(135)")
+    .call(p => { p.append("rect").attr("width", 6).attr("height", 6).attr("fill", cor("--abst"));
+                 p.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 6).attr("stroke", cor("--hachura")).attr("stroke-width", 1.5); });
+  const x = d3.scaleLinear().domain([0, 1]).range([esq, largura]);
+  [["t1", "1º turno"], ["t2", "2º turno"]].forEach(([t, rot], i) => {
+    const tt = T[t], y0 = i * passo + (estreito ? 20 : 8);
+    svg.append("text").attr("class", "forte").attr("x", estreito ? 0 : esq - 12).attr("y", estreito ? y0 - 6 : y0 + alt / 2 + 4)
+      .attr("text-anchor", estreito ? "start" : "end").text(rot);
+    let acc = 0;
+    for (const p of PARTES) {
+      const val = p.v(tt); if (!val) continue;
+      const f = val / tt.aptos, x0 = x(acc), w = Math.max(0, x(acc + f) - x(acc) - 2);
+      const g = svg.append("g")
+        .on("mousemove", ev => dicaTexto(ev, [`${rot}: ${p.rot}`, `${inteiro(val)} (${fmt(100 * f, 1)}% dos aptos)`,
+          ...(p.id === "a" || p.id === "b" ? [`${fmt(p.id === "a" ? tt.a_pct : tt.b_pct, 1)}% dos votos válidos`] : [])]))
+        .on("mouseleave", esconderDica);
+      g.append("rect").attr("x", x0).attr("y", y0).attr("width", w).attr("height", alt).attr("rx", 3)
+        .attr("fill", p.hachura ? "url(#hach)" : cor(p.cor));
+      const txt = fmt(100 * f, 1) + "%";
+      if (w > txt.length * 7.5 + 10) g.append("text").attr("class", p.claro ? "dentro" : "dentro-escuro")
+        .attr("x", x0 + w / 2).attr("y", y0 + alt / 2 + 4).attr("text-anchor", "middle").text(txt);
+      acc += f;
+    }
+  });
+}
+
+// --- Mapa ------------------------------------------------------------------------
+// margem = % do 13 − % do 22 nos válidos (pontos). Divergente validada: vermelho = 13, azul = 22.
+const CORES_DIV = ["--div-1", "--div-2", "--div-3", "--div-4", "--div-5"];
+const MAPAS = {
+  t2: { cortes: [-20, -5, 5, 20], valor: r => r.t2.margem,
+        nota: () => `Margem no 2º turno: % de ${NA} menos % de ${NB} nos votos válidos, em pontos.`,
+        rotulos: c => [`${NB} à frente por ${c[3]}+`, `${NB} à frente por ${c[2]} a ${c[3]}`, `diferença até ${c[2]}`, `${NA} à frente por ${c[2]} a ${c[3]}`, `${NA} à frente por ${c[3]}+`],
+        titulos: [`Maior vantagem de ${NB}`, `Melhor para ${NA}`] },
+  var: { cortes: M.cortes_var, valor: r => r.var_margem,
+         nota: () => `Mudança da margem do 1º para o 2º turno, em pontos. Vermelho: ${NA} ficou com mais dos votos que mudaram entre os turnos; azul: ${NB}.`,
+         rotulos: c => [`${NB} ganhou ${c[3]}+ pontos`, `${NB} ganhou ${c[2]} a ${c[3]}`, `praticamente igual (±${c[2]})`, `${NA} ganhou ${c[2]} a ${c[3]}`, `${NA} ganhou ${c[3]}+ pontos`],
+         titulos: [`Mais a favor de ${NB}`, `Mais a favor de ${NA}`] },
+};
+let modo = "t2";
+function desenharMapa() {
+  const svg = d3.select("#mapa");
+  const largura = svg.node().getBoundingClientRect().width || 700;
+  const altura = Math.round(largura * 0.62);
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const caminho = d3.geoPath(d3.geoMercator().fitSize([largura, altura], MALHA));
+  const m = MAPAS[modo];
+  const corDe = v => v == null ? cor("--linha") : cor(CORES_DIV[d3.bisect(m.cortes, v)]);
+  svg.append("g").selectAll("path").data(MALHA.features).join("path")
+    .attr("d", caminho)
+    .attr("fill", f => { const r = porChave.get(f.properties.chave); return r ? corDe(m.valor(r)) : cor("--linha"); })
+    .attr("tabindex", 0)
+    .attr("aria-label", f => { const r = porChave.get(f.properties.chave); return r ? `${r.ra}: ${sinal(m.valor(r))} pontos` : f.properties.chave; })
+    .on("mousemove", (ev, f) => { const r = porChave.get(f.properties.chave); if (r) mostrarDica(ev, r); })
+    .on("mouseleave", esconderDica)
+    .on("focus", function (ev, f) { const r = porChave.get(f.properties.chave); const b = this.getBoundingClientRect();
+      if (r) mostrarDica({ clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }, r); d3.select(this).classed("ativo", true); })
+    .on("blur", function () { esconderDica(); d3.select(this).classed("ativo", false); });
+  document.getElementById("t-mapa").textContent = modo === "var" ? D.textos.titulo_var : D.textos.vitorias.replace(/\.$/, "");
+  document.getElementById("mapa-nota").textContent = m.nota();
+  const leg = document.getElementById("legenda-mapa"); leg.innerHTML = "";
+  const c = m.cortes.map(v => fmt(Math.abs(v), Number.isInteger(v) ? 0 : 1));
+  m.rotulos(c).forEach((t, i) => {
+    const n = D.ras.filter(r => { const v = m.valor(r); return v != null && d3.bisect(m.cortes, v) === i; }).length;
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = cor(CORES_DIV[i]); s.querySelector("span").textContent = `${t} (${n})`;
+    leg.appendChild(s);
+  });
+  const ord = D.ras.filter(r => m.valor(r) != null).sort((a, b) => m.valor(a) - m.valor(b));
+  const des = document.getElementById("destaques"); des.innerHTML = "";
+  for (const [t, lista] of [[m.titulos[0], ord.slice(0, 3)], [m.titulos[1], ord.slice(-3).reverse()]]) {
+    const b = document.createElement("b"); b.textContent = t; des.appendChild(b);
+    for (const r of lista) { const d = document.createElement("span"); d.textContent = `${r.ra}: ${sinal(m.valor(r))}`; des.appendChild(d); }
+  }
+}
+for (const b of document.querySelectorAll("[data-m]")) b.addEventListener("click", () => {
+  modo = b.dataset.m; for (const o of document.querySelectorAll("[data-m]")) o.setAttribute("aria-pressed", String(o === b)); desenharMapa(); });
+
+// --- Onde cada um cresceu ----------------------------------------------------------
+// Duas barras finas por unidade (13 em cima, 22 embaixo), a partir do zero: crescimento dos votos do
+// 1º para o 2º turno, em % ou em votos. Ordem: mudança da margem (mais a favor do 13 no topo).
+let medida = "pct";
+(function legendaCresc() {
+  const leg = document.getElementById("legenda-cresc");
+  for (const [n, c] of [[NA, "--c13"], [NB, "--c22"]]) {
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = `var(${c})`; s.querySelector("span").textContent = n; leg.appendChild(s);
+  }
+})();
+function desenharCresc() {
+  const svg = d3.select("#cresc");
+  const largura = svg.node().getBoundingClientRect().width || 900;
+  const estreito = largura < 560;
+  const esq = estreito ? Math.min(130, largura * 0.36) : Math.min(200, largura * 0.3), dir = 64, topo = 18;
+  const barra = 7, passo = 2 * barra + 16;
+  const lista = [...D.ras].sort((a, b) => b.var_margem - a.var_margem);
+  const val = medida === "pct" ? (r, k) => r["cresc_" + k] : (r, k) => r["dif_" + k];
+  const todos = lista.flatMap(r => [val(r, "a"), val(r, "b")]).filter(v => v != null);
+  const x = d3.scaleLinear().domain([Math.min(0, d3.min(todos)), Math.max(0, d3.max(todos))]).nice().range([esq, largura - dir]);
+  const altura = topo + lista.length * passo + 8;
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  for (const t of x.ticks(estreito ? 3 : 6)) {
+    svg.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y1", topo - 4).attr("y2", altura - 8).attr("stroke", cor("--linha"));
+    svg.append("text").attr("x", x(t)).attr("y", topo - 8).attr("text-anchor", "middle")
+      .text(medida === "pct" ? sinal(t, 0) + "%" : sinalMil(t));
+  }
+  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", topo - 4).attr("y2", altura - 8).attr("stroke", cor("--tinta-2"));
+  const rot = v => medida === "pct" ? sinal(v) + "%" : sinalMil(v);
+  lista.forEach((r, i) => {
+    const y = topo + i * passo;
+    const g = svg.append("g").on("mousemove", ev => mostrarDica(ev, r)).on("mouseleave", esconderDica);
+    g.append("rect").attr("x", 0).attr("y", y - 2).attr("width", largura).attr("height", passo).attr("fill", "transparent");
+    g.append("text").attr("x", esq - 10).attr("y", y + barra + 4).attr("text-anchor", "end").text(r.ra);
+    [["a", "--c13", 0], ["b", "--c22", barra + 1]].forEach(([k, c, dy]) => {
+      const v = val(r, k); if (v == null) return;
+      const x0 = Math.min(x(0), x(v)), w = Math.max(1, Math.abs(x(v) - x(0)));
+      g.append("rect").attr("x", x0).attr("y", y + dy).attr("width", w).attr("height", barra).attr("rx", 2).attr("fill", cor(c));
+      g.append("text").attr("x", v >= 0 ? x(v) + 4 : x(v) - 4).attr("y", y + dy + barra - 0.5).attr("text-anchor", v >= 0 ? "start" : "end")
+        .style("font-size", "10px").text(rot(v));
+    });
+  });
+}
+for (const b of document.querySelectorAll("[data-c]")) b.addEventListener("click", () => {
+  medida = b.dataset.c; for (const o of document.querySelectorAll("[data-c]")) o.setAttribute("aria-pressed", String(o === b)); desenharCresc(); });
+
+// --- Abstenção nos dois turnos -----------------------------------------------------
+// Halteres: círculo vazado = 1º turno, cheio = 2º turno. Sem cor de candidato.
+(function legendaAbst() {
+  const leg = document.getElementById("legenda-abst");
+  leg.innerHTML = `<span><i class="ponto" style="background:transparent;border:2px solid var(--dado-base)"></i>1º turno</span>` +
+                  `<span><i class="ponto" style="background:var(--tinta);border-color:var(--tinta)"></i>2º turno</span>`;
+})();
+function desenharAbst() {
+  const svg = d3.select("#abst");
+  const largura = svg.node().getBoundingClientRect().width || 900;
+  const estreito = largura < 560;
+  const esq = estreito ? Math.min(130, largura * 0.36) : Math.min(200, largura * 0.3), dir = 56, topo = 18, passo = estreito ? 24 : 20;
+  const lista = [...D.ras].sort((a, b) => b.t2.abst_pct - a.t2.abst_pct);
+  const vals = lista.flatMap(r => [r.t1.abst_pct, r.t2.abst_pct, T.t1.abst_pct, T.t2.abst_pct]);
+  const x = d3.scaleLinear().domain(d3.extent(vals)).nice().range([esq, largura - dir]);
+  const altura = topo + lista.length * passo + 8;
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  for (const t of x.ticks(estreito ? 4 : 8)) {
+    svg.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y1", topo - 4).attr("y2", altura - 8).attr("stroke", cor("--linha"));
+    svg.append("text").attr("x", x(t)).attr("y", topo - 8).attr("text-anchor", "middle").text(fmt(t, 0) + "%");
+  }
+  svg.append("line").attr("x1", x(T.t2.abst_pct)).attr("x2", x(T.t2.abst_pct)).attr("y1", topo - 4).attr("y2", altura - 8)
+    .attr("stroke", cor("--tinta-2")).attr("stroke-dasharray", "3 3");
+  lista.forEach((r, i) => {
+    const y = topo + i * passo + passo / 2;
+    const g = svg.append("g").on("mousemove", ev => dicaTexto(ev, [r.ra,
+      `Abstenção: ${fmt(r.t1.abst_pct, 1)}% no 1º turno → ${fmt(r.t2.abst_pct, 1)}% no 2º (${sinal(r.var_abst)} ${pontos(r.var_abst)})`,
+      `${inteiro(r.t2.abstencoes)} de ${inteiro(r.t2.aptos)} eleitores não votaram no 2º turno`])).on("mouseleave", esconderDica);
+    g.append("rect").attr("x", 0).attr("y", y - passo / 2).attr("width", largura).attr("height", passo).attr("fill", "transparent");
+    g.append("text").attr("x", esq - 10).attr("y", y + 4).attr("text-anchor", "end").text(r.ra);
+    g.append("line").attr("x1", x(r.t1.abst_pct)).attr("x2", x(r.t2.abst_pct)).attr("y1", y).attr("y2", y).attr("stroke", cor("--apagado")).attr("stroke-width", 2);
+    g.append("circle").attr("cx", x(r.t1.abst_pct)).attr("cy", y).attr("r", 4.5).attr("fill", cor("--superficie")).attr("stroke", cor("--dado-base")).attr("stroke-width", 2);
+    g.append("circle").attr("cx", x(r.t2.abst_pct)).attr("cy", y).attr("r", 4.5).attr("fill", cor("--tinta")).attr("stroke", cor("--superficie")).attr("stroke-width", 1.5);
+    g.append("text").attr("x", Math.max(x(r.t1.abst_pct), x(r.t2.abst_pct)) + 9).attr("y", y + 4).style("font-size", "10px").text(sinal(r.var_abst));
+  });
+}
+
+// --- Tabela ----------------------------------------------------------------------
+let tabModo = "votos", ordem = { id: "margem", desc: false };
+function desenharTabela() {
+  const pct = tabModo === "pct";
+  const cand = (k, rot) => pct ? [
+    { id: k + "1", rot: `${rot} 1º`, v: r => r.t1[k + "_pct"], f: v => fmt(v, 1) + "%", grupo: true },
+    { id: k + "2", rot: `${rot} 2º`, v: r => r.t2[k + "_pct"], f: v => fmt(v, 1) + "%", forte: true },
+  ] : [
+    { id: k + "1", rot: `${rot} 1º`, v: r => r.t1[k], f: inteiro, grupo: true },
+    { id: k + "2", rot: `${rot} 2º`, v: r => r.t2[k], f: inteiro, forte: true },
+    { id: "c" + k, rot: "Cresc.", v: r => r["cresc_" + k], f: v => sinal(v) + "%" },
+  ];
+  const colunas = [
+    { id: "ra", rot: M.unidade[0].toUpperCase() + M.unidade.slice(1), v: r => r.ra, texto: true },
+    { id: "aptos", rot: "Eleitores", v: r => r.t2.aptos, f: inteiro },
+    { id: "ab1", rot: "Abst. 1º", v: r => r.t1.abst_pct, f: v => fmt(v, 1) + "%", grupo: true },
+    { id: "ab2", rot: "Abst. 2º", v: r => r.t2.abst_pct, f: v => fmt(v, 1) + "%" },
+    ...cand("a", curto(NA)), ...cand("b", curto(NB)),
+    { id: "margem", rot: "Margem 2º", v: r => r.t2.margem, f: v => sinal(v), grupo: true },
+  ];
+  const t = document.getElementById("tabela"); t.innerHTML = "";
+  const thead = t.createTHead().insertRow();
+  for (const c of colunas) {
+    const th = document.createElement("th"); th.textContent = c.rot; th.tabIndex = 0; th.scope = "col";
+    if (ordem.id === c.id) th.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto }; desenharTabela(); };
+    th.addEventListener("click", ordenar);
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    thead.appendChild(th);
+  }
+  const col = colunas.find(c => c.id === ordem.id) || colunas[colunas.length - 1];
+  const linhas = [...D.ras].sort((x, y) => {
+    const vx = col.v(x), vy = col.v(y); if (vx == null) return 1; if (vy == null) return -1;
+    const r = col.texto ? String(vx).localeCompare(String(vy), "pt-BR") : vx - vy; return ordem.desc ? -r : r; });
+  const tbody = t.createTBody();
+  const linha = (tr, r, forte) => {
+    for (const c of colunas) {
+      const td = tr.insertCell(); const v = c.v(r);
+      td.textContent = c.f ? c.f(v) : v;
+      if (c.id === "ra" && r.extra) { const e = document.createElement("span"); e.className = "pequena"; e.textContent = r.extra; td.appendChild(e); }
+      td.className = [c.forte || forte ? "forte" : "", c.grupo ? "grupo" : ""].join(" ").trim();
+    }
+  };
+  for (const r of linhas) linha(tbody.insertRow(), r, false);
+  linha(t.createTFoot().insertRow(), { ra: M.nome_total, t1: T.t1, t2: T.t2, cresc_a: T.cresc_a, cresc_b: T.cresc_b }, true);
+}
+for (const b of document.querySelectorAll("[data-t]")) b.addEventListener("click", () => {
+  tabModo = b.dataset.t; for (const o of document.querySelectorAll("[data-t]")) o.setAttribute("aria-pressed", String(o === b));
+  if (!colIds().includes(ordem.id)) ordem = { id: "margem", desc: false };
+  desenharTabela(); });
+const colIds = () => ["ra", "aptos", "ab1", "ab2", "a1", "a2", "b1", "b2", "margem", ...(tabModo === "pct" ? [] : ["ca", "cb"])];
+
+// --- Método ----------------------------------------------------------------------
+(function metodo() {
+  const pe = document.getElementById("metodo");
+  const par = t => { const p = document.createElement("p"); p.textContent = t; pe.appendChild(p); };
+  M.metodo.forEach(par);
+  const sem = M.sem_unidade;
+  if (sem.t1 || sem.t2) par(`Seções sem região (local sem coordenada ou fora dos limites): ${inteiro(sem.t1)} eleitores no 1º turno e ${inteiro(sem.t2)} no 2º; entram só no total.`);
+  if (M.sem_secoes.length) par(`Sem local de votação dentro dos limites (cinza no mapa): ${M.sem_secoes.join(", ")}.`);
+  if (M.pequenas.length) par(`${M.abrev[0].toUpperCase() + M.abrev.slice(1)} com menos de 10 mil eleitores (${M.pequenas.join(", ")}) têm poucos locais de votação e oscilam mais.`);
+})();
+
+function redesenhar() { desenharEleitores(); desenharMapa(); desenharCresc(); desenharAbst(); }
+desenharTabela(); redesenhar();
+let pendente;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(redesenhar, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redesenhar);
+new MutationObserver(redesenhar).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

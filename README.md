@@ -165,8 +165,10 @@ até 13,7 pontos. Governador é bem menos previsível (cobertura de ~87%, deixan
 uv run python -m apuracao.pagina    # gera data/pagina/abstencao-1o-turno-2026.html
 uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df --regioes-rio   # dados das páginas por região
 uv run python -m apuracao.pagina --inicio --site site              # página inicial (links) -> site/index.html
-uv run python -m apuracao.pagina --recorte brasilia --site site    # Brasília -> site/brasilia/
-uv run python -m apuracao.pagina --recorte rio --site site         # cidade do Rio -> site/rio-de-janeiro/
+uv run python -m apuracao.pagina --recorte brasilia --turnos --site site   # 1º x 2º turno, Brasília -> site/brasilia/
+uv run python -m apuracao.pagina --recorte rio --turnos --site site        # 1º x 2º turno, cidade do Rio -> site/rio-de-janeiro/
+uv run python -m apuracao.pagina --recorte brasilia --turnos --ano 2022    # o mesmo com 2022 (conferência) -> data/pagina/
+uv run python -m apuracao.pagina --recorte brasilia    # abstenção do 1º turno (saiu do site em 26/10) -> data/pagina/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
 uv run python -m apuracao.pagina --recorte brasilia --votos --site site   # votos por candidato -> site/votos/
 uv run python -m apuracao.pagina --perdas --site site   # "Onde Lula perdeu votos" -> site/onde-lula-perdeu/
@@ -174,6 +176,11 @@ uv run python -m apuracao.pagina --perdas --recorte brasilia --site site   # por
 uv run python -m apuracao.pagina --vitoria   # "Como Lula venceu em 2026" (2º turno x 2022) -> data/pagina/
 uv run python -m apuracao.pagina --pesquisas --site site   # pesquisas do 2º turno x resultado -> site/pesquisas/
 ```
+
+**Do 1º ao 2º turno** (`apuracao/pagina/turnos.py`): votos de Lula e do 22, brancos, nulos e abstenção em cada RA,
+no 1º e no 2º turno, seção a seção. Precisa do 2º turno nos arquivos por seção do TSE (detalhe e votação por seção),
+que saem dias depois da eleição: `uv run python -m apuracao.carga --secao 2026` baixa de novo os três arquivos
+quando o tamanho no TSE muda. Sem o 2º turno neles, o comando para com uma mensagem.
 
 **Pesquisas do 2º turno** (`apuracao/pagina/pesquisas.py`): as pesquisas nacionais com campo encerrado de 20 a
 24/10/2026 ficam em `apuracao/pagina/pesquisas_2t_2026.csv` (votos totais como divulgados, fonte por linha); o

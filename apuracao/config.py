@@ -50,6 +50,7 @@ class Historico(BaseModel):
     boletim_pacote: str = ""
     secao: str = ""     # detalhe da votação por seção (relativo a `base`)
     locais: str = ""    # locais de votação, com bairro e coordenadas (relativo a `base`)
+    votos_secao: str = ""   # votação por seção, presidente (relativo a `base`)
 
 
 class Ibge(BaseModel):

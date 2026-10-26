@@ -41,13 +41,13 @@ def baixar_ano(cfg: Config, ano: int, log: LogJson, transport: httpx.BaseTranspo
 
 
 def baixar_secoes(cfg: Config, ano: int, log: LogJson, transport: httpx.BaseTransport | None = None) -> list[Path]:
-    """Detalhe por seção e locais de votação do ano (ver carga/secao.py)."""
+    """Detalhe por seção, locais de votação e votação por seção do ano (ver carga/secao.py)."""
     h = cfg.historico
     destino_dir = Path(h.dir) / str(ano)
     destino_dir.mkdir(parents=True, exist_ok=True)
     saida = []
     with httpx.Client(transport=transport, timeout=httpx.Timeout(60, read=300), follow_redirects=True) as c:
-        for modelo in (h.secao, h.locais):
+        for modelo in (m for m in (h.secao, h.locais, h.votos_secao) if m):
             url = h.base + modelo.format(ano=ano)
             destino = destino_dir / url.rsplit("/", 1)[-1]
             tamanho = c.head(url).headers.get("Content-Length")

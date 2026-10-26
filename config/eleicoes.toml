@@ -100,6 +100,8 @@ boletim_pacote = "https://dadosabertos.tse.jus.br/api/3/action/package_show?id=r
 # locais de votação (bairro, latitude e longitude). Saem dias depois do turno.
 secao = "/detalhe_votacao_secao/detalhe_votacao_secao_{ano}.zip"
 locais = "/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip"
+# Votos de cada número por seção (presidente, todas as UFs). Traz o 2º turno depois que o TSE publica.
+votos_secao = "/votacao_secao/votacao_secao_{ano}_BR.zip"
 
 # --- Malha municipal do IBGE (mapas) -----------------------------------------
 # API de malhas v3: GeoJSON de todos os municípios, `codarea` = código IBGE (7 dígitos),
