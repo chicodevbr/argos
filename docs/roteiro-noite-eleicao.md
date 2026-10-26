@@ -90,12 +90,13 @@ Aba **Actions → coleta → Run workflow**:
 | Campo | Valor |
 |---|---|
 | ambiente | `oficial` |
-| eleicoes | **`segundo-turno`** ⚠️ o padrão do formulário é `ensaio` |
+| eleicoes | **`segundo-turno`** (o padrão `escolher` faz o run falhar de propósito) |
 | duracao | `20400` (5h40, o máximo que cabe nas 6h do Actions) |
 | municipios | marcado |
 
-Dois crons de reserva disparam sozinhos com `segundo-turno`: às **16h45** e às **21h45**
+(Removidos do workflow em 26/10/2026, depois da eleição.) Dois crons de reserva disparam sozinhos com `segundo-turno`: às **16h45** e às **21h45**
 (este cobre a apuração depois das ~22h10, quando o primeiro run atinge o limite de 5h40).
+Em 25/10/2026 os crons atrasaram muito (16h45 -> 19h02; 21h45 -> 02h18): não conte com eles.
 Se rodarem junto com o disparo manual, não tem problema: snapshots têm nome por horário de
 coleta e nunca se sobrescrevem. Se o cron das 21h45 não aparecer na aba Actions até ~21h50
 (o cron do GitHub pode atrasar), disparar um run manualmente.

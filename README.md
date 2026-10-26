@@ -66,8 +66,9 @@ uv run python -m apuracao.coletor.sync --dir-raw data/raw
 Máquina que só coleta (ex.: Mac antigo, sem `pyarrow`): `python3.12 -m venv .venv &&
 .venv/bin/pip install -r requirements-coletor.txt`. Ver [docs/mac-mini-coletor.md](docs/mac-mini-coletor.md).
 
-No GitHub Actions, o workflow **coleta** dispara pela aba Actions (perfis `ensaio` e `segundo-turno`)
-e por dois crons de reserva em 25/10: 16h45 e 21h45 (Brasília), cada run com até 5h40.
+No GitHub Actions, o workflow **coleta** dispara pela aba Actions (perfis `ensaio` e `segundo-turno`;
+o padrão `escolher` falha de propósito para obrigar a escolha), cada run com até 5h40.
+Os crons de reserva de 25/10/2026 foram removidos depois da eleição (ver comentário no workflow).
 
 ### Tabelas (data/raw → data/parquet)
 
