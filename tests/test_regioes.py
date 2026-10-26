@@ -228,7 +228,7 @@ def test_onde_lula_perdeu_por_ra(tmp_path, monkeypatch):
         f = d["faixas"][b]
         assert len(f["rotulos"]) == len(f["cores"]) == len(f["cortes"]) + 1
         assert d["textos"][b]["lede"].startswith("No Distrito Federal, Lula teve")
-    assert d["meta"]["titulo"] == "Onde Lula perdeu votos em Brasília" and d["meta"]["mostrar_uf"] is False
+    assert d["meta"]["titulo"] == "Onde Lula perdeu votos em Brasília no 1º turno" and d["meta"]["mostrar_uf"] is False
     assert set(d["grupos"]) == {m[col["nome"]] for m in d["municipios"]}
 
 

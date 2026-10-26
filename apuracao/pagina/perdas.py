@@ -1,4 +1,4 @@
-"""Página "Onde Lula perdeu votos": o número 13 (PT) no 1º turno de presidente, por município,
+"""Página "Onde Lula perdeu votos no 1º turno": o número 13 (PT) no 1º turno de presidente, por município,
 2026 comparado a 2022 (Lula) e a 2014 (Dilma).
 
 uv run python -m apuracao.pagina --perdas
@@ -44,7 +44,7 @@ def _milhoes(v: float) -> str:
 # Como cada página fala do lugar e das unidades. `lugar`: frase curta para uma linha da tabela
 # (nacional: "em São Paulo (SP)"; DF: "no Plano Piloto"); os textos ficam iguais aos da versão nacional.
 META_BRASIL = {
-    "titulo": "Onde Lula perdeu votos", "rotulo": "Brasil, por município", "no_lugar": "",
+    "titulo": "Onde Lula perdeu votos no 1º turno", "rotulo": "Brasil, por município", "no_lugar": "",
     "unidades": "municípios", "unidade": "Município", "de": "dos", "grandes": "cidades",
     "titulo_tabela": "Todos os municípios", "titulo_mapa": "Variação por município, em pontos dos votos válidos",
     "titulo_grupos": "Por UF", "grupos": "UFs", "de_grupos": "das", "mostrar_uf": True,
@@ -213,7 +213,7 @@ def montar_dados_regioes(r, cfg, dir_parquet: Path) -> dict:
                       f"(local de votação sem coordenadas no cadastro) e entram só no total {r.do_lugar}."
                       for a in anos if sem_unidade[a]]
     meta = {**META_BRASIL,
-            "titulo": f"Onde Lula perdeu votos em {r.nome_curto}", "rotulo": f"{r.rotulo}, por {r.unidade}",
+            "titulo": f"Onde Lula perdeu votos em {r.nome_curto} no 1º turno", "rotulo": f"{r.rotulo}, por {r.unidade}",
             "no_lugar": r.no_lugar, "unidades": r.abrev, "unidade": r.unidade[0].upper() + r.unidade[1:],
             "de": "das" if r.todas == "todas" else "dos", "grandes": r.abrev,
             "titulo_tabela": f"{'Todas as' if r.todas == 'todas' else 'Todos os'} {r.unidades}",
