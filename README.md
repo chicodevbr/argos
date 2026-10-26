@@ -70,6 +70,15 @@ No GitHub Actions, o workflow **coleta** dispara pela aba Actions (perfis `ensai
 o padrão `escolher` falha de propósito para obrigar a escolha), cada run com até 5h40.
 Os crons de reserva de 25/10/2026 foram removidos depois da eleição (ver comentário no workflow).
 
+Backup de um pacote local no R2 (as credenciais só existem como secrets do repo): o workflow
+**backup** busca o arquivo numa release em rascunho, envia e confere o SHA-256 baixando de volta.
+
+```
+gh release create backup-X --draft --title backup-X pacote.tar.gz pacote.tar.gz.sha256
+gh workflow run backup.yml -f release=backup-X -f arquivo=pacote.tar.gz   # destino: backup/ no bucket
+gh release delete backup-X --yes                                          # depois do run verde
+```
+
 ### Tabelas (data/raw → data/parquet)
 
 ```
