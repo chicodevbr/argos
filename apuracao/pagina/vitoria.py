@@ -26,6 +26,7 @@ from apuracao.pagina.abstencao import NOMES_UF
 from apuracao.pagina.perdas import faixas
 from apuracao.pagina.recortes import nome_proprio
 from apuracao.pagina.regioes import _br
+from apuracao.pagina.votos import nome_urna
 
 MODELO = Path(__file__).with_name("modelo_vitoria.html")
 LULA, N22 = 13, 22
@@ -86,6 +87,48 @@ def serie_abstencao(con, t1: int, t2: int) -> list[dict]:
     return sorted(saida, key=lambda r: (r["ano"], r["turno"]))
 
 
+def historico_presidente(con, t1: int, t2: int) -> list[dict]:
+    """Uma linha por eleição: os dois do 2º turno (nome, número, votos), comparecimento, abstenção nos dois
+    turnos e brancos + nulos no 2º turno. Histórico do Portal de Dados Abertos; 2026 do arquivo BR do TSE."""
+    cands = con.execute("""
+        SELECT ano, numero, any_value(nome) AS nome, sum(votos) AS votos FROM hist_votacao
+        WHERE cargo = 1 AND turno = 2 GROUP BY ALL
+    """).df()
+    part = con.execute("""
+        SELECT ano, turno, sum(aptos) AS aptos, sum(comparecimento) AS comp, sum(abstencao) AS abst,
+               sum(brancos) AS brancos, sum(nulos) AS nulos FROM hist_comparecimento WHERE cargo = 1 GROUP BY ALL
+    """).df()
+    for turno, e in ((1, t1), (2, t2)):
+        linha = con.execute(f"""
+            SELECT eleitorado, comparecimento, abstencao, brancos, nulos, arquivo_raw FROM snapshot_totais
+            WHERE eleicao = {int(e)} AND cargo = 1 AND abrangencia = 'br' ORDER BY ts_tse DESC, ts_coleta DESC LIMIT 1
+        """).fetchone()
+        part.loc[len(part)] = [2026, turno, *linha[:5]]
+        if turno == 2:
+            for n, nome, v in con.execute("SELECT numero, nome, votos FROM snapshot_candidatos WHERE arquivo_raw = ?",
+                                          [linha[5]]).fetchall():
+                cands.loc[len(cands)] = [2026, n, nome, v]
+    saida = []
+    for ano in sorted(set(cands["ano"]) & set(part["ano"])):
+        c = cands[cands["ano"] == ano].sort_values("votos", ascending=False).head(2)
+        if len(c) < 2:
+            continue
+        (v, venc), (d, derr) = [(int(r.votos), r) for r in c.itertuples()]
+        t1_, t2_ = (part[(part["ano"] == ano) & (part["turno"] == t)] for t in (1, 2))
+        if t2_.empty:
+            continue
+        x = t2_.iloc[0]
+        saida.append({
+            "ano": int(ano), "vencedor": nome_urna(venc.nome), "num_v": int(venc.numero), "votos_v": v,
+            "derrotado": nome_urna(derr.nome), "num_d": int(derr.numero), "votos_d": d,
+            "pct_v": round(100 * v / (v + d), 2), "margem": v - d,
+            "comparecimento": int(x.comp), "abst2": round(float(100 * x.abst / x.aptos), 2),
+            "abst1": round(float(100 * t1_.iloc[0].abst / t1_.iloc[0].aptos), 2) if len(t1_) else None,
+            "bn2": round(float(100 * (x.brancos + x.nulos) / x.comp), 2),
+        })
+    return saida
+
+
 def _soma(df: pd.DataFrame) -> dict:
     s = {k: int(df[k].sum()) for k in ("l26", "f26", "l22", "b22", "l1", "v1", "aptos", "abst_n", "aptos22", "abst_n22",
                                         "aptos1", "abst_n1")}
@@ -136,6 +179,7 @@ def montar_dados(dir_parquet: Path, cfg) -> dict:
     dados = {
         "colunas": COLUNAS, "municipios": linhas, "brasil": brasil, "ufs": ufs, "regioes": regioes,
         "serie": serie_abstencao(con, t1, t2),
+        "eleicoes": historico_presidente(con, t1, t2),
         "faixas": {"2022": faixas(var22), "t1": faixas(var1)},
         "metodo": METODO,
     }
@@ -148,14 +192,14 @@ METODO = [
     "em 2022. Percentuais sobre os votos válidos, que no 2º turno são a soma dos dois. Margem = votos de Lula menos "
     "votos do 22.",
     "2026: arquivos de resultado por município publicados pelo TSE na noite da apuração (o último de cada município, "
-    "com 100% das seções). 2022 e a série de abstenção de 2006 a 2022: Portal de Dados Abertos do TSE. Os totais "
-    "nacionais conferem com os resultados oficiais.",
+    "com 100% das seções). 2022 e as eleições de 2002 a 2022 (série de abstenção e resumo por eleição): Portal de "
+    "Dados Abertos do TSE. Os totais nacionais conferem com os resultados oficiais.",
     "Os números do Brasil, das regiões e o placar incluem os votos do exterior; mapa, estados e tabela trazem só os "
     "municípios. Municípios que não existiam em 2022 ficam fora das comparações com 2022.",
     "Na comparação com o 1º turno de 2026, o percentual de Lula no 1º turno é sobre todos os votos válidos (com os "
     "outros candidatos); a diferença mostra quanto ele ganhou entre os turnos.",
-    "Abstenção: eleitores aptos que não votaram, sobre o total de aptos. Mapa: malha municipal do IBGE, projeção "
-    "cônica equivalente de Albers.",
+    "Abstenção: eleitores aptos que não votaram, sobre o total de aptos. Brancos e nulos: sobre o total de votos "
+    "(comparecimento). Mapa: malha municipal do IBGE, projeção cônica equivalente de Albers.",
 ]
 
 
@@ -311,6 +355,7 @@ def textos(D: dict) -> dict:
                f"não mostra quem passou a votar em quem.")
     return {"lede": lede, "decisivo": decisivo, "cresceu": {"2022": cresceu("2022"), "t1": cresceu("t1")},
             "flavio": flavio, "abstencao": abst, "relacao": relacao, "turnos": abst_turnos(D),
+            "eleicoes": eleicoes_txt(D["eleicoes"]) if D.get("eleicoes") else "",
             "quintis": [{"da": round(float(da.iloc[i]), 2), "dl": round(float(q.iloc[i]), 2)} for i in range(len(q))]}
 
 
@@ -331,8 +376,35 @@ def placar(dir_parquet: Path, cfg) -> dict | None:
     if linha is None or linha[0] is None or linha[3] is None:
         return None
     pct_secoes, aptos, abst, l, f = linha
+    t1 = con.execute(f"""
+        SELECT eleitorado, abstencao FROM snapshot_totais
+        WHERE eleicao = {int(cfg.eleicao_por_id('2026-t1-federal').codigo)} AND cargo = 1 AND abrangencia = 'br'
+        ORDER BY ts_tse DESC, ts_coleta DESC LIMIT 1""").fetchone()
     return {"pct_secoes": round(float(pct_secoes), 2), "lula": round(100 * l / (l + f), 2),
-            "n22": round(100 * f / (l + f), 2), "vantagem": int(l - f), "abstencao": round(100 * abst / aptos, 2)}
+            "n22": round(100 * f / (l + f), 2), "vantagem": int(l - f), "abstencao": round(100 * abst / aptos, 2),
+            "abstencao_t1": round(100 * t1[1] / t1[0], 2) if t1 else None}
+
+
+def eleicoes_txt(E: list[dict]) -> str:
+    """Onde 2026 fica na série de 2º turnos de presidente."""
+    atual = E[-1]
+    menores = sorted((e for e in E[:-1] if e["margem"] < atual["margem"]), key=lambda e: e["ano"])
+    maiores = [e for e in E[:-1] if e["margem"] > atual["margem"]]
+    txt = (f"Desde {E[0]['ano']}, houve {len(E)} segundos turnos para presidente. Em {atual['ano']}, "
+           f"{atual['vencedor']} venceu com {_mi(atual['margem'])} de vantagem")
+    if menores and maiores:
+        txt += (f": mais que em {_lista([str(e['ano']) for e in menores])}, as disputas mais apertadas, e menos que "
+                f"nas outras {len(maiores)}.")
+    elif menores:
+        txt += ", a maior da série."
+    else:
+        txt += ", a menor da série."
+    mais_bn, menos_bn = max(E, key=lambda e: e["bn2"]), min(E, key=lambda e: e["bn2"])
+    txt += f" Brancos e nulos somaram {_br(atual['bn2'])}% dos votos no 2º turno de {atual['ano']}"
+    txt += (", o menor percentual da série" if menos_bn is atual else
+            f"; o menor percentual da série foi em {menos_bn['ano']} ({_br(menos_bn['bn2'])}%)")
+    txt += f"; o maior, em {mais_bn['ano']} ({_br(mais_bn['bn2'])}%)."
+    return txt
 
 
 def abst_turnos(D: dict) -> str:

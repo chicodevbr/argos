@@ -133,3 +133,25 @@ def test_layout_antigo_falha_se_houve_votos_anulados(tmp_path):
     hist = _ano_antigo(tmp_path, validos_detalhe=900)  # 100 votos nominais não foram válidos
     with pytest.raises(ValueError, match="nominais != válidos"):
         tse_csv.carregar_ano(2014, hist, tmp_path / "pq", LogJson(io.StringIO()))
+
+
+def test_layout_antigo_descarta_so_o_governador_que_nao_bate(tmp_path):
+    # 2002: governador do RJ no 1º turno com votos anulados; presidente confere -> entra, sem o governador
+    d = tmp_path / "hist" / "2002"
+    d.mkdir(parents=True)
+    pres = [2002, 1, 1, '"Presidente"', 1, '"RJ"', 60011, 1]
+    gov = [2002, 1, 3, '"Governador"', 1, '"RJ"', 60011, 1]
+    cab = BASE + ["NR_CANDIDATO", "NM_URNA_CANDIDATO", "QT_VOTOS_NOMINAIS"]
+    with zipfile.ZipFile(d / "votacao_candidato_munzona_2002.zip", "w") as z:
+        for membro, linhas in (("votacao_candidato_munzona_2002_BR.csv", [pres + ['"N"', 13, '"LULA"', 600]]),
+                               ("votacao_candidato_munzona_2002_RJ.csv", [gov + ['"N"', 40, '"ROSINHA"', 500]])):
+            z.writestr(membro, (";".join(f'"{c}"' for c in cab) + "\n"
+                                + "".join(";".join(str(v) for v in l) + "\n" for l in linhas)).encode("latin-1"))
+    _zip(d / "detalhe_votacao_munzona_2002.zip", "detalhe_votacao_munzona_2002_BRASIL.csv",
+         BASE + ["QT_APTOS", "QT_COMPARECIMENTO", "QT_ABSTENCOES", "QT_TOTAL_VOTOS_VALIDOS",
+                 "QT_VOTOS_BRANCOS", "QT_TOTAL_VOTOS_NULOS"],
+         [pres + ['"N"', 800, 700, 100, 600, 40, 60], gov + ['"N"', 800, 700, 100, 450, 40, 60]])
+    saida = io.StringIO()
+    n = tse_csv.carregar_ano(2002, tmp_path / "hist", tmp_path / "pq", LogJson(saida))
+    assert n == {"hist_votacao": 1, "hist_comparecimento": 2}     # só o voto de presidente; participação inteira
+    assert '"carga_descartada"' in saida.getvalue() and '"nominais": 500' in saida.getvalue()

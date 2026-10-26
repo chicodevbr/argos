@@ -102,7 +102,7 @@ function cartao(p) {
       if (cor) { const m = el("i", "marca"); m.style.background = `var(${cor})`; q.append(m); }
       q.append(quem); d.append(n, q); return d; };
     placar.append(item(fmt(x.lula) + "%", "Lula", "--lula"), item(fmt(x.n22) + "%", "Flávio Bolsonaro", "--n22"),
-                  item(fmt(x.abstencao) + "%", "abstenção"));
+                  item(fmt(x.abstencao) + "%", x.abstencao_t1 != null ? `abstenção (1º turno: ${fmt(x.abstencao_t1)}%)` : "abstenção"));
     const barra = el("div", "barra meio"); barra.setAttribute("role", "img");
     barra.setAttribute("aria-label", `Votos válidos: Lula ${fmt(x.lula)}%, Flávio Bolsonaro ${fmt(x.n22)}%`);
     const sl = el("span"); sl.style.width = x.lula + "%"; sl.style.background = "var(--lula)";

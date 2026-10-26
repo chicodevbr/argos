@@ -54,3 +54,13 @@ def test_abstencao_entre_turnos():
     assert "diminuiu em 2 dos 3 municípios" in t
     assert "as maiores quedas foram em São Paulo (SP, −3,0 pontos) e Rio de Janeiro (RJ, −3,0 pontos)" in t
     assert "Em 1 estado ela subiu: Rio Grande do Sul (19,0% → 22,0%)." in t
+
+
+def test_texto_da_serie_de_eleicoes():
+    E = [{"ano": a, "vencedor": v, "margem": m, "bn2": bn} for a, v, m, bn in
+         [(2002, "Lula", 19_400_000, 6.0), (2014, "Dilma", 3_460_000, 6.3), (2018, "Jair Bolsonaro", 10_760_000, 9.6),
+          (2022, "Lula", 2_140_000, 4.6), (2026, "Lula", 4_430_000, 3.2)]]
+    t = vitoria.eleicoes_txt(E)
+    assert "Desde 2002, houve 5 segundos turnos" in t
+    assert "4,4 milhões de votos de vantagem: mais que em 2014 e 2022, as disputas mais apertadas, e menos que nas outras 2." in t
+    assert "3,20% dos votos no 2º turno de 2026, o menor percentual da série; o maior, em 2018 (9,60%)." in t

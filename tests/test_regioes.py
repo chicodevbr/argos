@@ -235,7 +235,8 @@ def test_onde_lula_perdeu_por_ra(tmp_path, monkeypatch):
 def test_pagina_inicial_com_destaque_e_placar(tmp_path):
     import json
     from apuracao.pagina.__main__ import DESTAQUE, SITE, inicio
-    placar = {"pct_secoes": 100.0, "lula": 51.79, "n22": 48.21, "vantagem": 4430191, "abstencao": 19.22}
+    placar = {"pct_secoes": 100.0, "lula": 51.79, "n22": 48.21, "vantagem": 4430191, "abstencao": 19.22,
+              "abstencao_t1": 21.08}
     html = inicio(tmp_path / "index.html", placar).read_text()
     d = json.loads(html.split("const D = ", 1)[1].split(";\n", 1)[0])
     assert d["placar"] == placar and len(d["paginas"]) == len(SITE)

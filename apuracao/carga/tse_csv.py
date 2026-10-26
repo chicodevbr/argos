@@ -18,8 +18,10 @@ Anos antigos: o CSV de 2014 não tem QT_VOTOS_NOMINAIS_VALIDOS nem
 NM_TIPO_DESTINACAO_VOTOS. Nesse caso usamos QT_VOTOS_NOMINAIS como válidos e
 deixamos a destinação vazia, e `carregar_ano` CONFERE que a soma por (turno, UF,
 cargo) bate com QT_TOTAL_VOTOS_VALIDOS do detalhe; se não bater (havia votos
-anulados), a carga falha em vez de gravar números errados. Em 2014 bate em todas as
-56 (presidente) e 42 (governador) combinações.
+anulados), nada errado é gravado: em presidente a carga falha; em governador os votos
+daquela (turno, UF) ficam de fora (log `carga_descartada`) e o resto do ano entra.
+Em 2014 bate em todas as 56 (presidente) e 42 (governador) combinações; em 2002 só o
+governador do RJ no 1º turno não bate (8.002.554 nominais x 7.994.454 válidos).
 """
 
 from __future__ import annotations
@@ -118,8 +120,9 @@ def linhas_comparecimento(zip_path: Path) -> Iterator[tuple]:
             )
 
 
-def conferir_validos(ano: int, votacao: list[tuple], comparecimento: list[tuple]) -> None:
-    """Soma dos votos dos candidatos == votos válidos do detalhe, por (turno, cargo, UF)."""
+def conferir_validos(votacao: list[tuple], comparecimento: list[tuple]) -> dict[tuple, tuple[int, int]]:
+    """(turno, cargo, UF) em que a soma dos votos dos candidatos != votos válidos do detalhe:
+    {chave: (soma dos candidatos, válidos do detalhe)}. Vazio = tudo confere."""
     iv = {c: i for i, (c, _) in enumerate(HIST_VOTACAO)}
     ic = {c: i for i, (c, _) in enumerate(HIST_COMPARECIMENTO)}
     soma_v, soma_c = Counter(), Counter()
@@ -129,10 +132,7 @@ def conferir_validos(ano: int, votacao: list[tuple], comparecimento: list[tuple]
     for l in comparecimento:
         if not l[ic["transito"]]:
             soma_c[(l[ic["turno"]], l[ic["cargo"]], l[ic["uf"]])] += l[ic["votos_validos"]] or 0
-    diferentes = {k: (soma_v[k], soma_c[k]) for k in set(soma_v) | set(soma_c) if soma_v[k] != soma_c[k]}
-    if diferentes:
-        raise ValueError(f"{ano}: CSV sem QT_VOTOS_NOMINAIS_VALIDOS e votos nominais != válidos em "
-                         f"{len(diferentes)} (turno, cargo, UF), ex.: {sorted(diferentes.items())[:3]}")
+    return {k: (soma_v[k], soma_c[k]) for k in set(soma_v) | set(soma_c) if soma_v[k] != soma_c[k]}
 
 
 def carregar_ano(ano: int, dir_hist: Path, dir_parquet: Path, log: LogJson) -> dict[str, int]:
@@ -143,7 +143,16 @@ def carregar_ano(ano: int, dir_hist: Path, dir_parquet: Path, log: LogJson) -> d
         raise ValueError(f"{ano}: CSV sem linhas de presidente/governador (arquivo ainda vazio no TSE?)")
     iv = {c: i for i, (c, _) in enumerate(HIST_VOTACAO)}
     if all(l[iv["destinacao"]] == "" for l in votacao):  # layout antigo: válidos = nominais
-        conferir_validos(ano, votacao, comparecimento)
+        diferentes = conferir_validos(votacao, comparecimento)
+        presidente = {k: v for k, v in diferentes.items() if k[1] == 1}
+        if presidente:
+            raise ValueError(f"{ano}: CSV sem QT_VOTOS_NOMINAIS_VALIDOS e votos nominais != válidos para "
+                             f"presidente em {len(presidente)} (turno, UF), ex.: {sorted(presidente.items())[:3]}")
+        if diferentes:
+            votacao = [l for l in votacao if (l[iv["turno"]], l[iv["cargo"]], l[iv["uf"]]) not in diferentes]
+            log.evento("carga_descartada", ano=ano, motivo="votos nominais != válidos (votos anulados?)",
+                       combinacoes=[{"turno": t, "cargo": c, "uf": u, "nominais": a, "validos": b}
+                                    for (t, c, u), (a, b) in sorted(diferentes.items())])
     _gravar_parquet(Path(dir_parquet) / "hist_votacao" / f"ano={ano}.parquet",
                     "hist_votacao", HIST_VOTACAO, votacao)
     _gravar_parquet(Path(dir_parquet) / "hist_comparecimento" / f"ano={ano}.parquet",
