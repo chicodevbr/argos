@@ -25,3 +25,7 @@ build/
 
 # Logs locais do coletor
 logs/
+
+# Ferramentas de agente instaladas localmente (skills etc.)
+.agents/
+.claude/
