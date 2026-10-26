@@ -1,5 +1,6 @@
 """uv run python -m apuracao.pagina [--saida data/pagina/abstencao-1o-turno-2026.html]
 uv run python -m apuracao.pagina --recorte brasilia|rio|estado-rj   (abstenção por região; ver pagina/recortes.py)
+uv run python -m apuracao.pagina --pesquisas --site site   (pesquisas do 2º turno x resultado; ver pagina/pesquisas.py)
 uv run python -m apuracao.pagina --recorte rio --site site   (também grava site/<subpasta>/index.html completo,
     para hospedar fora do claude.ai, ex.: Netlify; --brasilia = --recorte brasilia)"""
 
@@ -10,7 +11,7 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import perdas, regioes, vitoria, votos
+from apuracao.pagina import perdas, pesquisas, regioes, vitoria, votos
 from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
@@ -35,6 +36,8 @@ SITE = [
     ("Como Lula venceu", "como-lula-venceu", "2º turno · Brasil", "Como Lula venceu em 2026",
      "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.",
      "Votos"),
+    ("Pesquisas", "pesquisas", "2º turno · Brasil", "As pesquisas do 2º turno",
+     "As 25 pesquisas dos últimos cinco dias, de 18 institutos, comparadas ao resultado.", "Pesquisas"),
     ("Onde Lula perdeu no 1º turno", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos no 1º turno",
      "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
     ("Abstenção · Brasília", "brasilia", "1º turno · Brasília", "Abstenção em Brasília",
@@ -115,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--inicio", action="store_true", help="com --site: página inicial com os links (raiz do site)")
     ap.add_argument("--perdas", action="store_true", help="página \"Onde Lula perdeu votos\" (municípios, 2022 e 2014)")
     ap.add_argument("--vitoria", action="store_true", help="página \"Como Lula venceu em 2026\" (2º turno, municípios)")
+    ap.add_argument("--pesquisas", action="store_true", help="página \"As pesquisas do 2º turno\" (x resultado)")
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
     ap.add_argument("--sem-barra", action="store_true", help="--site sem a barra de navegação entre as páginas")
     ap.add_argument("--site", type=Path, default=None,
@@ -138,6 +142,12 @@ def main(argv: list[str] | None = None) -> int:
         sub = "como-lula-venceu"
         saida = vitoria.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/como-lula-venceu-2026.html"),
                               args.config)
+    elif args.pesquisas:
+        sub = "pesquisas"
+        res = vitoria.placar(args.dir_parquet, carregar(args.config))
+        if res is None:
+            ap.error("sem o resultado do 2º turno em --dir-parquet")
+        saida = pesquisas.gerar(res["lula"], args.saida or Path("data/pagina/pesquisas-2o-turno-2026.html"))
     elif args.perdas:
         sub = "onde-lula-perdeu"
         saida = perdas.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/onde-lula-perdeu-2026.html"))

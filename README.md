@@ -172,7 +172,12 @@ uv run python -m apuracao.pagina --recorte brasilia --votos --site site   # voto
 uv run python -m apuracao.pagina --perdas --site site   # "Onde Lula perdeu votos" -> site/onde-lula-perdeu/
 uv run python -m apuracao.pagina --perdas --recorte brasilia --site site   # por RA do DF -> site/onde-lula-perdeu/brasilia/
 uv run python -m apuracao.pagina --vitoria   # "Como Lula venceu em 2026" (2º turno x 2022) -> data/pagina/
+uv run python -m apuracao.pagina --pesquisas --site site   # pesquisas do 2º turno x resultado -> site/pesquisas/
 ```
+
+**Pesquisas do 2º turno** (`apuracao/pagina/pesquisas.py`): as pesquisas nacionais com campo encerrado de 20 a
+24/10/2026 ficam em `apuracao/pagina/pesquisas_2t_2026.csv` (votos totais como divulgados, fonte por linha); o
+resultado vem das tabelas do TSE. Para incluir ou corrigir uma pesquisa, edite o CSV e gere de novo.
 
 **Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e
 versionado, sem build no Netlify. Para atualizar, gere com `--site site`, faça commit e push. Com `--site`, cada página

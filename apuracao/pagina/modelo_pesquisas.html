@@ -1,0 +1,255 @@
+<title>__TITULO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), mesma série de "Como Lula venceu": placar das pesquisas x resultado,
+   gráfico de pontos (uma linha por pesquisa: válido de Lula com a margem de erro, linhas do empate e do resultado)
+   e a tabela. Lula = vermelho, 22 = azul (mesmo par validado de "Como Lula venceu"). */
+:root {
+  --fundo: #f5f6f8; --superficie: #ffffff; --tinta: #15181e; --tinta-2: #4a505d; --apagado: #737a89; --linha: #dde1e7;
+  --lula: #b3302f; --n22: #1c5cab;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px; --foco: #2a78d6;
+  --dado-atual: #2a78d6;  /* usado pela barra de navegação do site (pagina/__main__.py) */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --lula: #e66767; --n22: #3987e5; --foco: #3987e5; --dado-atual: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --lula: #e66767; --n22: #3987e5; --foco: #3987e5; --dado-atual: #3987e5;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+a { color: var(--tinta-2); }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; min-width: 0; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.indicador .sub { font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.marca { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
+svg .forte { fill: var(--tinta); font-weight: 600; }
+svg .inst { fill: var(--tinta); font-weight: 500; font-size: 13px; }
+svg .grade line { stroke: var(--linha); }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: var(--tinta-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legenda i.traco { width: 18px; height: 0; border-radius: 0; border-top: 2px solid var(--tinta); }
+.legenda i.tracejado { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--apagado); }
+.legenda i.barra { width: 18px; height: 2px; border-radius: 1px; background: var(--apagado); }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; justify-self: start; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+button:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+td.esq, th.esq { text-align: left; }
+td.forte { font-weight: 600; color: var(--tinta); }
+tr.anterior td { color: var(--apagado); }
+.a-lula { color: var(--lula); } .a-22 { color: var(--n22); }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 280px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo">Eleições 2026 · Presidente · 2º turno · Pesquisas nacionais</span>
+    <h1>__TITULO__</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <section aria-label="Média das pesquisas e resultado">
+    <div class="indicadores" id="indicadores"></div>
+    <p class="nota" id="txt-media"></p>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-pontos">
+    <div class="quadro-topo">
+      <h2 id="t-pontos">Cada pesquisa e o resultado</h2>
+      <div class="segmentado" role="group" aria-label="Quais pesquisas mostrar">
+        <button type="button" data-ver="ultimas" aria-pressed="true"></button>
+        <button type="button" data-ver="todas" aria-pressed="false"></button>
+      </div>
+    </div>
+    <p class="nota">Votos válidos de Lula em cada pesquisa, com a margem de erro declarada pelo instituto. Mais recentes em cima, pela data final do campo.</p>
+    <div class="legenda">
+      <span><i style="background:var(--lula)"></i>Lula à frente na pesquisa</span>
+      <span><i style="background:var(--n22)"></i>Flávio à frente na pesquisa</span>
+      <span><i class="barra"></i>margem de erro</span>
+      <span><i class="tracejado"></i>empate (50%)</span>
+      <span><i class="traco"></i>resultado de Lula</span>
+    </div>
+    <svg id="g-pontos" role="img" aria-label="Votos válidos de Lula em cada pesquisa comparados ao resultado oficial"></svg>
+  </section>
+
+  <section aria-labelledby="t-tabela">
+    <h2 id="t-tabela">Todas as pesquisas</h2>
+    <p class="nota">Votos totais como divulgados; válidos calculados sem brancos, nulos e indecisos. Erro = resultado de Lula menos a pesquisa, em pontos. Em cinza, rodadas anteriores do mesmo instituto (fora da média principal).</p>
+    <div class="tabela">
+      <table>
+        <thead><tr>
+          <th>Instituto</th><th>Campo</th><th>Amostra</th><th>Margem</th><th>Lula</th><th>Flávio</th>
+          <th>Br./nulos/indecisos</th><th>Lula válidos</th><th>Flávio válidos</th><th>Erro</th>
+        </tr></thead>
+        <tbody id="corpo"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="metodo">
+    <h2>Método e fontes</h2>
+    <p class="nota">Pesquisas nacionais de 2º turno, Lula x Flávio Bolsonaro, com campo encerrado entre 20 e 24 de outubro de 2026 (os cinco dias antes da votação). A lista e os votos totais vêm da tabela de pesquisas da <a id="link-wiki" href="#">Wikipédia</a>, conferidos com as reportagens indicadas em cada linha, quando há; os registros estão no PesqEle, do TSE. Os votos válidos foram calculados aqui a partir dos totais (Lula ÷ Lula + Flávio); como os totais vêm arredondados, podem diferir em até meio ponto do válido que o instituto divulgou.</p>
+    <p class="nota">A média principal usa a última pesquisa de cada instituto, para que quem publicou várias rodadas na semana não pese mais. A margem de erro é a declarada para os votos totais, aplicada aqui aos válidos como aproximação. O resultado vem dos dados oficiais do TSE coletados por este projeto.</p>
+    <p class="nota" id="atualizado"></p>
+  </section>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const R = D.resumo, REAL = R.lula_real;
+const fmt = (v, c = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => Math.round(v).toLocaleString("pt-BR");
+const sinal = (v, c = 1) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const dia = s => s.slice(8, 10) + "/" + s.slice(5, 7);
+const campo = p => p.inicio === p.fim ? dia(p.fim) : `${p.inicio.slice(8, 10)}–${dia(p.fim)}`;
+const margem = p => "±" + p.margem.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+const lider = p => p.lula_v > 50 ? "--lula" : p.lula_v < 50 ? "--n22" : "--apagado";
+
+document.getElementById("lede").textContent = D.textos.lede;
+document.getElementById("txt-media").textContent = D.textos.media;
+document.getElementById("link-wiki").href = D.wikipedia;
+document.getElementById("atualizado").textContent = `Atualizado em ${D.atualizado}.`;
+
+// --- Placar: média das pesquisas x resultado ------------------------------------------
+function indicador(rot, valor, sub, corVar) {
+  const d = document.createElement("div"); d.className = "indicador";
+  const r = document.createElement("span"); r.className = "rotulo"; r.textContent = rot;
+  const v = document.createElement("span"); v.className = "valor"; v.textContent = valor;
+  const s = document.createElement("span"); s.className = "sub";
+  if (corVar) { const m = document.createElement("i"); m.className = "marca"; m.style.background = `var(${corVar})`; s.append(m); }
+  s.append(sub); d.append(r, v, s); return d;
+}
+const U = R.ultimas;
+document.getElementById("indicadores").append(
+  indicador("Média das pesquisas", `${fmt(U.flavio)}%`, `Flávio · Lula ${fmt(U.lula)}% (última de cada um dos ${R.institutos} institutos)`, "--n22"),
+  indicador("Resultado oficial", `${fmt(REAL, 2)}%`, `Lula · Flávio ${fmt(100 - REAL, 2)}%`, "--lula"),
+  indicador("Erro na diferença", `${fmt(Math.abs(U.erro_vantagem))} pontos`, `a favor de Lula, entre a média e as urnas`),
+  indicador("Flávio à frente", `${R.todas.flavio_frente} de ${R.todas.n}`, `pesquisas; ${R.todas.na_margem} com o resultado dentro da margem`),
+);
+
+// --- Gráfico de pontos -------------------------------------------------------------
+const dica = document.getElementById("dica");
+function mostrar(ev, linhas) {
+  dica.hidden = false; dica.innerHTML = "";
+  linhas.forEach((t, i) => { const e = document.createElement(i ? "div" : "b"); e.textContent = t; dica.appendChild(e); });
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 290) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+const esconder = () => { dica.hidden = true; };
+
+let ver = "ultimas";
+const botoes = document.querySelectorAll(".segmentado button");
+botoes[0].textContent = `Última de cada instituto (${R.ultimas.n})`;
+botoes[1].textContent = `Todas (${R.todas.n})`;
+botoes.forEach(b => b.addEventListener("click", () => {
+  ver = b.dataset.ver; botoes.forEach(o => o.setAttribute("aria-pressed", String(o === b))); desenhar();
+}));
+
+function desenhar() {
+  const ps = D.pesquisas.filter(p => ver === "todas" || p.ultima);
+  const svg = d3.select("#g-pontos"); svg.selectAll("*").remove();
+  const W = svg.node().getBoundingClientRect().width || 900;
+  const estreito = W < 560;
+  const esq = estreito ? 132 : 200, dir = 16, topo = 30, passo = estreito ? 36 : 28, H = topo + ps.length * passo + 28;
+  svg.attr("viewBox", `0 0 ${W} ${H}`).attr("height", H);
+  const x = d3.scaleLinear().domain([45, 54]).range([esq, W - dir]);
+  const y = (i) => topo + i * passo + passo / 2;
+
+  const g = svg.append("g").attr("class", "grade");
+  for (const t of d3.range(45, 55, 1)) {
+    g.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y1", topo - 6).attr("y2", H - 22);
+    svg.append("text").attr("x", x(t)).attr("y", H - 6).attr("text-anchor", "middle")
+      .text(estreito && t % 2 ? "" : t + "%");
+  }
+  svg.append("line").attr("x1", x(50)).attr("x2", x(50)).attr("y1", topo - 6).attr("y2", H - 22)
+    .attr("stroke", "var(--apagado)").attr("stroke-width", 1.5).attr("stroke-dasharray", "4 3");
+  svg.append("line").attr("x1", x(REAL)).attr("x2", x(REAL)).attr("y1", topo - 10).attr("y2", H - 22)
+    .attr("stroke", "var(--tinta)").attr("stroke-width", 2);
+  svg.append("text").attr("class", "forte").attr("x", x(REAL)).attr("y", topo - 14).attr("text-anchor", "end")
+    .text(`Resultado: Lula ${fmt(REAL, 2)}%`);
+  svg.append("text").attr("x", x(50) - 6).attr("y", topo - 14).attr("text-anchor", "end").text(estreito ? "" : "empate");
+
+  ps.forEach((p, i) => {
+    const linha = svg.append("g");
+    linha.append("text").attr("class", "inst").attr("x", 0).attr("y", y(i) - (estreito ? 2 : 0)).attr("dy", "0.35em")
+      .text(p.instituto);
+    linha.append("text").attr("x", estreito ? 0 : esq - 12).attr("y", y(i) + (estreito ? 11 : 0)).attr("dy", "0.35em")
+      .attr("text-anchor", estreito ? "start" : "end").attr("font-size", 11).text(campo(p));
+    linha.append("line").attr("x1", x(Math.max(45, p.lula_v - p.margem))).attr("x2", x(Math.min(54, p.lula_v + p.margem)))
+      .attr("y1", y(i)).attr("y2", y(i)).attr("stroke", "var(--apagado)").attr("stroke-width", 2).attr("stroke-linecap", "round");
+    linha.append("circle").attr("cx", x(p.lula_v)).attr("cy", y(i)).attr("r", 5.5)
+      .attr("fill", `var(${lider(p)})`).attr("stroke", "var(--superficie)").attr("stroke-width", 2);
+    // alvo do hover: a linha inteira
+    linha.append("rect").attr("x", 0).attr("y", y(i) - passo / 2).attr("width", W).attr("height", passo)
+      .attr("fill", "transparent")
+      .on("mousemove", ev => mostrar(ev, [`${p.instituto} · campo ${campo(p)}`,
+        `Válidos: Lula ${fmt(p.lula_v)}% · Flávio ${fmt(100 - p.lula_v)}%`,
+        `Totais: Lula ${fmt(p.lula)}% · Flávio ${fmt(p.flavio)}% · outros ${fmt(p.outros)}%`,
+        `Amostra ${inteiro(p.amostra)} · margem ${margem(p)} ponto${p.margem >= 2 ? "s" : ""}`,
+        `Erro em Lula: ${sinal(REAL - p.lula_v)} pontos`]))
+      .on("mouseleave", esconder);
+  });
+}
+desenhar();
+let largura = 0;
+new ResizeObserver(es => { const w = es[0].contentRect.width; if (Math.abs(w - largura) > 4) { largura = w; desenhar(); } })
+  .observe(document.getElementById("g-pontos"));
+
+// --- Tabela ------------------------------------------------------------------------
+const corpo = document.getElementById("corpo");
+for (const p of D.pesquisas) {
+  const tr = document.createElement("tr"); if (!p.ultima) tr.className = "anterior";
+  const td = (txt, cls) => { const c = document.createElement("td"); if (cls) c.className = cls; c.textContent = txt; tr.append(c); return c; };
+  const c0 = document.createElement("td"); const a = document.createElement("a"); a.href = p.fonte; a.textContent = p.instituto;
+  a.target = "_blank"; a.rel = "noopener"; c0.append(a); tr.append(c0);
+  td(campo(p), "esq"); td(inteiro(p.amostra)); td(margem(p));
+  td(fmt(p.lula) + "%"); td(fmt(p.flavio) + "%"); td(fmt(p.outros) + "%");
+  td(fmt(p.lula_v) + "%", "forte" + (p.lula_v > 50 ? " a-lula" : "")); td(fmt(100 - p.lula_v) + "%", "forte" + (p.lula_v < 50 ? " a-22" : ""));
+  td(sinal(REAL - p.lula_v));
+  corpo.append(tr);
+}
+</script>

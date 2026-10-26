@@ -241,7 +241,7 @@ def test_pagina_inicial_com_destaque_e_placar(tmp_path):
     d = json.loads(html.split("const D = ", 1)[1].split(";\n", 1)[0])
     assert d["placar"] == placar and len(d["paginas"]) == len(SITE)
     assert [p["sub"] for p in d["paginas"] if p["destaque"]] == [DESTAQUE]
-    assert all(p["tema"] in ("Votos", "Abstenção") and "turno" in p["grupo"] for p in d["paginas"])
+    assert all(p["tema"] in ("Votos", "Abstenção", "Pesquisas") and "turno" in p["grupo"] for p in d["paginas"])
     assert "site-nav" not in html and html.startswith("<!doctype html>")
     sem = json.loads(inicio(tmp_path / "sem" / "index.html").read_text().split("const D = ", 1)[1].split(";\n", 1)[0])
     assert sem["placar"] is None                       # sem 2º turno nas tabelas: só os cartões
