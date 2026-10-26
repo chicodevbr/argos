@@ -25,20 +25,21 @@
   --m-alta-1: #f2a3a2; --m-alta-2: #e47e7d; --m-alta-3: #cf5554; --m-alta-4: #b3302f;
   --contorno: #ffffff;
   --foco: #2a78d6;
+  --dado-atual: #2a78d6;  /* usado pela barra de navegação do site (pagina/__main__.py) */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
     --linha: #2a2e36; --lula: #e66767; --n22: #3987e5; --serie-1t: #76746e; --serie-2t: #eef0f3;
-    --contorno: #111317; --foco: #3987e5;
+    --contorno: #111317; --foco: #3987e5; --dado-atual: #3987e5;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
   --linha: #2a2e36; --lula: #e66767; --n22: #3987e5; --serie-1t: #76746e; --serie-2t: #eef0f3;
-  --contorno: #111317; --foco: #3987e5;
+  --contorno: #111317; --foco: #3987e5; --dado-atual: #3987e5;
 }
 
 * { box-sizing: border-box; }

@@ -30,6 +30,8 @@ ESQUELETO = """<!doctype html>
 # página inicial (--inicio). Endereços já divulgados não mudam: rio-de-janeiro/, estado-do-rio/, votos/.
 # Brasília foi a raiz até 07/10/2026 e passou para brasilia/.
 SITE = [
+    ("Como Lula venceu", "como-lula-venceu", "Votos", "Como Lula venceu em 2026",
+     "O 2º turno nos 5.570 municípios, comparado a 2022, e a abstenção."),
     ("Abstenção · Brasília", "brasilia", "Abstenção", "Abstenção em Brasília",
      "As 35 regiões administrativas do DF no 1º turno de 2026, comparadas a 2022."),
     ("Abstenção · Rio", "rio-de-janeiro", "Abstenção", "Abstenção no Rio de Janeiro",
