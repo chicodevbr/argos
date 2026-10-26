@@ -26,24 +26,27 @@ ESQUELETO = """<!doctype html>
 """
 
 
-# Páginas do site estático (Netlify): (rótulo na barra, subpasta, grupo, título, descrição). A raiz é a
-# página inicial (--inicio). Endereços já divulgados não mudam: rio-de-janeiro/, estado-do-rio/, votos/.
+# Páginas do site estático (Netlify): (rótulo na barra, subpasta, grupo, título, descrição, tema). A raiz é a
+# página inicial (--inicio), que mostra DESTAQUE em cima, com o placar, e as outras agrupadas por turno e lugar,
+# na ordem desta lista. Endereços já divulgados não mudam: rio-de-janeiro/, estado-do-rio/, votos/.
 # Brasília foi a raiz até 07/10/2026 e passou para brasilia/.
+DESTAQUE = "como-lula-venceu"
 SITE = [
-    ("Como Lula venceu", "como-lula-venceu", "Votos", "Como Lula venceu em 2026",
-     "O 2º turno nos 5.570 municípios, comparado a 2022, e a abstenção."),
-    ("Abstenção · Brasília", "brasilia", "Abstenção", "Abstenção em Brasília",
-     "As 35 regiões administrativas do DF no 1º turno de 2026, comparadas a 2022."),
-    ("Abstenção · Rio", "rio-de-janeiro", "Abstenção", "Abstenção no Rio de Janeiro",
-     "As 33 regiões administrativas da cidade, com os bairros de cada uma."),
-    ("Abstenção · Estado do Rio", "estado-do-rio", "Abstenção", "Abstenção no Estado do Rio",
-     "Os 92 municípios do estado, comparados a 2022."),
-    ("Votos · Brasília", "votos", "Votos", "Votos em Brasília",
-     "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022."),
-    ("Onde Lula perdeu", "onde-lula-perdeu", "Votos", "Onde Lula perdeu votos",
-     "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma)."),
-    ("Onde Lula perdeu · Brasília", "onde-lula-perdeu/brasilia", "Votos", "Onde Lula perdeu votos em Brasília",
-     "As 35 RAs do DF, comparadas a 2022 (Lula) e a 2014 (Dilma)."),
+    ("Como Lula venceu", "como-lula-venceu", "2º turno · Brasil", "Como Lula venceu em 2026",
+     "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.",
+     "Votos"),
+    ("Onde Lula perdeu", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos",
+     "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
+    ("Abstenção · Brasília", "brasilia", "1º turno · Brasília", "Abstenção em Brasília",
+     "As 35 regiões administrativas do DF, comparadas a 2022.", "Abstenção"),
+    ("Votos · Brasília", "votos", "1º turno · Brasília", "Votos em Brasília",
+     "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022.", "Votos"),
+    ("Onde Lula perdeu · Brasília", "onde-lula-perdeu/brasilia", "1º turno · Brasília", "Onde Lula perdeu votos em Brasília",
+     "As 35 RAs do DF, comparadas a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
+    ("Abstenção · Rio", "rio-de-janeiro", "1º turno · Rio de Janeiro", "Abstenção na cidade do Rio",
+     "As 33 regiões administrativas da cidade, com os bairros de cada uma.", "Abstenção"),
+    ("Abstenção · Estado do Rio", "estado-do-rio", "1º turno · Rio de Janeiro", "Abstenção no Estado do Rio",
+     "Os 92 municípios do estado, comparados a 2022.", "Abstenção"),
 ]
 
 NAV_CSS = """<style>
@@ -79,13 +82,17 @@ def documento_completo(pagina: Path, destino: Path, nav: str | None = None) -> P
     return destino
 
 
-def inicio(destino: Path) -> Path:
-    """Página inicial do site (estilo lista de links), a partir de SITE. Documento completo, com a barra."""
+def inicio(destino: Path, placar: dict | None = None) -> Path:
+    """Página inicial do site a partir de SITE: DESTAQUE em cima (com o placar do 2º turno, se dado) e as outras
+    páginas por grupo. Documento completo, sem a barra (os cartões já são a navegação)."""
     import json
+    from datetime import date
     modelo = Path(__file__).with_name("modelo_inicio.html").read_text()
-    paginas = [{"sub": sub, "grupo": g, "titulo": tit, "descricao": desc} for _, sub, g, tit, desc in SITE]
-    corpo = modelo.replace("const PAGINAS = __PAGINAS__;", "const PAGINAS = " + json.dumps(paginas, ensure_ascii=False) + ";")
-    if "__PAGINAS__" in corpo:
+    paginas = [{"sub": sub, "grupo": g, "titulo": tit, "descricao": desc, "tema": tema, "destaque": sub == DESTAQUE}
+               for _, sub, g, tit, desc, tema in SITE]
+    dados = {"paginas": paginas, "placar": placar, "atualizado": date.today().strftime("%d/%m/%Y")}
+    corpo = modelo.replace("const D = __DADOS__;", "const D = " + json.dumps(dados, ensure_ascii=False) + ";")
+    if "__DADOS__" in corpo:
         raise RuntimeError("modelo da página inicial sem o marcador")
     tmp = Path(destino).with_name(".inicio-corpo.html")
     tmp.parent.mkdir(parents=True, exist_ok=True)
@@ -117,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.inicio:
         if not args.site:
             ap.error("--inicio precisa de --site")
-        index = inicio(args.site / "index.html")
+        index = inicio(args.site / "index.html", vitoria.placar(args.dir_parquet, carregar(args.config)))
         print(f"site: {index}")
         return 0
     if args.perdas and recorte:

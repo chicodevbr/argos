@@ -314,6 +314,27 @@ def textos(D: dict) -> dict:
             "quintis": [{"da": round(float(da.iloc[i]), 2), "dl": round(float(q.iloc[i]), 2)} for i in range(len(q))]}
 
 
+def placar(dir_parquet: Path, cfg) -> dict | None:
+    """Resultado nacional do 2º turno (arquivo BR do TSE, último snapshot) para a página inicial do site;
+    None se o 2º turno não estiver nas tabelas."""
+    con = consultas.conectar(dir_parquet)
+    if not consultas.tem(con, "snapshot_totais"):
+        return None
+    t2 = cfg.eleicao_por_id("2026-t2-federal").codigo
+    linha = con.execute(f"""
+        WITH t AS (SELECT * FROM snapshot_totais WHERE eleicao = {int(t2)} AND cargo = 1 AND abrangencia = 'br'
+                   ORDER BY ts_tse DESC, ts_coleta DESC LIMIT 1)
+        SELECT any_value(t.pct_secoes), any_value(t.eleitorado), any_value(t.abstencao),
+               sum(c.votos) FILTER (c.numero = {LULA}), sum(c.votos) FILTER (c.numero = {N22})
+        FROM t JOIN snapshot_candidatos c USING (arquivo_raw)
+    """).fetchone()
+    if linha is None or linha[0] is None or linha[3] is None:
+        return None
+    pct_secoes, aptos, abst, l, f = linha
+    return {"pct_secoes": round(float(pct_secoes), 2), "lula": round(100 * l / (l + f), 2),
+            "n22": round(100 * f / (l + f), 2), "vantagem": int(l - f), "abstencao": round(100 * abst / aptos, 2)}
+
+
 def abst_turnos(D: dict) -> str:
     """Abstenção do 1º para o 2º turno de 2026: Brasil, municípios, cidades grandes e estados onde subiu."""
     b, col = D["brasil"], {c: i for i, c in enumerate(D["colunas"])}

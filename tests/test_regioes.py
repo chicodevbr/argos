@@ -230,3 +230,17 @@ def test_onde_lula_perdeu_por_ra(tmp_path, monkeypatch):
         assert d["textos"][b]["lede"].startswith("No Distrito Federal, Lula teve")
     assert d["meta"]["titulo"] == "Onde Lula perdeu votos em Brasília" and d["meta"]["mostrar_uf"] is False
     assert set(d["grupos"]) == {m[col["nome"]] for m in d["municipios"]}
+
+
+def test_pagina_inicial_com_destaque_e_placar(tmp_path):
+    import json
+    from apuracao.pagina.__main__ import DESTAQUE, SITE, inicio
+    placar = {"pct_secoes": 100.0, "lula": 51.79, "n22": 48.21, "vantagem": 4430191, "abstencao": 19.22}
+    html = inicio(tmp_path / "index.html", placar).read_text()
+    d = json.loads(html.split("const D = ", 1)[1].split(";\n", 1)[0])
+    assert d["placar"] == placar and len(d["paginas"]) == len(SITE)
+    assert [p["sub"] for p in d["paginas"] if p["destaque"]] == [DESTAQUE]
+    assert all(p["tema"] in ("Votos", "Abstenção") and "turno" in p["grupo"] for p in d["paginas"])
+    assert "site-nav" not in html and html.startswith("<!doctype html>")
+    sem = json.loads(inicio(tmp_path / "sem" / "index.html").read_text().split("const D = ", 1)[1].split(";\n", 1)[0])
+    assert sem["placar"] is None                       # sem 2º turno nas tabelas: só os cartões
