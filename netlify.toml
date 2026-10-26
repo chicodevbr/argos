@@ -4,5 +4,8 @@
 [build]
   publish = "site"
   command = ""
-  # só publica quando site/ (ou este arquivo) mudou; commits do coletor etc. não gastam deploy
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- site/ netlify.toml"
+  # só publica quando site/ (ou este arquivo) mudou; commits do coletor etc. não gastam deploy.
+  # Sem cache do último deploy, o Netlify põe CACHED_COMMIT_REF = COMMIT_REF: o diff sai vazio e o deploy era
+  # cancelado para sempre (nenhum deploy repovoa o cache). Visto em 26/10/2026: todos cancelados desde 07/10.
+  # Agora, refs iguais (ou diff com erro) = publica; só cancela com um deploy anterior e site/ igual.
+  ignore = "test \"$CACHED_COMMIT_REF\" != \"$COMMIT_REF\" && git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- site/ netlify.toml"
