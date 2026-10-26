@@ -12,24 +12,25 @@ def test_formatos_em_portugues():
     assert no_uf("RS") == "no Rio Grande do Sul" and no_uf("SP") == "em São Paulo" and no_uf("BA") == "na Bahia"
 
 
-def _soma(l26, f26, l22, b22, l1, v1, aptos, abst, aptos22, abst22):
+def _soma(l26, f26, l22, b22, l1, v1, aptos, abst, aptos22, abst22, aptos1, abst1):
     return vitoria._soma(__import__("pandas").DataFrame([{
-        "l26": l26, "f26": f26, "l22": l22, "b22": b22, "l1": l1, "v1": v1,
-        "aptos": aptos, "abst_n": abst, "aptos22": aptos22, "abst_n22": abst22}]))
+        "l26": l26, "f26": f26, "l22": l22, "b22": b22, "l1": l1, "v1": v1, "aptos": aptos, "abst_n": abst,
+        "aptos22": aptos22, "abst_n22": abst22, "aptos1": aptos1, "abst_n1": abst1}]))
 
 
 def _dados():
     # 3 municípios: SP e RJ grandes (Lula cresce), RS (Lula cai e o 22 perde votos)
     linhas = [
-        ["São Paulo", "SP", "3550308", "Sudeste", 200_000, 120_000, 60_000, 100_000, 80_000, 90_000, 180_000, 18.0, 20.0],
-        ["Rio de Janeiro", "RJ", "3304557", "Sudeste", 150_000, 90_000, 40_000, 70_000, 60_000, 60_000, 130_000, 17.0, 21.0],
-        ["Pelotas", "RS", "4314407", "Sul", 50_000, 15_000, 25_000, 18_000, 26_000, 12_000, 40_000, 22.0, 21.0],
+        ["São Paulo", "SP", "3550308", "Sudeste", 200_000, 120_000, 60_000, 100_000, 80_000, 90_000, 180_000, 18.0, 20.0, 21.0],
+        ["Rio de Janeiro", "RJ", "3304557", "Sudeste", 150_000, 90_000, 40_000, 70_000, 60_000, 60_000, 130_000, 17.0, 21.0, 20.0],
+        ["Pelotas", "RS", "4314407", "Sul", 50_000, 15_000, 25_000, 18_000, 26_000, 12_000, 40_000, 22.0, 21.0, 19.0],
     ]
     col = {c: i for i, c in enumerate(COLUNAS)}
     def soma_de(ls):
         return _soma(*(sum(l[col[k]] for l in ls) for k in ("l26", "f26", "l22", "b22", "l1", "v1", "eleitores")),
                      sum(l[col["eleitores"]] * l[col["abst26"]] / 100 for l in ls),
-                     sum(l[col["eleitores"]] for l in ls), sum(l[col["eleitores"]] * l[col["abst22"]] / 100 for l in ls))
+                     sum(l[col["eleitores"]] for l in ls), sum(l[col["eleitores"]] * l[col["abst22"]] / 100 for l in ls),
+                     sum(l[col["eleitores"]] for l in ls), sum(l[col["eleitores"]] * l[col["abst1"]] / 100 for l in ls))
     ufs = {l[1]: soma_de([l]) for l in linhas}
     return {"colunas": COLUNAS, "municipios": linhas, "brasil": soma_de(linhas), "ufs": ufs,
             "regioes": {"Sudeste": soma_de(linhas[:2]), "Sul": soma_de(linhas[2:])},
@@ -46,3 +47,10 @@ def test_textos_calculados():
     assert "2022. Em 3 dos 3 municípios o 22 teve menos votos" in t["flavio"]   # sem "Mas": no país também caiu
     assert "A maior queda: São Paulo (SP), com 20.000 votos a menos." in t["flavio"]
     assert t["cresceu"]["2022"].startswith("Lula teve percentual maior que em 2022 em 2 dos 3 municípios")
+
+
+def test_abstencao_entre_turnos():
+    t = vitoria.textos(_dados())["turnos"]
+    assert "diminuiu em 2 dos 3 municípios" in t
+    assert "as maiores quedas foram em São Paulo (SP, −3,0 pontos) e Rio de Janeiro (RJ, −3,0 pontos)" in t
+    assert "Em 1 estado ela subiu: Rio Grande do Sul (19,0% → 22,0%)." in t

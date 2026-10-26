@@ -30,7 +30,7 @@ from apuracao.pagina.regioes import _br
 MODELO = Path(__file__).with_name("modelo_vitoria.html")
 LULA, N22 = 13, 22
 BASE = 2022  # 2º turno de comparação
-COLUNAS = ["nome", "uf", "ibge", "regiao", "eleitores", "l26", "f26", "l22", "b22", "l1", "v1", "abst26", "abst22"]
+COLUNAS = ["nome", "uf", "ibge", "regiao", "eleitores", "l26", "f26", "l22", "b22", "l1", "v1", "abst26", "abst22", "abst1"]
 
 
 def _ultimos_mu(eleicao: int) -> str:
@@ -87,12 +87,14 @@ def serie_abstencao(con, t1: int, t2: int) -> list[dict]:
 
 
 def _soma(df: pd.DataFrame) -> dict:
-    s = {k: int(df[k].sum()) for k in ("l26", "f26", "l22", "b22", "l1", "v1", "aptos", "abst_n", "aptos22", "abst_n22")}
+    s = {k: int(df[k].sum()) for k in ("l26", "f26", "l22", "b22", "l1", "v1", "aptos", "abst_n", "aptos22", "abst_n22",
+                                        "aptos1", "abst_n1")}
     s["pct26"] = round(100 * s["l26"] / (s["l26"] + s["f26"]), 5)
     s["pct22"] = round(100 * s["l22"] / (s["l22"] + s["b22"]), 5) if s["l22"] + s["b22"] else None
     s["pct1"] = round(100 * s["l1"] / s["v1"], 5) if s["v1"] else None
     s["abst26"] = round(100 * s["abst_n"] / s["aptos"], 5)
     s["abst22"] = round(100 * s["abst_n22"] / s["aptos22"], 5) if s["aptos22"] else None
+    s["abst1"] = round(100 * s["abst_n1"] / s["aptos1"], 5) if s["aptos1"] else None
     s["ganho_margem"] = (s["l26"] - s["f26"]) - (s["l22"] - s["b22"])
     return s
 
@@ -101,13 +103,14 @@ def montar_dados(dir_parquet: Path, cfg) -> dict:
     con = consultas.conectar(dir_parquet)
     t1, t2 = cfg.eleicao_por_id("2026-t1-federal").codigo, cfg.eleicao_por_id("2026-t2-federal").codigo
     m26 = municipios_2026(con, t2).rename(columns={"lula": "l26", "n22": "f26", "abstencao": "abst_n"})
-    m1 = municipios_2026(con, t1)[["chave", "lula", "validos"]].rename(columns={"lula": "l1", "validos": "v1"})
+    m1 = municipios_2026(con, t1)[["chave", "lula", "validos", "aptos", "abstencao"]].rename(
+        columns={"lula": "l1", "validos": "v1", "aptos": "aptos1", "abstencao": "abst_n1"})
     mun = con.execute("SELECT uf || cod_tse AS chave, cod_ibge, nome, uf, regiao FROM municipios").df()
     d = (m26.merge(m1, on="chave", how="left").merge(municipios_2022(con), on="chave", how="left")
          .merge(mun, on="chave", how="left"))
     d["uf"] = d["uf"].fillna(d["chave"].str[:2])
     d["regiao"] = d["regiao"].where(d["uf"] != "zz", "Exterior")
-    d = d.fillna({k: 0 for k in ("l22", "b22", "aptos22", "abst_n22", "l1", "v1")})
+    d = d.fillna({k: 0 for k in ("l22", "b22", "aptos22", "abst_n22", "l1", "v1", "aptos1", "abst_n1")})
 
     bra = d[d["uf"] != "zz"]
     linhas = []
@@ -118,6 +121,7 @@ def montar_dados(dir_parquet: Path, cfg) -> dict:
             int(x.l22) if tem22 else None, int(x.b22) if tem22 else None, int(x.l1), int(x.v1),
             round(100 * x.abst_n / x.aptos, 2) if x.aptos else None,
             round(100 * x.abst_n22 / x.aptos22, 2) if x.aptos22 else None,
+            round(100 * x.abst_n1 / x.aptos1, 2) if x.aptos1 else None,
         ])
     linhas.sort(key=lambda l: (l[1], l[0]))
 
@@ -306,8 +310,36 @@ def textos(D: dict) -> dict:
                f"a 2022; onde ela menos caiu ou subiu, {mov(q.iloc[-1])}. Médias ponderadas pelo eleitorado; a relação "
                f"não mostra quem passou a votar em quem.")
     return {"lede": lede, "decisivo": decisivo, "cresceu": {"2022": cresceu("2022"), "t1": cresceu("t1")},
-            "flavio": flavio, "abstencao": abst, "relacao": relacao,
+            "flavio": flavio, "abstencao": abst, "relacao": relacao, "turnos": abst_turnos(D),
             "quintis": [{"da": round(float(da.iloc[i]), 2), "dl": round(float(q.iloc[i]), 2)} for i in range(len(q))]}
+
+
+def abst_turnos(D: dict) -> str:
+    """Abstenção do 1º para o 2º turno de 2026: Brasil, municípios, cidades grandes e estados onde subiu."""
+    b, col = D["brasil"], {c: i for i, c in enumerate(D["colunas"])}
+    ms = [(m, m[col["abst26"]] - m[col["abst1"]]) for m in D["municipios"]
+          if m[col["abst26"]] is not None and m[col["abst1"]] is not None]
+    caiu = sum(1 for _, v in ms if v < 0)
+    grandes = sorted((t for t in ms if t[0][col["eleitores"]] >= 100_000), key=lambda t: t[1])
+    subiu_uf = sorted(((u, v["abst26"] - v["abst1"]) for u, v in D["ufs"].items() if v["abst26"] > v["abst1"]),
+                      key=lambda t: -t[1])
+    txt = (f"Do 1º para o 2º turno, a abstenção caiu de {_br(b['abst1'])}% para {_br(b['abst26'])}% no país e diminuiu "
+           f"em {_n(caiu)} dos {_n(len(ms))} municípios. Entre as {len(grandes)} cidades com 100 mil eleitores ou mais, "
+           f"as maiores quedas foram em " + _lista([f"{m[col['nome']]} ({m[col['uf']]}, {_pontos(v, True)})"
+                                                    for m, v in grandes[:3]]) + ".")
+    if subiu_uf:
+        def uf_txt(u, v):  # noqa: E306
+            x = D["ufs"][u]
+            return (f"{NOMES_UF[u]} ({_br(x['abst1'], 1)}% → {_br(x['abst26'], 1)}%)" if v >= 0.05
+                    else f"{NOMES_UF[u]} (+{_br(v, 2)} ponto)")
+        txt += (f" Em {len(subiu_uf)} {'estado' if len(subiu_uf) == 1 else 'estados'} ela subiu: "
+                + _lista([uf_txt(u, v) for u, v in subiu_uf]) + ".")
+    return txt
+
+
+def _lista(itens: list[str]) -> str:
+    """'a', 'a e b', 'a, b e c'."""
+    return itens[0] if len(itens) == 1 else ", ".join(itens[:-1]) + " e " + itens[-1]
 
 
 def gerar(dir_parquet: Path, malha: Path, saida: Path, config: Path = Path("config/eleicoes.toml")) -> Path:

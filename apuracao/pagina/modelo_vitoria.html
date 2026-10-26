@@ -63,7 +63,8 @@ section { display: grid; gap: 16px; min-width: 0; }
 
 .quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; min-width: 0; }
 .duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
-@media (max-width: 760px) { .duas { grid-template-columns: 1fr; } }
+.duas.iguais { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .duas, .duas.iguais { grid-template-columns: 1fr; } }
 .duas > div { display: grid; gap: 8px; min-width: 0; }
 svg { display: block; width: 100%; height: auto; overflow: visible; }
 svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
@@ -163,6 +164,13 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--foco); outl
     <h3>Abstenção e o resultado de Lula, município a município</h3>
     <p class="nota" id="txt-relacao"></p>
     <svg id="g-quintis" role="img" aria-label="Variação do percentual de Lula conforme a variação da abstenção"></svg>
+    <h3>Do 1º para o 2º turno de 2026</h3>
+    <p class="nota" id="txt-turnos"></p>
+    <svg id="g-ufs-turnos" role="img" aria-label="Variação da abstenção do 1º para o 2º turno, por estado"></svg>
+    <div class="duas iguais">
+      <div><h3>Maiores quedas nas cidades com 100 mil eleitores ou mais</h3><div class="tabela"><table id="tab-queda"></table></div></div>
+      <div><h3>Onde a abstenção mais subiu</h3><div class="tabela"><table id="tab-alta"></table></div></div>
+    </div>
   </section>
 
   <section class="quadro" aria-labelledby="t-tabela">
@@ -207,6 +215,7 @@ const vantagem26 = m => m[C.l26] - m[C.f26];
 const ganhoVantagem = m => m[C.l22] == null ? null : (m[C.l26] - m[C.f26]) - (m[C.l22] - m[C.b22]);
 const dif22 = m => m[C.b22] == null ? null : m[C.f26] - m[C.b22];
 const da = m => m[C.abst22] == null || m[C.abst26] == null ? null : m[C.abst26] - m[C.abst22];
+const dt = m => m[C.abst1] == null || m[C.abst26] == null ? null : m[C.abst26] - m[C.abst1];
 let comp = "2022";
 const varComp = m => { const a = p26(m), b = comp === "2022" ? p22(m) : p1(m); return a == null || b == null ? null : a - b; };
 const porIbge = new Map(D.municipios.map(m => [String(m[C.ibge]), m]));
@@ -248,6 +257,7 @@ document.getElementById("txt-decisivo").textContent = T.decisivo;
 document.getElementById("txt-flavio").textContent = T.flavio;
 document.getElementById("txt-abst").textContent = T.abstencao;
 document.getElementById("txt-relacao").textContent = T.relacao;
+document.getElementById("txt-turnos").textContent = T.turnos;
 for (const t of D.metodo) { const p = document.createElement("p"); p.textContent = t; document.getElementById("metodo").appendChild(p); }
 function legenda(id, itens) {
   const el = document.getElementById(id); el.innerHTML = "";
@@ -260,7 +270,7 @@ function legenda(id, itens) {
 }
 
 // --- Barras divergentes (regiões, estados) ---------------------------------------------
-function barras(id, lista, formato, titulo) {
+function barras(id, lista, formato, titulo, corFixa) {
   const svg = d3.select("#" + id);
   const W = svg.node().getBoundingClientRect().width || 500;
   const rot = Math.min(110, 7.2 * Math.max(...lista.map(d => d.nome.length)));
@@ -273,7 +283,7 @@ function barras(id, lista, formato, titulo) {
     const y = topo + i * linha, g = svg.append("g");
     g.append("text").attr("x", rot).attr("y", y + 14).attr("text-anchor", "end").text(d.nome);
     g.append("rect").attr("x", Math.min(x(0), x(d.v))).attr("y", y + 4).attr("width", Math.max(1, Math.abs(x(d.v) - x(0))))
-      .attr("height", linha - 8).attr("rx", 2).attr("fill", cor(d.v < 0 ? "--n22" : "--lula"));
+      .attr("height", linha - 8).attr("rx", 2).attr("fill", cor(corFixa || (d.v < 0 ? "--n22" : "--lula")));
     g.append("text").attr("x", d.v < 0 ? x(d.v) - 6 : x(d.v) + 6).attr("y", y + 14)
       .attr("text-anchor", d.v < 0 ? "end" : "start").attr("class", "forte").text(formato(d.v));
     // alvo de hover mais largo que a barra
@@ -410,6 +420,32 @@ function desenharQuintis() {
   svg.append("text").attr("x", m.l).attr("y", 10).text("Lula, 2026 menos 2022 (pontos)");
 }
 
+// --- Abstenção do 1º para o 2º turno -----------------------------------------------------
+function desenharUfsTurnos() {
+  const lista = Object.entries(D.ufs).map(([n, x]) => ({ nome: n, x, v: x.abst26 - x.abst1 })).sort((a, b) => a.v - b.v);
+  barras("g-ufs-turnos", lista, v => sinal(v, 1), d => [d.nome, `1º turno: ${fmt(d.x.abst1, 1)}%`,
+    `2º turno: ${fmt(d.x.abst26, 1)}%`, `Variação: ${sinal(d.v)} pontos`], "--tinta-2");
+}
+function tabelaTurnos(id, lista) {
+  const t = document.getElementById(id); t.innerHTML = "";
+  const h = t.createTHead().insertRow();
+  ["Município", "UF", "1º turno", "2º turno", "Variação"].forEach((c, i) => {
+    const th = document.createElement("th"); th.textContent = c; th.scope = "col"; if (i === 1) th.className = "uf"; h.appendChild(th); });
+  const tb = t.createTBody();
+  for (const m of lista) {
+    const tr = tb.insertRow();
+    tr.addEventListener("mousemove", ev => mostrar(ev, [`${m[C.nome]} (${m[C.uf]})`, `${inteiro(m[C.eleitores])} eleitores`,
+      `Abstenção: ${fmt(m[C.abst1], 1)}% → ${fmt(m[C.abst26], 1)}%`])); tr.addEventListener("mouseleave", esconder);
+    [[m[C.nome]], [m[C.uf], "uf"], [fmt(m[C.abst1], 1) + "%"], [fmt(m[C.abst26], 1) + "%", "forte"], [sinal(dt(m))]]
+      .forEach(([v, c]) => { const td = tr.insertCell(); td.textContent = v; if (c) td.className = c; });
+  }
+}
+function desenharTurnos() {
+  const com = D.municipios.filter(m => dt(m) != null);
+  tabelaTurnos("tab-queda", com.filter(m => m[C.eleitores] >= 100000).sort((a, b) => dt(a) - dt(b)).slice(0, 10));
+  tabelaTurnos("tab-alta", [...com].sort((a, b) => dt(b) - dt(a)).slice(0, 10));
+}
+
 // --- Tabela de todos os municípios -------------------------------------------------------
 const ufsLista = [...new Set(D.municipios.map(m => m[C.uf]))].sort();
 for (const u of ufsLista) { const o = document.createElement("option"); o.value = u; o.textContent = u; document.getElementById("filtro-uf").appendChild(o); }
@@ -426,7 +462,8 @@ const COLS = [
   { id: "gv", rot: "Variação da vantagem", v: ganhoVantagem, f: sinalInt, sinal: true },
   { id: "d22", rot: "22: 2026 − 2022", v: dif22, f: sinalInt },
   { id: "ab", rot: "Abstenção 2026", v: m => m[C.abst26], f: v => fmt(v, 1) + "%" },
-  { id: "dab", rot: "Variação da abstenção", v: da, f: v => sinal(v) },
+  { id: "dab", rot: "Abstenção x 2022", v: da, f: v => sinal(v) },
+  { id: "dt", rot: "Abstenção x 1º turno", v: dt, f: v => sinal(v) },
 ];
 function desenharTabela() {
   const q = normal(document.getElementById("busca").value.trim());
@@ -467,8 +504,8 @@ document.getElementById("mais").addEventListener("click", () => { limite += 300;
 for (const id of ["busca", "filtro-uf", "filtro-tam"])
   document.getElementById(id).addEventListener("input", () => { limite = 300; desenharTabela(); });
 
-function graficos() { desenharDecisivo(); desenharMapa(); desenharUfsPct(); desenharSerie(); desenharQuintis(); }
-graficos(); desenharFlavio(); desenharTabela();
+function graficos() { desenharDecisivo(); desenharMapa(); desenharUfsPct(); desenharSerie(); desenharQuintis(); desenharUfsTurnos(); }
+graficos(); desenharFlavio(); desenharTurnos(); desenharTabela();
 let pendente;
 window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(graficos, 150); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", graficos);
