@@ -1,5 +1,6 @@
-"""Página "As pesquisas do 2º turno": as pesquisas nacionais de Lula x Flávio com campo encerrado nos últimos
-5 dias antes da votação (20 a 24/10/2026), comparadas ao resultado oficial.
+"""Página "As pesquisas do 2º turno": as pesquisas nacionais de Lula x Flávio dos 5 dias antes da votação
+(20 a 24/10/2026), comparadas ao resultado oficial. Entra quem teve o campo encerrado OU foi divulgada nesses dias
+(critério do usuário, 26/10); nas divulgadas com campo anterior, a coluna `nota` do CSV traz a data de divulgação.
 
 Os números das pesquisas vêm de pesquisas_2t_2026.csv (votos totais como divulgados; compilados da tabela da
 Wikipédia "Opinion polling for the 2026 Brazilian presidential election" e conferidos com as reportagens da coluna
@@ -31,7 +32,7 @@ def ler(caminho: Path = DADOS) -> list[dict]:
                 "instituto": r["instituto"], "inicio": r["campo_inicio"], "fim": r["campo_fim"],
                 "amostra": int(r["amostra"]), "margem": float(r["margem"]),
                 "lula": l, "flavio": fl, "outros": float(r["outros"]),
-                "lula_v": round(100 * l / (l + fl), 2), "fonte": r["fonte"] or WIKIPEDIA,
+                "lula_v": round(100 * l / (l + fl), 2), "fonte": r["fonte"] or WIKIPEDIA, "nota": r.get("nota") or "",
             })
     # mais recente primeiro: fim do campo, depois início (campo mais curto = mais recente)
     linhas.sort(key=lambda p: (p["fim"], p["inicio"]), reverse=True)
@@ -67,8 +68,8 @@ def _n(v: float, c: int = 1) -> str:
 
 def textos(r: dict) -> dict:
     u, t, real = r["ultimas"], r["todas"], r["lula_real"]
-    lede = (f"Nos últimos cinco dias antes da votação, {t['n']} pesquisas nacionais de {r['institutos']} institutos "
-            f"mediram Lula contra Flávio Bolsonaro. {t['flavio_frente']} mostraram Flávio à frente nos votos válidos. "
+    lede = (f"Nos cinco dias antes da votação, de 20 a 24 de outubro, saíram {t['n']} pesquisas nacionais de "
+            f"{r['institutos']} institutos com Lula contra Flávio Bolsonaro. {t['flavio_frente']} mostraram Flávio à frente nos votos válidos. "
             f"Lula venceu com {_n(real, 2)}%, mais do que qualquer uma delas apontava (a maior dava "
             f"{_n(t['max_lula'])}%).")
     media = (f"Na média da última pesquisa de cada instituto, Flávio tinha {_n(u['flavio'])}% e Lula "

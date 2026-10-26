@@ -38,6 +38,7 @@ def test_resumo_e_textos(tmp_path):
 
 def test_dados_do_repositorio_consistentes():
     ps = pesquisas.ler()
-    assert len(ps) == 25 and sum(p["ultima"] for p in ps) == 18
-    assert all("2026-10-20" <= p["fim"] <= "2026-10-24" and p["inicio"] <= p["fim"] for p in ps)
+    assert len(ps) == 30 and sum(p["ultima"] for p in ps) == 20
+    # campo encerrado de 20 a 24/10, ou divulgada nesses dias (com a nota)
+    assert all(("2026-10-20" <= p["fim"] <= "2026-10-24" or p["nota"]) and p["inicio"] <= p["fim"] for p in ps)
     assert all(40 < p["lula"] < 55 and 40 < p["flavio"] < 55 and 0 < p["margem"] <= 3 for p in ps)

@@ -1,26 +1,31 @@
-instituto,campo_inicio,campo_fim,amostra,margem,lula,flavio,outros,fonte
-Futura,2026-10-23,2026-10-24,2000,2.2,47.9,48.2,3.9,https://www.cnnbrasil.com.br/eleicoes/futura-flavio-tem-501-dos-votos-validos-no-2o-turno-lula-499/
-Quaest,2026-10-23,2026-10-24,3702,2,45,46,9,https://dadobruto.com/2turno
-Datafolha,2026-10-23,2026-10-24,4050,2,47,48,5,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/
-Nexus/BTG,2026-10-23,2026-10-24,2000,2.2,46,47,7,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/
-PoderData,2026-10-23,2026-10-24,4000,1.6,48,49,4,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/
-Palver,2026-10-22,2026-10-24,5000,2.2,49,50,1,
-Gerp,2026-10-22,2026-10-24,2400,2,46,49,4,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/
-Colectta,2026-10-23,2026-10-23,3000,2,46.5,46,7.5,https://rede98.com.br/eleicoes2026/todas-as-21-pesquisas-eleitorais-erraram-o-resultado-das-eleicoes-no-segundo-turno/
-CNT/MDA,2026-10-21,2026-10-23,2032,2.2,45,46.3,8.7,https://www.metropoles.com/brasil/cnt-mda-flavio-bolsonaro-tem-507-votos-validos-no-2o-turno-e-lula-493
-Instituto França,2026-10-21,2026-10-23,1537,2.5,43.1,45.1,11.3,
-Veritá,2026-10-19,2026-10-23,15554,1,47.8,49.8,2.4,
-AtlasIntel,2026-10-18,2026-10-23,4990,1,48.4,49.9,1.7,https://dadobruto.com/2turno
-Ipespe,2026-10-20,2026-10-22,1500,2.6,47,48,5,
-Vox Brasil,2026-10-20,2026-10-22,2100,2.15,45.4,44.3,10.3,https://www.cnnbrasil.com.br/eleicoes/vox-lula-tem-506-dos-votos-validos-no-2o-turno-flavio-494/
-Datafolha,2026-10-20,2026-10-22,2520,2,46,47,7,https://www.cnnbrasil.com.br/eleicoes/datafolha-flavio-e-lula-empatam-em-50-de-votos-validos-no-2o-turno/
-Alfa,2026-10-19,2026-10-22,2700,1.9,46,49.9,4.1,
-Real Time Big Data,2026-10-19,2026-10-22,2000,2,45,49,6,https://dadobruto.com/2turno
-Veritá,2026-10-18,2026-10-22,15554,1,47.5,50.2,2.3,
-Indexa,2026-10-20,2026-10-21,2000,2.2,44.1,45.2,10.7,https://dadobruto.com/2turno
-DataTrends,2026-10-19,2026-10-21,2000,2.19,46,50,4,
-PoderData,2026-10-19,2026-10-21,4000,1.6,48,49,4,
-Gerp,2026-10-19,2026-10-21,2400,2,45,50,5,https://www.poder360.com.br/poder-eleicoes-2026/flavio-tem-53-dos-votos-validos-contra-47-de-lula-diz-gerp/
-Futura,2026-10-19,2026-10-20,2000,2.2,46.8,48.9,4.3,https://dadobruto.com/2turno
-Palver,2026-10-18,2026-10-20,5000,2.4,48,50,1,https://dadobruto.com/2turno
-Quaest,2026-10-17,2026-10-20,2154,2,44,45,11,https://portaldeprefeitura.com.br/bastidores-da-politica/quaest-flavio-bolsonaro-tem-45-e-lula-44-das-intencoes-de-voto-no/634532/
+instituto,campo_inicio,campo_fim,amostra,margem,lula,flavio,outros,fonte,nota
+Futura,2026-10-23,2026-10-24,2000,2.2,47.9,48.2,3.9,https://www.cnnbrasil.com.br/eleicoes/futura-flavio-tem-501-dos-votos-validos-no-2o-turno-lula-499/,
+Quaest,2026-10-23,2026-10-24,3702,2,45,46,9,https://dadobruto.com/2turno,
+Datafolha,2026-10-23,2026-10-24,4050,2,47,48,5,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/,
+Nexus/BTG,2026-10-23,2026-10-24,2000,2.2,46,47,7,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/,
+PoderData,2026-10-23,2026-10-24,4000,1.6,48,49,4,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/,
+Palver,2026-10-22,2026-10-24,5000,2.2,49,50,1,,
+Gerp,2026-10-22,2026-10-24,2400,2,46,49,4,https://www.poder360.com.br/poder-pesquisas/saiba-como-estao-lula-e-flavio-nas-ultimas-18-pesquisas-divulgadas/,
+Colectta,2026-10-23,2026-10-23,3000,2,46.5,46,7.5,https://rede98.com.br/eleicoes2026/todas-as-21-pesquisas-eleitorais-erraram-o-resultado-das-eleicoes-no-segundo-turno/,
+CNT/MDA,2026-10-21,2026-10-23,2032,2.2,45,46.3,8.7,https://www.metropoles.com/brasil/cnt-mda-flavio-bolsonaro-tem-507-votos-validos-no-2o-turno-e-lula-493,
+Instituto França,2026-10-21,2026-10-23,1537,2.5,43.1,45.1,11.3,,
+Veritá,2026-10-19,2026-10-23,15554,1,47.8,49.8,2.4,,
+AtlasIntel,2026-10-18,2026-10-23,4990,1,48.4,49.9,1.7,https://dadobruto.com/2turno,
+Ipespe,2026-10-20,2026-10-22,1500,2.6,47,48,5,,
+Vox Brasil,2026-10-20,2026-10-22,2100,2.15,45.4,44.3,10.3,https://www.cnnbrasil.com.br/eleicoes/vox-lula-tem-506-dos-votos-validos-no-2o-turno-flavio-494/,
+Datafolha,2026-10-20,2026-10-22,2520,2,46,47,7,https://www.cnnbrasil.com.br/eleicoes/datafolha-flavio-e-lula-empatam-em-50-de-votos-validos-no-2o-turno/,
+Alfa,2026-10-19,2026-10-22,2700,1.9,46,49.9,4.1,,
+Real Time Big Data,2026-10-19,2026-10-22,2000,2,45,49,6,https://dadobruto.com/2turno,
+Veritá,2026-10-18,2026-10-22,15554,1,47.5,50.2,2.3,,
+Indexa,2026-10-20,2026-10-21,2000,2.2,44.1,45.2,10.7,https://dadobruto.com/2turno,
+DataTrends,2026-10-19,2026-10-21,2000,2.19,46,50,4,,
+PoderData,2026-10-19,2026-10-21,4000,1.6,48,49,4,,
+Gerp,2026-10-19,2026-10-21,2400,2,45,50,5,https://www.poder360.com.br/poder-eleicoes-2026/flavio-tem-53-dos-votos-validos-contra-47-de-lula-diz-gerp/,
+Futura,2026-10-19,2026-10-20,2000,2.2,46.8,48.9,4.3,https://dadobruto.com/2turno,
+Palver,2026-10-18,2026-10-20,5000,2.4,48,50,1,https://dadobruto.com/2turno,
+Quaest,2026-10-17,2026-10-20,2154,2,44,45,11,https://portaldeprefeitura.com.br/bastidores-da-politica/quaest-flavio-bolsonaro-tem-45-e-lula-44-das-intencoes-de-voto-no/634532/,
+Data Ranking,2026-10-14,2026-10-16,2100,2.15,45.4,44.6,10,https://fonte83.com.br/politica/pesquisa-nacional-data-ranking-lula-tem-504-e-flavio-496-no-2o-turno/,campo encerrado antes de 20/10; divulgada em 20/10
+Alfa,2026-10-15,2026-10-19,2700,1.9,45.9,48.8,5.3,https://www.oliberal.com/politica/alfa-inteligencia-flavio-tem-48-8-dos-votos-totais-contra-45-9-de-lula-em-empate-tecnico-1.1184555,campo encerrado antes de 20/10; divulgada em 20/10
+Real Time Big Data,2026-10-15,2026-10-19,2000,2,45,48,7,https://www.dgabc.com.br/Noticia/4353712/real-time-big-data-flavio-tem-52-dos-votos-validos-e-lula-48-em-empate-tecnico,campo encerrado antes de 20/10; divulgada em 20/10
+Meio/Ideia,2026-10-15,2026-10-19,1500,2.5,46,48,6,https://www.dgabc.com.br/Noticia/4353916/pesquisa-meio-ideia-flavio-bolsonaro-tem-48-e-lula-soma-46-das-intencoes-de-voto,campo encerrado antes de 20/10; divulgada em 21/10
+Veritá,2026-10-15,2026-10-19,15554,1,48.2,49.7,2.1,https://midiamax.com.br/brasil/2026/flavio-bolsonaro-tem-507-intencoes-voto-lula-493-diz-verita/,campo encerrado antes de 20/10; divulgada em 21/10

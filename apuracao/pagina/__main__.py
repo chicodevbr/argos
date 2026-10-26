@@ -37,7 +37,7 @@ SITE = [
      "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.",
      "Votos"),
     ("Pesquisas", "pesquisas", "2º turno · Brasil", "As pesquisas do 2º turno",
-     "As 25 pesquisas dos últimos cinco dias, de 18 institutos, comparadas ao resultado.", "Pesquisas"),
+     "As 30 pesquisas dos cinco dias antes da votação, de 20 institutos, comparadas ao resultado.", "Pesquisas"),
     ("Onde Lula perdeu no 1º turno", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos no 1º turno",
      "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
     ("Abstenção · Brasília", "brasilia", "1º turno · Brasília", "Abstenção em Brasília",

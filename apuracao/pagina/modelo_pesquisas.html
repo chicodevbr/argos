@@ -117,7 +117,7 @@ tr.anterior td { color: var(--apagado); }
 
   <section aria-labelledby="t-tabela">
     <h2 id="t-tabela">Todas as pesquisas</h2>
-    <p class="nota">Votos totais como divulgados; válidos calculados sem brancos, nulos e indecisos. Erro = resultado de Lula menos a pesquisa, em pontos. Em cinza, rodadas anteriores do mesmo instituto (fora da média principal).</p>
+    <p class="nota">Votos totais como divulgados; válidos calculados sem brancos, nulos e indecisos. Erro = resultado de Lula menos a pesquisa, em pontos. Em cinza, rodadas anteriores do mesmo instituto (fora da média principal). * Campo encerrado antes de 20/10, divulgada dentro da janela.</p>
     <div class="tabela">
       <table>
         <thead><tr>
@@ -131,7 +131,7 @@ tr.anterior td { color: var(--apagado); }
 
   <section class="metodo">
     <h2>Método e fontes</h2>
-    <p class="nota">Pesquisas nacionais de 2º turno, Lula x Flávio Bolsonaro, com campo encerrado entre 20 e 24 de outubro de 2026 (os cinco dias antes da votação). A lista e os votos totais vêm da tabela de pesquisas da <a id="link-wiki" href="#">Wikipédia</a>, conferidos com as reportagens indicadas em cada linha, quando há; os registros estão no PesqEle, do TSE. Os votos válidos foram calculados aqui a partir dos totais (Lula ÷ Lula + Flávio); como os totais vêm arredondados, podem diferir em até meio ponto do válido que o instituto divulgou.</p>
+    <p class="nota">Pesquisas nacionais de 2º turno, Lula x Flávio Bolsonaro, com campo encerrado ou divulgadas entre 20 e 24 de outubro de 2026, os cinco dias antes da votação. A lista e os votos totais vêm da tabela de pesquisas da <a id="link-wiki" href="#">Wikipédia</a>, conferidos com as reportagens indicadas em cada linha, quando há; os registros estão no PesqEle, do TSE. Os votos válidos foram calculados aqui a partir dos totais (Lula ÷ Lula + Flávio); como os totais vêm arredondados, podem diferir em até meio ponto do válido que o instituto divulgou.</p>
     <p class="nota">A média principal usa a última pesquisa de cada instituto, para que quem publicou várias rodadas na semana não pese mais. A margem de erro é a declarada para os votos totais, aplicada aqui aos válidos como aproximação. O resultado vem dos dados oficiais do TSE coletados por este projeto.</p>
     <p class="nota" id="atualizado"></p>
   </section>
@@ -230,7 +230,7 @@ function desenhar() {
         `Válidos: Lula ${fmt(p.lula_v)}% · Flávio ${fmt(100 - p.lula_v)}%`,
         `Totais: Lula ${fmt(p.lula)}% · Flávio ${fmt(p.flavio)}% · outros ${fmt(p.outros)}%`,
         `Amostra ${inteiro(p.amostra)} · margem ${margem(p)} ponto${p.margem >= 2 ? "s" : ""}`,
-        `Erro em Lula: ${sinal(REAL - p.lula_v)} pontos`]))
+        `Erro em Lula: ${sinal(REAL - p.lula_v)} pontos`, ...(p.nota ? [p.nota] : [])]))
       .on("mouseleave", esconder);
   });
 }
@@ -245,7 +245,9 @@ for (const p of D.pesquisas) {
   const tr = document.createElement("tr"); if (!p.ultima) tr.className = "anterior";
   const td = (txt, cls) => { const c = document.createElement("td"); if (cls) c.className = cls; c.textContent = txt; tr.append(c); return c; };
   const c0 = document.createElement("td"); const a = document.createElement("a"); a.href = p.fonte; a.textContent = p.instituto;
-  a.target = "_blank"; a.rel = "noopener"; c0.append(a); tr.append(c0);
+  a.target = "_blank"; a.rel = "noopener"; c0.append(a);
+  if (p.nota) { const n = document.createElement("sup"); n.textContent = " *"; n.title = p.nota; c0.append(n); }
+  tr.append(c0);
   td(campo(p), "esq"); td(inteiro(p.amostra)); td(margem(p));
   td(fmt(p.lula) + "%"); td(fmt(p.flavio) + "%"); td(fmt(p.outros) + "%");
   td(fmt(p.lula_v) + "%", "forte" + (p.lula_v > 50 ? " a-lula" : "")); td(fmt(100 - p.lula_v) + "%", "forte" + (p.lula_v < 50 ? " a-22" : ""));
