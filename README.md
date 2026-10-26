@@ -129,6 +129,17 @@ uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador
 uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador --uma-fora
 ```
 
+Replay de uma noite já coletada (presidente): refaz a projeção minuto a minuto a partir dos
+snapshots, com o código do painel, e compara com o resultado final e com o histórico gravado.
+A base (1º turno por município) vem de `data/parquet`.
+
+```
+uv run python -m apuracao.modelo construir --dir-raw NOITE/data/raw --dir-parquet data/noite-2t/replay/parquet \
+    --historico-projecao data/noite-2t/replay/descartar.jsonl
+uv run python -m apuracao.projecao.replay --dir-parquet data/noite-2t/replay/parquet \
+    --historico NOITE/data/projecao/historico.jsonl --verdade 51.785 --taus 0.01,0.02,0.03
+```
+
 No 2º turno de presidente, o painel mostra também o **caminho da apuração**
 (`apuracao/projecao/caminho.py`): quanto falta contar por região, quanto o candidato que está atrás
 precisa do que falta, a chance de virada e o horário provável, comparados com a curva minuto a minuto
