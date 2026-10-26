@@ -10,6 +10,12 @@ cada corte (fração do eleitorado já com dados):
 - o resto: não iniciados.
 O observado de um parcial é a verdade final vezes a fração: supõe que as seções
 já apuradas são representativas do município (limitação conhecida).
+
+Ordem real (--ordem-real): com o boletim de urna do 2º turno carregado
+(carga --boletim ANO:2), cada seção entra no horário em que o boletim chegou ao TSE.
+O observado de cada município é a soma das seções já recebidas, e frac é a fração das
+suas seções recebidas: sem ordem sorteada e sem supor que as parciais representam o
+município. Na noite de 25/10/2026 o erro real foi 5-8x o das ordens sorteadas.
 """
 
 from __future__ import annotations
@@ -82,6 +88,71 @@ def rodar(base: pd.DataFrame, verdade: pd.DataFrame, capitais: set[str], params:
                     "cobre": r.pct_a_inf <= alvo <= r.pct_a_sup,
                 })
     return pd.DataFrame(linhas)
+
+
+FAIXAS_CONTADO = [0, 10, 15, 25, 45, 70, 95, 100.01]  # % contado (pct_contado), para comparar ordens
+
+
+def secoes_boletim(dir_parquet: Path, ano: int, num_a: int, num_b: int) -> pd.DataFrame:
+    """Uma linha por seção do 2º turno: chave, ts (chegada; antes das 17h conta como 17h,
+    como em noite.py), a, b (votos de A e B)."""
+    arq = Path(dir_parquet) / "hist_boletim" / f"{ano}_t2.parquet"
+    return duckdb.connect().execute(f"""
+        SELECT uf || cod_mun AS chave,
+               greatest(min(recebido), CAST(CAST(min(recebido) AS DATE) || ' 17:00:00' AS TIMESTAMP)) AS ts,
+               coalesce(sum(votos) FILTER (tipo = 'Nominal' AND numero = $a), 0) AS a,
+               coalesce(sum(votos) FILTER (tipo = 'Nominal' AND numero = $b), 0) AS b
+        FROM read_parquet('{arq}')
+        WHERE recebido IS NOT NULL
+        GROUP BY uf, cod_mun, zona, secao
+    """, {"a": num_a, "b": num_b}).df()
+
+
+def observar_real(secoes: pd.DataFrame, ts: pd.Timestamp) -> pd.DataFrame:
+    """Município a município, o que tinha chegado até `ts`: frac = seções recebidas / seções
+    do município; a2, b2 = votos dessas seções. Só municípios com alguma seção recebida."""
+    total = secoes.groupby("chave").size()
+    ja = secoes[secoes["ts"] <= ts].groupby("chave").agg(n=("a", "size"), a2=("a", "sum"), b2=("b", "sum"))
+    ja["frac"] = ja["n"] / total.reindex(ja.index)
+    return ja.reset_index()[["chave", "frac", "a2", "b2"]]
+
+
+def rodar_real(base: pd.DataFrame, secoes: pd.DataFrame, params: Parametros,
+               passo_min: int = 1, depois_99_min: int = 10) -> pd.DataFrame:
+    """Projeção a cada `passo_min` minutos da noite real, até `depois_99_min` depois de 99%
+    das seções recebidas (o resto da noite é a cauda, com projeção já exata, e só inflaria a
+    cobertura). A verdade é o total do próprio boletim (para onde o observado converge)."""
+    alvo = 100 * secoes["a"].sum() / (secoes["a"].sum() + secoes["b"].sum())
+    fim = secoes["ts"].quantile(0.99) + pd.Timedelta(minutes=depois_99_min)
+    horarios = pd.date_range(secoes["ts"].min().floor(f"{passo_min}min"),
+                             fim.ceil(f"{passo_min}min"), freq=f"{passo_min}min")
+    linhas = []
+    for ts in horarios:
+        obs = observar_real(secoes, ts)
+        if obs.empty:
+            continue
+        r = projetar(base, obs, params)
+        ingenuo = 100 * obs["a2"].sum() / max(obs["a2"].sum() + obs["b2"].sum(), 1)
+        linhas.append({
+            "ordem": "real", "ts": ts, "pct_contado": r.pct_contado,
+            "pct_secoes": 100 * (secoes["ts"] <= ts).mean(), "verdade": alvo,
+            "projecao": r.pct_a, "inf": r.pct_a_inf, "sup": r.pct_a_sup,
+            "erro": r.pct_a - alvo, "largura": r.pct_a_sup - r.pct_a_inf,
+            "erro_parcial_nacional": ingenuo - alvo,
+            "cobre": r.pct_a_inf <= alvo <= r.pct_a_sup,
+        })
+    return pd.DataFrame(linhas)
+
+
+def resumo_por_contado(res: pd.DataFrame) -> pd.DataFrame:
+    """Como `resumo`, mas por faixa de % contado: compara ordens com eixos diferentes
+    (corte sorteado x horário real)."""
+    faixa = pd.cut(res["pct_contado"], FAIXAS_CONTADO, right=False)
+    return res.groupby(faixa, observed=True).agg(
+        n=("erro", "size"), erro_medio=("erro", lambda e: e.abs().mean()),
+        erro_max=("erro", lambda e: e.abs().max()), vies=("erro", "mean"),
+        largura=("largura", "mean"), cobertura=("cobre", "mean"),
+    ).round(3)
 
 
 def resumo(res: pd.DataFrame) -> pd.DataFrame:
@@ -164,6 +235,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n-sim", type=int, default=400)
     ap.add_argument("--cargo", choices=["presidente", "governador"], default="presidente")
     ap.add_argument("--uma-fora", action="store_true", help="governador: validação deixando uma UF de fora")
+    ap.add_argument("--ordem-real", action="store_true",
+                    help="presidente: ordem real de chegada (boletim de urna do 2º turno carregado)")
     args = ap.parse_args(argv)
     pd.set_option("display.width", 160)
 
@@ -194,9 +267,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     base = base_historica(args.dir_parquet, args.ano, 1, args.num_a, args.num_b)
+    if args.ordem_real:
+        secoes = secoes_boletim(args.dir_parquet, args.ano, args.num_a, args.num_b)
+        for tau in (float(t) for t in args.taus.split(",")):
+            res = rodar_real(base, secoes, parametros_presidente(tau=tau, n_sim=args.n_sim))
+            print(f"\n=== ordem real {args.ano} | tau = {tau} | cobertura geral {res['cobre'].mean():.0%} | "
+                  f"erro absoluto médio {res['erro'].abs().mean():.2f} pp | verdade {res['verdade'].iloc[0]:.3f}")
+            print(resumo_por_contado(res).to_string())
+        return 0
     verdade = verdade_historica(args.dir_parquet, args.ano, 1, args.num_a, args.num_b)
     capitais = capitais_de(args.dir_parquet)
-    pd.set_option("display.width", 160)
     for tau in (float(t) for t in args.taus.split(",")):
         res = rodar(base, verdade, capitais, parametros_presidente(tau=tau, n_sim=args.n_sim))
         print(f"\n=== tau = {tau} | cobertura geral {res['cobre'].mean():.0%} | "

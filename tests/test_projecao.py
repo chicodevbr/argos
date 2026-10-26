@@ -101,7 +101,8 @@ def test_mesma_semente_mesmo_resultado():
 
 # --- backtest: simulação da chegada -------------------------------------------
 
-from apuracao.projecao.backtest import observar as observar_chegada, ordens, resumo, rodar
+from apuracao.projecao.backtest import observar as observar_chegada
+from apuracao.projecao.backtest import observar_real, ordens, resumo, resumo_por_contado, rodar, rodar_real
 
 
 def test_ordens_sao_permutacoes_e_respeitam_o_criterio():
@@ -133,6 +134,37 @@ def test_backtest_sintetico_cobre_e_supera_parcial_nacional():
     assert res["cobre"].mean() >= 0.9
     assert res["erro"].abs().max() < res["erro_parcial_nacional"].abs().max()
     assert set(resumo(res).index) == {0.25, 0.5}
+
+
+def _secoes_de(verdade, n_secoes=4, seed=0):
+    """Cada município dividido em `n_secoes` seções iguais, com chegada sorteada entre 17h e 19h."""
+    rng = np.random.default_rng(seed)
+    linhas = []
+    for _, m in verdade.iterrows():
+        for _s in range(n_secoes):
+            linhas.append({"chave": m["chave"], "a": m["a2"] / n_secoes, "b": m["b2"] / n_secoes,
+                           "ts": pd.Timestamp("2022-10-30 17:00") + pd.Timedelta(minutes=int(rng.integers(0, 120)))})
+    return pd.DataFrame(linhas)
+
+
+def test_observar_real_soma_o_que_chegou():
+    sec = pd.DataFrame({"chave": ["m0"] * 4 + ["m1"] * 2, "a": [1, 2, 3, 4, 10, 20], "b": [4, 3, 2, 1, 5, 5],
+                        "ts": pd.to_datetime(["2022-10-30 17:01", "2022-10-30 17:05", "2022-10-30 17:30",
+                                              "2022-10-30 18:00", "2022-10-30 17:10", "2022-10-30 17:20"])})
+    obs = observar_real(sec, pd.Timestamp("2022-10-30 17:15")).set_index("chave")
+    assert obs.loc["m0", "frac"] == 0.5 and (obs.loc["m0", "a2"], obs.loc["m0", "b2"]) == (3, 7)
+    assert obs.loc["m1", "frac"] == 0.5 and obs.loc["m1", "a2"] == 10
+    assert observar_real(sec, pd.Timestamp("2022-10-30 16:59")).empty
+
+
+def test_backtest_ordem_real_converge_e_resume_por_contado():
+    base, v = mundo(n=120, swing=0.2)
+    res = rodar_real(base, _secoes_de(v), Parametros(n_sim=200), passo_min=10)
+    assert res["pct_secoes"].is_monotonic_increasing and res["pct_secoes"].iloc[-1] > 99
+    assert abs(res["erro"].iloc[-1]) < 0.05 and res["cobre"].mean() >= 0.9
+    assert res["verdade"].iloc[0] == pytest.approx(pct_verdade(v))
+    r = resumo_por_contado(res)
+    assert r["n"].sum() == len(res) and {"erro_medio", "vies", "largura", "cobertura"} <= set(r.columns)
 
 
 # --- porte e parâmetros por cargo ---------------------------------------------

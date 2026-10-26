@@ -124,6 +124,7 @@ ao iniciar, ex.: `2026-t2-federal`).
 
 ```
 uv run python -m apuracao.projecao.backtest --ano 2022                         # presidente
+uv run python -m apuracao.projecao.backtest --ano 2022 --ordem-real            # presidente, ordem real de chegada (boletim 2022:2)
 uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador
 uv run python -m apuracao.projecao.backtest --ano 2022 --cargo governador --uma-fora
 ```
