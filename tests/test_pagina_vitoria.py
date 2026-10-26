@@ -64,3 +64,12 @@ def test_texto_da_serie_de_eleicoes():
     assert "Desde 2002, houve 5 segundos turnos" in t
     assert "4,4 milhões de votos de vantagem: mais que em 2014 e 2022, as disputas mais apertadas, e menos que nas outras 2." in t
     assert "3,20% dos votos no 2º turno de 2026, o menor percentual da série; o maior, em 2018 (9,60%)." in t
+
+
+def test_texto_dos_dois_turnos():
+    b = {"l1": 53_879_538, "f1": 56_104_503, "l26": 64_256_232, "f26": 59_826_041}
+    t = vitoria.dois_turnos(b)
+    assert t.startswith("No 1º turno, Flávio ficou na frente: Lula teve 53,9 milhões de votos e Flávio, 56,1 milhões")
+    assert "Lula ganhou 10,4 milhões de votos e Flávio, 3,7 milhões. Lula cresceu 6,7 milhões a mais, o que virou" in t
+    sem_virada = vitoria.dois_turnos({"l1": 50, "f1": 40, "l26": 60, "f26": 45})
+    assert "virou" not in sem_virada and sem_virada.startswith("No 1º turno, Lula ficou na frente")

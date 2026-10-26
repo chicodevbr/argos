@@ -128,6 +128,13 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--foco); outl
     <div class="indicadores" id="indicadores"></div>
   </section>
 
+  <section class="quadro" aria-labelledby="t-turnos-votos">
+    <h2 id="t-turnos-votos">Votos no 1º e no 2º turno</h2>
+    <p class="nota" id="txt-dois-turnos"></p>
+    <div class="legenda" id="leg-dois-turnos"></div>
+    <svg id="g-dois-turnos" role="img" aria-label="Votos de Lula e de Flávio Bolsonaro no 1º e no 2º turno de 2026"></svg>
+  </section>
+
   <section class="quadro" aria-labelledby="t-decisivo">
     <h2 id="t-decisivo">Onde a vitória foi decidida</h2>
     <p class="nota" id="txt-decisivo"></p>
@@ -368,6 +375,41 @@ function desenharFlavio() {
   }
 }
 
+// --- Votos no 1º e no 2º turno (barras agrupadas) -----------------------------------------
+function desenharDoisTurnos() {
+  document.getElementById("txt-dois-turnos").textContent = T.dois_turnos;
+  legenda("leg-dois-turnos", [["--lula", "Lula"], ["--n22", "Flávio Bolsonaro"]]);
+  const svg = d3.select("#g-dois-turnos");
+  const W = svg.node().getBoundingClientRect().width || 800, H = 300, m = { t: 28, r: 12, b: 30, l: 52 };
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const dados = [["1º turno", B.l1, B.f1], ["2º turno", B.l26, B.f26]];
+  const x = d3.scaleBand().domain(dados.map(d => d[0])).range([m.l, W - m.r]).paddingInner(0.35).paddingOuter(0.2);
+  const xi = d3.scaleBand().domain([0, 1]).range([0, x.bandwidth()]).padding(0.08);
+  const y = d3.scaleLinear().domain([0, Math.max(B.l26, B.f26, B.l1, B.f1) * 1.12]).range([H - m.b, m.t]).nice();
+  const g = svg.append("g").attr("class", "grade");
+  for (const t of y.ticks(5)) {
+    g.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(t)).attr("y2", y(t));
+    svg.append("text").attr("x", m.l - 8).attr("y", y(t) + 4).attr("text-anchor", "end").text(fmt(t / 1e6, 0) + " mi");
+  }
+  const nomes = ["Lula", "Flávio Bolsonaro"], cores = ["--lula", "--n22"];
+  for (const [turno, l, f] of dados) {
+    svg.append("text").attr("x", x(turno) + x.bandwidth() / 2).attr("y", H - 8).attr("text-anchor", "middle")
+      .attr("class", "forte").text(turno);
+    [l, f].forEach((v, i) => {
+      const bx = x(turno) + xi(i), bw = xi.bandwidth();
+      svg.append("rect").attr("x", bx).attr("y", y(v)).attr("width", bw).attr("height", y(0) - y(v))
+        .attr("rx", 3).attr("fill", cor(cores[i]));
+      svg.append("text").attr("x", bx + bw / 2).attr("y", y(v) - 8).attr("text-anchor", "middle").attr("class", "forte")
+        .text(fmt(v / 1e6, 1) + " mi");
+      const pct = 100 * v / (turno === "1º turno" ? B.v1 : B.l26 + B.f26);
+      svg.append("rect").attr("x", bx).attr("y", m.t).attr("width", bw).attr("height", y(0) - m.t).attr("fill", "transparent")
+        .on("mousemove", ev => mostrar(ev, [`${nomes[i]}, ${turno}`, `${inteiro(v)} votos`, `${fmt(pct)}% dos votos válidos`]))
+        .on("mouseleave", esconder);
+    });
+  }
+  svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", cor("--apagado"));
+}
+
 // --- Abstenção: série e quintis ---------------------------------------------------------
 function desenharSerie() {
   legenda("leg-abst", [["--serie-2t", "2º turno", true], ["--serie-1t", "1º turno", true]]);
@@ -532,7 +574,7 @@ document.getElementById("mais").addEventListener("click", () => { limite += 300;
 for (const id of ["busca", "filtro-uf", "filtro-tam"])
   document.getElementById(id).addEventListener("input", () => { limite = 300; desenharTabela(); });
 
-function graficos() { desenharDecisivo(); desenharMapa(); desenharUfsPct(); desenharSerie(); desenharQuintis(); desenharUfsTurnos(); }
+function graficos() { desenharDoisTurnos(); desenharDecisivo(); desenharMapa(); desenharUfsPct(); desenharSerie(); desenharQuintis(); desenharUfsTurnos(); }
 graficos(); desenharFlavio(); desenharTurnos(); desenharEleicoes(); desenharTabela();
 let pendente;
 window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(graficos, 150); });

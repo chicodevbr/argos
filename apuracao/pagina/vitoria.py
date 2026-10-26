@@ -131,7 +131,8 @@ def historico_presidente(con, t1: int, t2: int) -> list[dict]:
 
 def _soma(df: pd.DataFrame) -> dict:
     s = {k: int(df[k].sum()) for k in ("l26", "f26", "l22", "b22", "l1", "v1", "aptos", "abst_n", "aptos22", "abst_n22",
-                                        "aptos1", "abst_n1")}
+                                        "aptos1", "abst_n1") if k in df}
+    s["f1"] = int(df["f1"].sum()) if "f1" in df else None
     s["pct26"] = round(100 * s["l26"] / (s["l26"] + s["f26"]), 5)
     s["pct22"] = round(100 * s["l22"] / (s["l22"] + s["b22"]), 5) if s["l22"] + s["b22"] else None
     s["pct1"] = round(100 * s["l1"] / s["v1"], 5) if s["v1"] else None
@@ -146,14 +147,14 @@ def montar_dados(dir_parquet: Path, cfg) -> dict:
     con = consultas.conectar(dir_parquet)
     t1, t2 = cfg.eleicao_por_id("2026-t1-federal").codigo, cfg.eleicao_por_id("2026-t2-federal").codigo
     m26 = municipios_2026(con, t2).rename(columns={"lula": "l26", "n22": "f26", "abstencao": "abst_n"})
-    m1 = municipios_2026(con, t1)[["chave", "lula", "validos", "aptos", "abstencao"]].rename(
-        columns={"lula": "l1", "validos": "v1", "aptos": "aptos1", "abstencao": "abst_n1"})
+    m1 = municipios_2026(con, t1)[["chave", "lula", "n22", "validos", "aptos", "abstencao"]].rename(
+        columns={"lula": "l1", "n22": "f1", "validos": "v1", "aptos": "aptos1", "abstencao": "abst_n1"})
     mun = con.execute("SELECT uf || cod_tse AS chave, cod_ibge, nome, uf, regiao FROM municipios").df()
     d = (m26.merge(m1, on="chave", how="left").merge(municipios_2022(con), on="chave", how="left")
          .merge(mun, on="chave", how="left"))
     d["uf"] = d["uf"].fillna(d["chave"].str[:2])
     d["regiao"] = d["regiao"].where(d["uf"] != "zz", "Exterior")
-    d = d.fillna({k: 0 for k in ("l22", "b22", "aptos22", "abst_n22", "l1", "v1", "aptos1", "abst_n1")})
+    d = d.fillna({k: 0 for k in ("l22", "b22", "aptos22", "abst_n22", "l1", "f1", "v1", "aptos1", "abst_n1")})
 
     bra = d[d["uf"] != "zz"]
     linhas = []
@@ -355,6 +356,7 @@ def textos(D: dict) -> dict:
                f"não mostra quem passou a votar em quem.")
     return {"lede": lede, "decisivo": decisivo, "cresceu": {"2022": cresceu("2022"), "t1": cresceu("t1")},
             "flavio": flavio, "abstencao": abst, "relacao": relacao, "turnos": abst_turnos(D),
+            "dois_turnos": dois_turnos(b) if b.get("f1") else "",
             "eleicoes": eleicoes_txt(D["eleicoes"]) if D.get("eleicoes") else "",
             "quintis": [{"da": round(float(da.iloc[i]), 2), "dl": round(float(q.iloc[i]), 2)} for i in range(len(q))]}
 
@@ -383,6 +385,19 @@ def placar(dir_parquet: Path, cfg) -> dict | None:
     return {"pct_secoes": round(float(pct_secoes), 2), "lula": round(100 * l / (l + f), 2),
             "n22": round(100 * f / (l + f), 2), "vantagem": int(l - f), "abstencao": round(100 * abst / aptos, 2),
             "abstencao_t1": round(100 * t1[1] / t1[0], 2) if t1 else None}
+
+
+def dois_turnos(b: dict) -> str:
+    """Votos de Lula e de Flávio no 1º e no 2º turno de 2026 (Brasil, com o exterior)."""
+    dl, df_ = b["l26"] - b["l1"], b["f26"] - b["f1"]
+    frente1 = "Flávio" if b["f1"] > b["l1"] else "Lula"
+    txt = (f"No 1º turno, {frente1} ficou na frente: Lula teve {_mi(b['l1'])} e Flávio, {_mi(b['f1'])}. "
+           f"Do 1º para o 2º turno, Lula ganhou {_mi(dl)} e Flávio, {_mi(df_).replace(' de votos', '')}.")
+    if (b["l1"] < b["f1"]) != (b["l26"] < b["f26"]):
+        quem = "Lula" if dl > df_ else "Flávio"
+        txt += f" {quem} cresceu {_mi(abs(dl - df_)).replace(' de votos', '')} a mais, o que virou o resultado."
+    return txt + (" Os dados mostram quanto cada um cresceu, não de quais candidatos vieram os votos novos: eles "
+                  "incluem eleitores de outros candidatos e quem não tinha votado no 1º turno.")
 
 
 def eleicoes_txt(E: list[dict]) -> str:
