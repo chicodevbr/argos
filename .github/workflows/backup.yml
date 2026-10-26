@@ -1,0 +1,76 @@
+name: backup
+
+# Leva para o R2 um pacote que só existe numa máquina local (ex.: data/noite-2t, 26/10/2026).
+# As credenciais do R2 só existem como secrets aqui, então o arquivo vem por uma release em
+# rascunho (invisível ao público, mesmo com o repo público):
+#   gh release create backup-X --draft --title backup-X pacote.tar.gz pacote.tar.gz.sha256
+#   gh workflow run backup.yml -f release=backup-X -f arquivo=pacote.tar.gz
+# Confirmado o envio (o job baixa de volta do R2 e confere o SHA-256), apague a release:
+#   gh release delete backup-X --yes
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: tag da release em rascunho com o pacote
+        required: true
+      arquivo:
+        description: nome do anexo (precisa de um <arquivo>.sha256 ao lado)
+        required: true
+      prefixo:
+        description: pasta de destino no bucket
+        default: backup
+
+permissions:
+  contents: write  # ler release em rascunho exige acesso de escrita
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE: ${{ inputs.release }}
+      ARQUIVO: ${{ inputs.arquivo }}
+      CHAVE: ${{ inputs.prefixo }}/${{ inputs.arquivo }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+
+      - run: uv sync --frozen --no-dev
+
+      - name: Baixar da release e conferir
+        run: |
+          mkdir pacote
+          gh release download "$RELEASE" --dir pacote --pattern "$ARQUIVO" --pattern "$ARQUIVO.sha256"
+          cd pacote && shasum -a 256 -c "$ARQUIVO.sha256"
+
+      - name: Enviar ao R2 e conferir a volta
+        run: |
+          uv run --no-sync python - <<'EOF'
+          import hashlib, os, boto3
+          from boto3.s3.transfer import TransferConfig
+
+          s3 = boto3.client("s3", endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
+                            aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+                            aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"], region_name="auto")
+          bucket, chave, local = os.environ["R2_BUCKET"], os.environ["CHAVE"], f"pacote/{os.environ['ARQUIVO']}"
+          esperado = open(local + ".sha256").read().split()[0]
+          # R2 exige partes de mesmo tamanho no multipart; 64 MB fixo.
+          cfg = TransferConfig(multipart_threshold=64 * 2**20, multipart_chunksize=64 * 2**20)
+          s3.upload_file(local, bucket, chave, Config=cfg)
+          s3.upload_file(local + ".sha256", bucket, chave + ".sha256")
+          tam = s3.head_object(Bucket=bucket, Key=chave)["ContentLength"]
+          assert tam == os.path.getsize(local), f"tamanho no R2 {tam} != local"
+          s3.download_file(bucket, chave, "volta.bin", Config=cfg)
+          h = hashlib.sha256()
+          with open("volta.bin", "rb") as f:
+              for bloco in iter(lambda: f.read(2**20), b""):
+                  h.update(bloco)
+          assert h.hexdigest() == esperado, "SHA-256 da cópia no R2 não confere"
+          print(f"ok: {chave} ({tam:,} bytes), sha256 {esperado}")
+          EOF
