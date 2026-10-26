@@ -64,6 +64,8 @@ section { display: grid; gap: 16px; min-width: 0; }
 
 .quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; min-width: 0; }
 .duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; }
+svg .candidato { font: 600 1.35rem var(--display); fill: var(--tinta); letter-spacing: .01em; }
 .duas.iguais { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 760px) { .duas, .duas.iguais { grid-template-columns: 1fr; } }
 .duas > div { display: grid; gap: 8px; min-width: 0; }
@@ -129,9 +131,11 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--foco); outl
   </section>
 
   <section class="quadro" aria-labelledby="t-turnos-votos">
-    <h2 id="t-turnos-votos">Votos no 1º e no 2º turno</h2>
+    <div class="quadro-topo">
+      <h2 id="t-turnos-votos">Votos no 1º e no 2º turno</h2>
+      <select id="lugar-turnos" aria-label="Escolher o Brasil, um estado ou o exterior"></select>
+    </div>
     <p class="nota" id="txt-dois-turnos"></p>
-    <div class="legenda" id="leg-dois-turnos"></div>
     <svg id="g-dois-turnos" role="img" aria-label="Votos de Lula e de Flávio Bolsonaro no 1º e no 2º turno de 2026"></svg>
   </section>
 
@@ -375,39 +379,42 @@ function desenharFlavio() {
   }
 }
 
-// --- Votos no 1º e no 2º turno (barras agrupadas) -----------------------------------------
+// --- Votos no 1º e no 2º turno: barras horizontais por candidato, Brasil ou um estado -------------
+const LUGARES = [["BR", "Brasil"], ...Object.keys(D.ufs).map(u => [u, D.nomes_uf[u]])
+  .sort((a, b) => a[1].localeCompare(b[1], "pt-BR")), ["Exterior", "Exterior"]];
+const selLugar = document.getElementById("lugar-turnos");
+for (const [v, t] of LUGARES) { const o = document.createElement("option"); o.value = v; o.textContent = t; selLugar.appendChild(o); }
+selLugar.value = "BR";
+selLugar.addEventListener("input", () => desenharDoisTurnos());
+const dadosLugar = k => k === "BR" ? B : k === "Exterior" ? D.regioes.Exterior : D.ufs[k];
+const curto = v => v >= 1e6 ? fmt(v / 1e6, 1) + " mi" : v >= 1e4 ? fmt(v / 1e3, 0) + " mil" : inteiro(v);
 function desenharDoisTurnos() {
-  document.getElementById("txt-dois-turnos").textContent = T.dois_turnos;
-  legenda("leg-dois-turnos", [["--lula", "Lula"], ["--n22", "Flávio Bolsonaro"]]);
+  const k = selLugar.value, x = dadosLugar(k), nomeLugar = LUGARES.find(l => l[0] === k)[1];
+  document.getElementById("txt-dois-turnos").textContent = T.dois_turnos[k];
   const svg = d3.select("#g-dois-turnos");
-  const W = svg.node().getBoundingClientRect().width || 800, H = 300, m = { t: 28, r: 12, b: 30, l: 52 };
+  const W = svg.node().getBoundingClientRect().width || 800;
+  const rot = 78, dir = 90, barra = 30, entre = 8, cab = 34, grupo = cab + 2 * barra + entre + 34, H = 2 * grupo - 10;
   svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
-  const dados = [["1º turno", B.l1, B.f1], ["2º turno", B.l26, B.f26]];
-  const x = d3.scaleBand().domain(dados.map(d => d[0])).range([m.l, W - m.r]).paddingInner(0.35).paddingOuter(0.2);
-  const xi = d3.scaleBand().domain([0, 1]).range([0, x.bandwidth()]).padding(0.08);
-  const y = d3.scaleLinear().domain([0, Math.max(B.l26, B.f26, B.l1, B.f1) * 1.12]).range([H - m.b, m.t]).nice();
-  const g = svg.append("g").attr("class", "grade");
-  for (const t of y.ticks(5)) {
-    g.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(t)).attr("y2", y(t));
-    svg.append("text").attr("x", m.l - 8).attr("y", y(t) + 4).attr("text-anchor", "end").text(fmt(t / 1e6, 0) + " mi");
-  }
-  const nomes = ["Lula", "Flávio Bolsonaro"], cores = ["--lula", "--n22"];
-  for (const [turno, l, f] of dados) {
-    svg.append("text").attr("x", x(turno) + x.bandwidth() / 2).attr("y", H - 8).attr("text-anchor", "middle")
-      .attr("class", "forte").text(turno);
-    [l, f].forEach((v, i) => {
-      const bx = x(turno) + xi(i), bw = xi.bandwidth();
-      svg.append("rect").attr("x", bx).attr("y", y(v)).attr("width", bw).attr("height", y(0) - y(v))
-        .attr("rx", 3).attr("fill", cor(cores[i]));
-      svg.append("text").attr("x", bx + bw / 2).attr("y", y(v) - 8).attr("text-anchor", "middle").attr("class", "forte")
-        .text(fmt(v / 1e6, 1) + " mi");
-      const pct = 100 * v / (turno === "1º turno" ? B.v1 : B.l26 + B.f26);
-      svg.append("rect").attr("x", bx).attr("y", m.t).attr("width", bw).attr("height", y(0) - m.t).attr("fill", "transparent")
-        .on("mousemove", ev => mostrar(ev, [`${nomes[i]}, ${turno}`, `${inteiro(v)} votos`, `${fmt(pct)}% dos votos válidos`]))
-        .on("mouseleave", esconder);
+  const cands = [["Lula", "--lula", x.l1, x.l26], ["Flávio Bolsonaro", "--n22", x.f1, x.f26]];
+  const esc = d3.scaleLinear().domain([0, Math.max(x.l1, x.f1, x.l26, x.f26)]).range([rot, W - dir]);
+  cands.forEach(([nome, c, v1, v2], gi) => {
+    const y0 = gi * grupo;
+    svg.append("text").attr("x", 0).attr("y", y0 + 24).attr("class", "candidato").text(nome);
+    // 1º turno no tom claro da cor do candidato; o rótulo escrito ao lado identifica cada barra
+    [["1º turno", v1, 0.45, 100 * v1 / x.v1], ["2º turno", v2, 1, 100 * v2 / (x.l26 + x.f26)]].forEach(([turno, v, op, pct], i) => {
+      const y = y0 + cab + i * (barra + entre);
+      svg.append("text").attr("x", rot - 10).attr("y", y + barra / 2 + 4).attr("text-anchor", "end").text(turno);
+      svg.append("rect").attr("x", rot).attr("y", y).attr("width", Math.max(1, esc(v) - rot)).attr("height", barra)
+        .attr("rx", 3).attr("fill", cor(c)).attr("fill-opacity", op);
+      svg.append("text").attr("x", esc(v) + 8).attr("y", y + barra / 2 + 4).attr("class", "forte").text(curto(v));
+      svg.append("rect").attr("x", 0).attr("y", y).attr("width", W).attr("height", barra).attr("fill", "transparent")
+        .on("mousemove", ev => mostrar(ev, [`${nome} · ${nomeLugar} · ${turno}`, `${inteiro(v)} votos`,
+          `${fmt(pct)}% dos votos válidos`])).on("mouseleave", esconder);
     });
-  }
-  svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", cor("--apagado"));
+    const dv = v2 - v1;
+    svg.append("text").attr("x", rot).attr("y", y0 + cab + 2 * barra + entre + 20)
+      .text(`${dv >= 0 ? "+" : "−"}${curto(Math.abs(dv))} do 1º para o 2º turno`);
+  });
 }
 
 // --- Abstenção: série e quintis ---------------------------------------------------------

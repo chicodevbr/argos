@@ -183,6 +183,7 @@ def montar_dados(dir_parquet: Path, cfg) -> dict:
         "eleicoes": historico_presidente(con, t1, t2),
         "faixas": {"2022": faixas(var22), "t1": faixas(var1)},
         "metodo": METODO,
+        "nomes_uf": NOMES_UF,
     }
     dados["textos"] = textos(dados)
     return dados
@@ -356,7 +357,9 @@ def textos(D: dict) -> dict:
                f"não mostra quem passou a votar em quem.")
     return {"lede": lede, "decisivo": decisivo, "cresceu": {"2022": cresceu("2022"), "t1": cresceu("t1")},
             "flavio": flavio, "abstencao": abst, "relacao": relacao, "turnos": abst_turnos(D),
-            "dois_turnos": dois_turnos(b) if b.get("f1") else "",
+            "dois_turnos": ({"BR": dois_turnos(b), "Exterior": dois_turnos(D["regioes"]["Exterior"], "no exterior"),
+                             **{u: dois_turnos(v, no_uf(u)) for u, v in D["ufs"].items()}}
+                            if b.get("f1") else {}),
             "eleicoes": eleicoes_txt(D["eleicoes"]) if D.get("eleicoes") else "",
             "quintis": [{"da": round(float(da.iloc[i]), 2), "dl": round(float(q.iloc[i]), 2)} for i in range(len(q))]}
 
@@ -387,17 +390,25 @@ def placar(dir_parquet: Path, cfg) -> dict | None:
             "abstencao_t1": round(100 * t1[1] / t1[0], 2) if t1 else None}
 
 
-def dois_turnos(b: dict) -> str:
-    """Votos de Lula e de Flávio no 1º e no 2º turno de 2026 (Brasil, com o exterior)."""
+def dois_turnos(b: dict, lugar: str | None = None) -> str:
+    """Votos de Lula e de Flávio no 1º e no 2º turno de 2026. `lugar`: "no Rio Grande do Sul", "no exterior";
+    None = Brasil (com o exterior)."""
     dl, df_ = b["l26"] - b["l1"], b["f26"] - b["f1"]
     frente1 = "Flávio" if b["f1"] > b["l1"] else "Lula"
-    txt = (f"No 1º turno, {frente1} ficou na frente: Lula teve {_mi(b['l1'])} e Flávio, {_mi(b['f1'])}. "
-           f"Do 1º para o 2º turno, Lula ganhou {_mi(dl)} e Flávio, {_mi(df_).replace(' de votos', '')}.")
-    if (b["l1"] < b["f1"]) != (b["l26"] < b["f26"]):
-        quem = "Lula" if dl > df_ else "Flávio"
-        txt += f" {quem} cresceu {_mi(abs(dl - df_)).replace(' de votos', '')} a mais, o que virou o resultado."
-    return txt + (" Os dados mostram quanto cada um cresceu, não de quais candidatos vieram os votos novos: eles "
-                  "incluem eleitores de outros candidatos e quem não tinha votado no 1º turno.")
+    frente2 = "Flávio" if b["f26"] > b["l26"] else "Lula"
+    abre = f"{lugar[0].upper()}{lugar[1:]}, {frente1} ficou na frente no 1º turno" if lugar else \
+        f"No 1º turno, {frente1} ficou na frente"
+    mov = lambda v: f"ganhou {_mi(v)}" if v >= 0 else f"perdeu {_mi(v)}"  # noqa: E731
+    txt = (f"{abre}: Lula teve {_mi(b['l1'])} e Flávio, {_mi(b['f1'])}. "
+           f"Do 1º para o 2º turno, Lula {mov(dl)} e Flávio {mov(df_)}.")
+    if frente1 != frente2:
+        txt += f" {frente2} cresceu {_mi(abs(dl - df_)).replace(' de votos', '')} a mais, o que virou o resultado."
+    else:
+        txt += f" {frente2} manteve a frente no 2º turno."
+    if lugar is None:
+        txt += (" Os dados mostram quanto cada um cresceu, não de quais candidatos vieram os votos novos: eles "
+                "incluem eleitores de outros candidatos e quem não tinha votado no 1º turno.")
+    return txt
 
 
 def eleicoes_txt(E: list[dict]) -> str:

@@ -70,6 +70,12 @@ def test_texto_dos_dois_turnos():
     b = {"l1": 53_879_538, "f1": 56_104_503, "l26": 64_256_232, "f26": 59_826_041}
     t = vitoria.dois_turnos(b)
     assert t.startswith("No 1º turno, Flávio ficou na frente: Lula teve 53,9 milhões de votos e Flávio, 56,1 milhões")
-    assert "Lula ganhou 10,4 milhões de votos e Flávio, 3,7 milhões. Lula cresceu 6,7 milhões a mais, o que virou" in t
-    sem_virada = vitoria.dois_turnos({"l1": 50, "f1": 40, "l26": 60, "f26": 45})
-    assert "virou" not in sem_virada and sem_virada.startswith("No 1º turno, Lula ficou na frente")
+    assert "Lula ganhou 10,4 milhões de votos e Flávio ganhou 3,7 milhões de votos. Lula cresceu 6,7 milhões a mais" in t
+    uf = vitoria.dois_turnos({"l1": 500, "f1": 400, "l26": 450, "f26": 600}, vitoria.no_uf("RS"))
+    assert uf.startswith("No Rio Grande do Sul, Lula ficou na frente no 1º turno: Lula teve 500 votos")
+    assert "Lula perdeu 50 votos e Flávio ganhou 200 votos. Flávio cresceu 250 votos a mais" in uf
+    assert "Os dados mostram" not in uf
+    mantem = vitoria.dois_turnos({"l1": 50, "f1": 40, "l26": 60, "f26": 45})
+    assert "virou" not in mantem and mantem.endswith("Os dados mostram quanto cada um cresceu, não de quais candidatos "
+                                                     "vieram os votos novos: eles incluem eleitores de outros candidatos "
+                                                     "e quem não tinha votado no 1º turno.") and "Lula manteve a frente" in mantem
