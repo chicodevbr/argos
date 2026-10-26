@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import perdas, regioes, votos
+from apuracao.pagina import perdas, regioes, vitoria, votos
 from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
@@ -104,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--votos", action="store_true", help="com --recorte: página de votos por candidato")
     ap.add_argument("--inicio", action="store_true", help="com --site: página inicial com os links (raiz do site)")
     ap.add_argument("--perdas", action="store_true", help="página \"Onde Lula perdeu votos\" (municípios, 2022 e 2014)")
+    ap.add_argument("--vitoria", action="store_true", help="página \"Como Lula venceu em 2026\" (2º turno, municípios)")
     ap.add_argument("--config", type=Path, default=Path("config/eleicoes.toml"))
     ap.add_argument("--sem-barra", action="store_true", help="--site sem a barra de navegação entre as páginas")
     ap.add_argument("--site", type=Path, default=None,
@@ -123,6 +124,10 @@ def main(argv: list[str] | None = None) -> int:
         sub = f"onde-lula-perdeu/{r.subpasta}"
         saida = perdas.gerar_regioes(r, cfg, args.dir_parquet,
                                      args.saida or Path(f"data/pagina/onde-lula-perdeu-{r.id}-2026.html"))
+    elif args.vitoria:
+        sub = "como-lula-venceu"
+        saida = vitoria.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/como-lula-venceu-2026.html"),
+                              args.config)
     elif args.perdas:
         sub = "onde-lula-perdeu"
         saida = perdas.gerar(args.dir_parquet, args.malha, args.saida or Path("data/pagina/onde-lula-perdeu-2026.html"))

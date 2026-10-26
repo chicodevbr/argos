@@ -162,6 +162,7 @@ uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do R
 uv run python -m apuracao.pagina --recorte brasilia --votos --site site   # votos por candidato -> site/votos/
 uv run python -m apuracao.pagina --perdas --site site   # "Onde Lula perdeu votos" -> site/onde-lula-perdeu/
 uv run python -m apuracao.pagina --perdas --recorte brasilia --site site   # por RA do DF -> site/onde-lula-perdeu/brasilia/
+uv run python -m apuracao.pagina --vitoria   # "Como Lula venceu em 2026" (2º turno x 2022) -> data/pagina/
 ```
 
 **Netlify:** o repositório publica a pasta `site/` (ver `netlify.toml`): o HTML é gerado aqui e

@@ -1,0 +1,476 @@
+<title>__TITULO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), da mesma série das páginas de abstenção, votos e "Onde Lula perdeu
+   votos": placar, onde a vantagem cresceu (regiões e estados), mapa da variação, o 22 abaixo de 2022, abstenção e
+   a tabela de todos os municípios. Lula = vermelho, 22 = azul (pedido do usuário; par validado nos dois temas).
+   Mapa: cores fixas nos dois temas, mais escuro = mudança maior (como em "Onde Lula perdeu votos"). */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --lula: #b3302f;
+  --n22: #1c5cab;
+  --serie-1t: #8a8883;
+  --serie-2t: #15181e;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --m-queda-4: #104281; --m-queda-3: #1c5cab; --m-queda-2: #5598e7; --m-queda-1: #b7d3f6;
+  --m-alta-1: #f2a3a2; --m-alta-2: #e47e7d; --m-alta-3: #cf5554; --m-alta-4: #b3302f;
+  --contorno: #ffffff;
+  --foco: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --lula: #e66767; --n22: #3987e5; --serie-1t: #76746e; --serie-2t: #eef0f3;
+    --contorno: #111317; --foco: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --lula: #e66767; --n22: #3987e5; --serie-1t: #76746e; --serie-2t: #eef0f3;
+  --contorno: #111317; --foco: #3987e5;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.2rem; font-weight: 600; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; min-width: 0; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.indicador .sub { font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .duas { grid-template-columns: 1fr; } }
+.duas > div { display: grid; gap: 8px; min-width: 0; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); font-variant-numeric: tabular-nums; }
+svg .forte { fill: var(--tinta); font-weight: 600; }
+svg .grade line { stroke: var(--linha); }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: var(--tinta-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; justify-self: start; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+button:focus-visible, th:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+.mapa-grade { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mapa-grade { grid-template-columns: 1fr; } }
+#mapa path { stroke: var(--contorno); stroke-width: .15; }
+#mapa path:hover { stroke: var(--tinta); stroke-width: 1; }
+.legenda-mapa { display: grid; gap: 6px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda-mapa span { display: inline-flex; align-items: center; gap: 8px; }
+.legenda-mapa i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; border: 1px solid var(--linha); }
+
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+th.ordena { cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+td.uf, th.uf { text-align: left; }
+td.forte { font-weight: 600; color: var(--tinta); }
+/* sinal: a favor de Lula em vermelho, a favor do 22 em azul (cores dos candidatos) */
+.a-lula { color: var(--lula); } .a-22 { color: var(--n22); }
+.filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.filtros input { flex: 1 1 220px; min-width: 0; }
+input, select { font: 400 .95rem var(--texto); color: var(--tinta); background: var(--superficie); border: 1px solid var(--linha);
+  border-radius: var(--raio); padding: 8px 10px; }
+input:focus-visible, select:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.mais { justify-self: start; background: var(--superficie); color: var(--tinta); border: 1px solid var(--linha);
+  border-radius: var(--raio); padding: 8px 14px; font: 500 .9rem var(--texto); cursor: pointer; }
+.mais:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 280px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .segmentado button { transition: background .15s, color .15s; } }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo">Eleições 2026 · Presidente · 2º turno · Brasil, por município</span>
+    <h1>__TITULO__</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <section aria-label="Placar">
+    <div class="indicadores" id="indicadores"></div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-decisivo">
+    <h2 id="t-decisivo">Onde a vitória foi decidida</h2>
+    <p class="nota" id="txt-decisivo"></p>
+    <div class="legenda" id="leg-decisivo"></div>
+    <div class="duas">
+      <div><h3>Por região</h3><svg id="g-regioes" role="img" aria-label="Variação da vantagem de Lula por região, em votos"></svg></div>
+      <div><h3>Por estado</h3><svg id="g-ufs-margem" role="img" aria-label="Variação da vantagem de Lula por estado, em votos"></svg></div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-cresceu">
+    <h2 id="t-cresceu">Onde Lula mais cresceu</h2>
+    <div class="segmentado" role="group" aria-label="Comparar o 2º turno de 2026 com">
+      <button data-comp="2022" aria-pressed="true">2º turno de 2022</button>
+      <button data-comp="t1" aria-pressed="false">1º turno de 2026</button>
+    </div>
+    <p class="nota" id="txt-cresceu"></p>
+    <div class="mapa-grade">
+      <svg id="mapa" role="img" aria-label="Mapa da variação do percentual de Lula por município"></svg>
+      <div class="legenda-mapa" id="legenda-mapa"></div>
+    </div>
+    <h3 id="t-ufs-pct">Por estado, em pontos percentuais</h3>
+    <svg id="g-ufs-pct" role="img" aria-label="Variação do percentual de Lula por estado"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-flavio">
+    <h2 id="t-flavio">Onde o 22 teve menos votos que em 2022</h2>
+    <p class="nota" id="txt-flavio"></p>
+    <div class="tabela"><table id="tab-flavio"></table></div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-abst">
+    <h2 id="t-abst">Abstenção</h2>
+    <p class="nota" id="txt-abst"></p>
+    <div class="legenda" id="leg-abst"></div>
+    <svg id="g-serie" role="img" aria-label="Abstenção em eleições para presidente, 2006 a 2026, 1º e 2º turnos"></svg>
+    <h3>Abstenção e o resultado de Lula, município a município</h3>
+    <p class="nota" id="txt-relacao"></p>
+    <svg id="g-quintis" role="img" aria-label="Variação do percentual de Lula conforme a variação da abstenção"></svg>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <h2 id="t-tabela">Todos os municípios</h2>
+    <div class="filtros">
+      <input id="busca" type="search" placeholder="Buscar município (ex.: Campinas)" aria-label="Buscar município">
+      <select id="filtro-uf" aria-label="Filtrar por estado"><option value="">Todos os estados</option></select>
+      <select id="filtro-tam" aria-label="Filtrar por tamanho">
+        <option value="0">Todos os tamanhos</option><option value="10000">10 mil eleitores ou mais</option>
+        <option value="100000">100 mil eleitores ou mais</option></select>
+    </div>
+    <p class="nota" id="contagem"></p>
+    <div class="tabela"><table id="tabela"></table></div>
+    <button class="mais" id="mais" hidden>Mostrar mais 300</button>
+  </section>
+
+  <footer class="metodo nota" id="metodo">
+    <span class="rotulo">Método e fontes</span>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+const C = Object.fromEntries(D.colunas.map((c, i) => [c, i]));
+const T = D.textos, B = D.brasil;
+const fmt = (v, c = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : Math.round(v).toLocaleString("pt-BR");
+const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const sinalInt = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + inteiro(Math.abs(v));
+// votos compactos: "677 mil", "1,4 mi"
+const compacto = v => { const a = Math.abs(v), s = v > 0 ? "+" : v < 0 ? "−" : "";
+  return s + (a >= 1e6 ? fmt(a / 1e6, 1) + " mi" : a >= 1e3 ? fmt(a / 1e3, 0) + " mil" : inteiro(a)); };
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const pct2 = (l, f) => l + f > 0 ? 100 * l / (l + f) : null;
+const p26 = m => pct2(m[C.l26], m[C.f26]);
+const p22 = m => m[C.l22] == null ? null : pct2(m[C.l22], m[C.b22]);
+const p1 = m => m[C.v1] ? 100 * m[C.l1] / m[C.v1] : null;
+const vantagem26 = m => m[C.l26] - m[C.f26];
+const ganhoVantagem = m => m[C.l22] == null ? null : (m[C.l26] - m[C.f26]) - (m[C.l22] - m[C.b22]);
+const dif22 = m => m[C.b22] == null ? null : m[C.f26] - m[C.b22];
+const da = m => m[C.abst22] == null || m[C.abst26] == null ? null : m[C.abst26] - m[C.abst22];
+let comp = "2022";
+const varComp = m => { const a = p26(m), b = comp === "2022" ? p22(m) : p1(m); return a == null || b == null ? null : a - b; };
+const porIbge = new Map(D.municipios.map(m => [String(m[C.ibge]), m]));
+const NOMES_REG = ["Sudeste", "Nordeste", "Norte", "Exterior", "Centro-Oeste", "Sul"];
+
+// --- Dica (tooltip) ----------------------------------------------------------------
+const dica = document.getElementById("dica");
+function mostrar(ev, linhas) {
+  dica.hidden = false; dica.innerHTML = "";
+  linhas.forEach((t, i) => { const e = document.createElement(i ? "div" : "b"); e.textContent = t; dica.appendChild(e); });
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 290) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+const esconder = () => { dica.hidden = true; };
+function dicaMun(ev, m) {
+  mostrar(ev, [`${m[C.nome]} (${m[C.uf]})`,
+    `Lula 2026: ${fmt(p26(m), 1)}% · ${inteiro(m[C.l26])} votos`,
+    `Lula 2022: ${fmt(p22(m), 1)}% · 1º turno 2026: ${fmt(p1(m), 1)}%`,
+    `Flávio 2026: ${inteiro(m[C.f26])} · Bolsonaro 2022: ${inteiro(m[C.b22])}`,
+    `Variação: ${sinal(varComp(m))} pontos (${comp === "2022" ? "x 2022" : "x 1º turno"})`]);
+}
+
+// --- Cabeçalho e placar --------------------------------------------------------------
+document.getElementById("lede").textContent = T.lede;
+const s2 = D.serie.filter(r => r.turno === 2);
+const menor = s2.filter(r => r.ano < 2026 && r.pct < s2.at(-1).pct).map(r => r.ano).at(-1);
+const placar = [
+  ["Lula", fmt(B.pct26) + "%", `dos votos válidos · 2022: ${fmt(B.pct22)}%`],
+  ["Vantagem de Lula", compacto(B.l26 - B.f26).replace("+", "") + " votos", `2022: ${compacto(B.l22 - B.b22).replace("+", "")} votos`],
+  ["Abstenção", fmt(B.abst26) + "%", `2022: ${fmt(B.abst22)}%${menor ? ` · menor desde ${menor}` : ""}`],
+  ["Número 22", compacto(B.f26 - B.b22) + " votos", "Flávio 2026 em relação a Jair Bolsonaro 2022"],
+];
+for (const [r, v, s] of placar) {
+  const el = document.createElement("div"); el.className = "indicador";
+  el.innerHTML = `<span class="rotulo"></span><span class="valor"></span><span class="sub"></span>`;
+  el.children[0].textContent = r; el.children[1].textContent = v; el.children[2].textContent = s;
+  document.getElementById("indicadores").appendChild(el);
+}
+document.getElementById("txt-decisivo").textContent = T.decisivo;
+document.getElementById("txt-flavio").textContent = T.flavio;
+document.getElementById("txt-abst").textContent = T.abstencao;
+document.getElementById("txt-relacao").textContent = T.relacao;
+for (const t of D.metodo) { const p = document.createElement("p"); p.textContent = t; document.getElementById("metodo").appendChild(p); }
+function legenda(id, itens) {
+  const el = document.getElementById(id); el.innerHTML = "";
+  for (const [c, t, traco] of itens) {
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = cor(c);
+    if (traco) { s.querySelector("i").style.height = "3px"; s.querySelector("i").style.width = "16px"; }
+    s.querySelector("span").textContent = t; el.appendChild(s);
+  }
+}
+
+// --- Barras divergentes (regiões, estados) ---------------------------------------------
+function barras(id, lista, formato, titulo) {
+  const svg = d3.select("#" + id);
+  const W = svg.node().getBoundingClientRect().width || 500;
+  const rot = Math.min(110, 7.2 * Math.max(...lista.map(d => d.nome.length)));
+  const linha = 22, topo = 4, esq = rot + 64, dir = 64, H = topo + lista.length * linha + 4;
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const ext = Math.max(...lista.map(d => Math.abs(d.v))) * 1.02;
+  const x = d3.scaleLinear().domain([-ext, ext]).range([esq, W - dir]);
+  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", 0).attr("y2", H).attr("stroke", cor("--apagado"));
+  lista.forEach((d, i) => {
+    const y = topo + i * linha, g = svg.append("g");
+    g.append("text").attr("x", rot).attr("y", y + 14).attr("text-anchor", "end").text(d.nome);
+    g.append("rect").attr("x", Math.min(x(0), x(d.v))).attr("y", y + 4).attr("width", Math.max(1, Math.abs(x(d.v) - x(0))))
+      .attr("height", linha - 8).attr("rx", 2).attr("fill", cor(d.v < 0 ? "--n22" : "--lula"));
+    g.append("text").attr("x", d.v < 0 ? x(d.v) - 6 : x(d.v) + 6).attr("y", y + 14)
+      .attr("text-anchor", d.v < 0 ? "end" : "start").attr("class", "forte").text(formato(d.v));
+    // alvo de hover mais largo que a barra
+    g.append("rect").attr("x", 0).attr("y", y).attr("width", W).attr("height", linha).attr("fill", "transparent")
+      .on("mousemove", ev => mostrar(ev, titulo(d))).on("mouseleave", esconder);
+  });
+}
+function desenharDecisivo() {
+  legenda("leg-decisivo", [["--lula", "vantagem de Lula aumentou"], ["--n22", "vantagem de Lula diminuiu"]]);
+  const dica = d => [d.nome, `Vantagem de Lula em 2026: ${sinalInt(d.x.l26 - d.x.f26)} votos`,
+    `Em 2022: ${sinalInt(d.x.l22 - d.x.b22)} votos`, `Variação: ${sinalInt(d.v)} votos`];
+  const reg = Object.entries(D.regioes).map(([n, x]) => ({ nome: n, v: x.ganho_margem, x })).sort((a, b) => b.v - a.v);
+  barras("g-regioes", reg, compacto, dica);
+  const ufs = Object.entries(D.ufs).map(([n, x]) => ({ nome: n, v: x.ganho_margem, x })).sort((a, b) => b.v - a.v);
+  barras("g-ufs-margem", ufs, compacto, dica);
+}
+
+// --- Mapa e estados (variação em pontos) ------------------------------------------------
+const corFaixa = c => `--m-${c[0] === "q" ? "queda" : "alta"}-${c[1]}`;
+function desenharMapa() {
+  const svg = d3.select("#mapa");
+  const W = svg.node().getBoundingClientRect().width || 700, H = Math.round(W * 0.95);
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const proj = d3.geoConicEqualArea().parallels([-2, -22]).rotate([54, 0]).fitSize([W, H], MALHA);
+  const f = D.faixas[comp];
+  const corDe = v => v == null ? cor("--linha") : cor(corFaixa(f.cores[d3.bisect(f.cortes, v)]));
+  svg.append("g").selectAll("path").data(MALHA.features).join("path")
+    .attr("d", d3.geoPath(proj))
+    .attr("fill", g => { const m = porIbge.get(String(g.properties.codarea)); return m ? corDe(varComp(m)) : cor("--linha"); })
+    .on("mousemove", (ev, g) => { const m = porIbge.get(String(g.properties.codarea)); if (m) dicaMun(ev, m); })
+    .on("mouseleave", esconder);
+  const leg = document.getElementById("legenda-mapa"); leg.innerHTML = "";
+  const titulo = document.createElement("span");
+  titulo.textContent = comp === "2022" ? "Lula em 2026 menos Lula em 2022, em pontos dos votos válidos"
+                                       : "Lula no 2º turno menos Lula no 1º turno de 2026, em pontos dos votos válidos";
+  leg.appendChild(titulo);
+  f.rotulos.forEach((t, i) => {
+    const n = D.municipios.filter(m => { const v = varComp(m); return v != null && d3.bisect(f.cortes, v) === i; }).length;
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = cor(corFaixa(f.cores[i]));
+    s.querySelector("span").textContent = `${t} (${inteiro(n)})`; leg.appendChild(s);
+  });
+  document.getElementById("txt-cresceu").textContent = T.cresceu[comp];
+}
+function desenharUfsPct() {
+  const lista = Object.entries(D.ufs).map(([n, x]) => ({ nome: n, x, v: x.pct26 - (comp === "2022" ? x.pct22 : x.pct1) }))
+    .sort((a, b) => b.v - a.v);
+  barras("g-ufs-pct", lista, v => sinal(v, 1), d => [d.nome, `Lula 2026: ${fmt(d.x.pct26, 1)}%`,
+    comp === "2022" ? `Lula 2022: ${fmt(d.x.pct22, 1)}%` : `Lula no 1º turno: ${fmt(d.x.pct1, 1)}%`, `Variação: ${sinal(d.v)} pontos`]);
+}
+for (const b of document.querySelectorAll("[data-comp]")) b.addEventListener("click", () => {
+  comp = b.dataset.comp;
+  for (const o of document.querySelectorAll("[data-comp]")) o.setAttribute("aria-pressed", String(o === b));
+  desenharMapa(); desenharUfsPct();
+});
+
+// --- O 22 abaixo de 2022 ----------------------------------------------------------------
+function desenharFlavio() {
+  const lista = D.municipios.filter(m => dif22(m) != null && dif22(m) < 0).sort((a, b) => dif22(a) - dif22(b)).slice(0, 20);
+  const t = document.getElementById("tab-flavio"); t.innerHTML = "";
+  const cab = ["Município", "UF", "Bolsonaro 2022", "Flávio 2026", "Diferença do 22", "Diferença de Lula"];
+  const h = t.createTHead().insertRow();
+  cab.forEach((c, i) => { const th = document.createElement("th"); th.textContent = c; th.scope = "col"; if (i === 1) th.className = "uf"; h.appendChild(th); });
+  const tb = t.createTBody();
+  for (const m of lista) {
+    const tr = tb.insertRow();
+    tr.addEventListener("mousemove", ev => dicaMun(ev, m)); tr.addEventListener("mouseleave", esconder);
+    const dl = m[C.l26] - m[C.l22];
+    [[m[C.nome]], [m[C.uf], "uf"], [inteiro(m[C.b22])], [inteiro(m[C.f26]), "forte"],
+     [sinalInt(dif22(m)), "a-22"], [sinalInt(dl), dl > 0 ? "a-lula" : dl < 0 ? "a-22" : ""]]
+      .forEach(([v, c]) => { const td = tr.insertCell(); td.textContent = v; if (c) td.className = c; });
+  }
+}
+
+// --- Abstenção: série e quintis ---------------------------------------------------------
+function desenharSerie() {
+  legenda("leg-abst", [["--serie-2t", "2º turno", true], ["--serie-1t", "1º turno", true]]);
+  const svg = d3.select("#g-serie");
+  const W = svg.node().getBoundingClientRect().width || 800, H = 260, m = { t: 16, r: 90, b: 28, l: 44 };
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const anos = [...new Set(D.serie.map(r => r.ano))];
+  const x = d3.scalePoint().domain(anos).range([m.l, W - m.r]).padding(0.2);
+  const vals = D.serie.map(r => r.pct);
+  const y = d3.scaleLinear().domain([Math.floor(Math.min(...vals)) - 0.5, Math.ceil(Math.max(...vals)) + 0.5]).range([H - m.b, m.t]);
+  const g = svg.append("g").attr("class", "grade");
+  for (const t of y.ticks(5)) {
+    g.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(t)).attr("y2", y(t));
+    svg.append("text").attr("x", m.l - 8).attr("y", y(t) + 4).attr("text-anchor", "end").text(fmt(t, 0) + "%");
+  }
+  for (const a of anos) svg.append("text").attr("x", x(a)).attr("y", H - 8).attr("text-anchor", "middle").text(a);
+  for (const [turno, c] of [[1, "--serie-1t"], [2, "--serie-2t"]]) {
+    const pts = D.serie.filter(r => r.turno === turno);
+    svg.append("path").datum(pts).attr("fill", "none").attr("stroke", cor(c)).attr("stroke-width", 2)
+      .attr("d", d3.line().x(r => x(r.ano)).y(r => y(r.pct)));
+    for (const r of pts) {
+      const ultimo = r.ano === anos.at(-1);
+      svg.append("circle").attr("cx", x(r.ano)).attr("cy", y(r.pct)).attr("r", ultimo && turno === 2 ? 6 : 4)
+        .attr("fill", cor(c)).attr("stroke", cor("--superficie")).attr("stroke-width", 2);
+      svg.append("circle").attr("cx", x(r.ano)).attr("cy", y(r.pct)).attr("r", 14).attr("fill", "transparent")
+        .on("mousemove", ev => mostrar(ev, [`${r.ano}, ${r.turno}º turno`, `Abstenção: ${fmt(r.pct)}%`])).on("mouseleave", esconder);
+    }
+    const u = pts.at(-1);
+    svg.append("text").attr("x", x(u.ano) + 10).attr("y", y(u.pct) + 4).attr("class", turno === 2 ? "forte" : "")
+      .text(`${turno}º turno ${fmt(u.pct)}%`);
+  }
+}
+function desenharQuintis() {
+  const svg = d3.select("#g-quintis");
+  const W = svg.node().getBoundingClientRect().width || 800, H = 220, m = { t: 20, r: 12, b: 46, l: 44 };
+  svg.attr("viewBox", `0 0 ${W} ${H}`).selectAll("*").remove();
+  const q = T.quintis;
+  const nomes = ["Maior queda", "2º quinto", "3º quinto", "4º quinto", "Menor queda ou alta"];
+  const x = d3.scaleBand().domain(q.map((_, i) => i)).range([m.l, W - m.r]).padding(0.35);
+  const ext = Math.max(...q.map(d => Math.abs(d.dl))) * 1.25 || 1;
+  const y = d3.scaleLinear().domain([-ext, ext]).range([H - m.b, m.t]);
+  const g = svg.append("g").attr("class", "grade");
+  for (const t of y.ticks(4)) {
+    g.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(t)).attr("y2", y(t));
+    svg.append("text").attr("x", m.l - 8).attr("y", y(t) + 4).attr("text-anchor", "end").text(sinal(t, 0));
+  }
+  svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", cor("--apagado"));
+  q.forEach((d, i) => {
+    svg.append("rect").attr("x", x(i)).attr("width", x.bandwidth()).attr("y", Math.min(y(0), y(d.dl)))
+      .attr("height", Math.max(1, Math.abs(y(d.dl) - y(0)))).attr("rx", 2).attr("fill", cor(d.dl < 0 ? "--n22" : "--lula"));
+    svg.append("text").attr("x", x(i) + x.bandwidth() / 2).attr("y", d.dl < 0 ? y(d.dl) + 14 : y(d.dl) - 6)
+      .attr("text-anchor", "middle").attr("class", "forte").text(sinal(d.dl));
+    svg.append("text").attr("x", x(i) + x.bandwidth() / 2).attr("y", H - 26).attr("text-anchor", "middle").text(nomes[i]);
+    svg.append("text").attr("x", x(i) + x.bandwidth() / 2).attr("y", H - 10).attr("text-anchor", "middle")
+      .text(`abstenção ${sinal(d.da)}`);
+    svg.append("rect").attr("x", x(i)).attr("width", x.bandwidth()).attr("y", m.t).attr("height", H - m.t - m.b).attr("fill", "transparent")
+      .on("mousemove", ev => mostrar(ev, [nomes[i] + " da abstenção", `Abstenção (mediana): ${sinal(d.da)} pontos`,
+        `Lula x 2022: ${sinal(d.dl)} pontos (média ponderada)`])).on("mouseleave", esconder);
+  });
+  svg.append("text").attr("x", m.l).attr("y", 10).text("Lula, 2026 menos 2022 (pontos)");
+}
+
+// --- Tabela de todos os municípios -------------------------------------------------------
+const ufsLista = [...new Set(D.municipios.map(m => m[C.uf]))].sort();
+for (const u of ufsLista) { const o = document.createElement("option"); o.value = u; o.textContent = u; document.getElementById("filtro-uf").appendChild(o); }
+let limite = 300, ordem = { id: "gv", desc: true };
+const normal = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const COLS = [
+  { id: "nome", rot: "Município", v: m => m[C.nome], texto: true },
+  { id: "uf", rot: "UF", v: m => m[C.uf], texto: true, cls: "uf" },
+  { id: "el", rot: "Eleitores", v: m => m[C.eleitores], f: inteiro },
+  { id: "p22", rot: "Lula 2022", v: p22, f: v => fmt(v, 1) + "%" },
+  { id: "p26", rot: "Lula 2026", v: p26, f: v => fmt(v, 1) + "%", forte: true },
+  { id: "dp", rot: "Variação (pontos)", v: m => p22(m) == null ? null : p26(m) - p22(m), f: v => sinal(v), sinal: true },
+  { id: "va", rot: "Vantagem de Lula", v: vantagem26, f: sinalInt, sinal: true },
+  { id: "gv", rot: "Variação da vantagem", v: ganhoVantagem, f: sinalInt, sinal: true },
+  { id: "d22", rot: "22: 2026 − 2022", v: dif22, f: sinalInt },
+  { id: "ab", rot: "Abstenção 2026", v: m => m[C.abst26], f: v => fmt(v, 1) + "%" },
+  { id: "dab", rot: "Variação da abstenção", v: da, f: v => sinal(v) },
+];
+function desenharTabela() {
+  const q = normal(document.getElementById("busca").value.trim());
+  const uf = document.getElementById("filtro-uf").value, tam = +document.getElementById("filtro-tam").value;
+  const lista = D.municipios.filter(m => (!q || normal(m[C.nome]).includes(q)) && (!uf || m[C.uf] === uf) && m[C.eleitores] >= tam);
+  const col = COLS.find(c => c.id === ordem.id);
+  lista.sort((a, b) => { const va = col.v(a), vb = col.v(b);
+    if (va == null) return 1; if (vb == null) return -1;
+    const r = col.texto ? String(va).localeCompare(String(vb), "pt-BR") : va - vb; return ordem.desc ? -r : r; });
+  document.getElementById("contagem").textContent =
+    `${inteiro(lista.length)} municípios${lista.length > limite ? `; mostrando os ${inteiro(limite)} primeiros` : ""}.`;
+  const t = document.getElementById("tabela"); t.innerHTML = "";
+  const h = t.createTHead().insertRow();
+  for (const c of COLS) {
+    const th = document.createElement("th"); th.textContent = c.rot; th.tabIndex = 0; th.scope = "col";
+    th.className = "ordena" + (c.cls ? " " + c.cls : "");
+    if (ordem.id === c.id) th.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto }; desenharTabela(); };
+    th.addEventListener("click", ordenar);
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    h.appendChild(th);
+  }
+  const tb = t.createTBody();
+  for (const m of lista.slice(0, limite)) {
+    const tr = tb.insertRow();
+    tr.addEventListener("mousemove", ev => dicaMun(ev, m)); tr.addEventListener("mouseleave", esconder);
+    for (const c of COLS) {
+      const td = tr.insertCell(), v = c.v(m);
+      td.textContent = c.f ? c.f(v) : v;
+      if (c.cls) td.className = c.cls;
+      if (c.forte) td.className = "forte";
+      if (c.sinal && v != null) td.className = v > 0 ? "a-lula" : v < 0 ? "a-22" : "";
+    }
+  }
+  document.getElementById("mais").hidden = lista.length <= limite;
+}
+document.getElementById("mais").addEventListener("click", () => { limite += 300; desenharTabela(); });
+for (const id of ["busca", "filtro-uf", "filtro-tam"])
+  document.getElementById(id).addEventListener("input", () => { limite = 300; desenharTabela(); });
+
+function graficos() { desenharDecisivo(); desenharMapa(); desenharUfsPct(); desenharSerie(); desenharQuintis(); }
+graficos(); desenharFlavio(); desenharTabela();
+let pendente;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(graficos, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", graficos);
+new MutationObserver(graficos).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
