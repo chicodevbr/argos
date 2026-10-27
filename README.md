@@ -168,6 +168,8 @@ uv run python -m apuracao.pagina --inicio --site site              # página ini
 uv run python -m apuracao.pagina --recorte brasilia --turnos --site site   # 1º x 2º turno, Brasília -> site/brasilia/
 uv run python -m apuracao.pagina --recorte rio --turnos --site site        # 1º x 2º turno, cidade do Rio -> site/rio-de-janeiro/
 uv run python -m apuracao.pagina --recorte brasilia --urnas --site site   # quem venceu em cada urna -> site/brasilia/urnas/
+uv run python -m apuracao.pagina --recorte brasilia --ras --site site     # quem venceu em cada RA x zona -> site/brasilia/ras/
+uv run python -m apuracao.pagina --recorte brasilia --zonas --site site   # votos por zona eleitoral -> site/brasilia/zonas/
 uv run python -m apuracao.pagina --recorte brasilia --turnos --ano 2022    # o mesmo com 2022 (conferência) -> data/pagina/
 uv run python -m apuracao.pagina --recorte brasilia    # abstenção do 1º turno (saiu do site em 26/10) -> data/pagina/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
@@ -189,6 +191,12 @@ somado por local de votação e desenhado no mapa pelas coordenadas do local; ma
 **Página inicial** (`--inicio`): o resultado do 2º turno e um cartão por página, com uma frase tirada da própria
 página já gerada em `site/` (`FATOS` em `apuracao/pagina/__main__.py`) e a barrinha de onde cada um venceu (RAs,
 urnas). Por isso, gere de novo a inicial depois de atualizar qualquer página.
+
+**Quem venceu em cada RA** (`apuracao/pagina/ras.py`) e **votos por zona eleitoral** (`apuracao/pagina/zonas.py`):
+o 2º turno por região administrativa (RA do local de votação, pelas coordenadas) e por zona eleitoral, que junta RAs.
+O TSE não publica o contorno das zonas; o mapa usa a zona do local de votação mais próximo (Voronoi). A página das
+RAs confere a atribuição: move para a RA vizinha cada local a menos de 100 m do limite ou cujo bairro no TSE cita
+outra RA e mostra se algum vencedor mudaria.
 
 **Pesquisas do 2º turno** (`apuracao/pagina/pesquisas.py`): as pesquisas nacionais com campo encerrado de 20 a
 24/10/2026 ficam em `apuracao/pagina/pesquisas_2t_2026.csv` (votos totais como divulgados, fonte por linha); o

@@ -1,0 +1,392 @@
+<title>__TITULO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), irmão das páginas por zona e por urna. Primeiro, dois mapas lado a
+   lado com o mesmo critério de cor (quem venceu: 13 vermelho, 22 azul): por região administrativa e por zona
+   eleitoral, para mostrar que a contagem por zona esconde vitórias. Depois, a margem de cada RA em barras
+   divergentes a partir do zero, a conferência da atribuição dos locais e a tabela. */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --dado-atual: #2a78d6;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --c13: #b3302f; --c22: #2a78d6;
+  --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #d6d4cf; --div-4: #f2a3a2; --div-5: #b3302f;
+  --terra: #eceef1; --contorno: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c13: #e66767; --c22: #3987e5;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --dado-atual: #3987e5;
+    --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #5c5b56; --div-4: #8f3433; --div-5: #e66767;
+    --terra: #20242a; --contorno: #111317;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c13: #e66767; --c22: #3987e5;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --dado-atual: #3987e5;
+  --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #5c5b56; --div-4: #8f3433; --div-5: #e66767;
+  --terra: #20242a; --contorno: #111317;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .nome { display: inline-flex; align-items: center; gap: 6px; }
+.indicador .nome i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.variacao { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+.botao { background: var(--superficie); color: var(--tinta-2); border: 1px solid var(--linha); border-radius: var(--raio);
+  padding: 6px 12px; font: 500 .875rem var(--texto); cursor: pointer; }
+button:focus-visible, th:focus-visible, input:focus-visible, tr:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+
+.mapa-caixa { position: relative; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; background: var(--superficie); }
+#mapa { touch-action: none; cursor: grab; }
+#mapa:active { cursor: grabbing; }
+#mapa .ra { fill: var(--terra); stroke: var(--apagado); stroke-width: .6; vector-effect: non-scaling-stroke; }
+#mapa .ponto { stroke: var(--contorno); vector-effect: non-scaling-stroke; stroke-width: .8; cursor: pointer; }
+#mapa .ponto.ativo { stroke: var(--tinta); stroke-width: 2.5; }
+.zoom { position: absolute; top: 10px; right: 10px; display: grid; gap: 4px; }
+.zoom button { width: 32px; height: 32px; padding: 0; font-size: 1.1rem; line-height: 1; }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.listas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+@media (max-width: 760px) { .listas { grid-template-columns: 1fr; } }
+.lista { display: grid; gap: 2px; font-size: .9rem; }
+.lista b { font-weight: 600; margin-bottom: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.lista b i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.lista button { all: unset; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+.lista button:hover { background: var(--fundo); }
+.lista button:focus-visible { outline: 2px solid var(--dado-atual); }
+.lista .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lista .s { color: var(--apagado); font-size: .8rem; display: block; }
+
+.busca { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.busca input { flex: 1 1 260px; padding: 8px 12px; border: 1px solid var(--linha); border-radius: var(--raio);
+  background: var(--fundo); color: var(--tinta); font: 400 .95rem var(--texto); }
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 14rem; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--fundo); }
+td .marca { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: baseline; }
+.pequena { color: var(--apagado); font-size: .78rem; display: block; white-space: normal; line-height: 1.35; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 300px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+#mapa { touch-action: auto; cursor: default; }
+#mapa .celula { stroke-width: .5; cursor: pointer; }
+#mapa .borda-zona { stroke: var(--contorno); stroke-width: 2.2; fill: none; stroke-linecap: round; pointer-events: none; }
+#mapa .limite-ra { fill: none; stroke: var(--tinta); stroke-opacity: .45; stroke-width: .7; stroke-dasharray: 2 2; pointer-events: none; }
+#mapa .rotulo-zona { font: 700 13px var(--texto); fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,.45); stroke-width: 3px; pointer-events: none; }
+#mapa .contorno-df { fill: none; stroke: var(--apagado); stroke-width: 1; pointer-events: none; }
+.legenda i.quadrado { border-radius: 2px; }
+.legenda i.tracejado { width: 18px; height: 0; border-radius: 0; border-top: 1.5px dashed var(--tinta-2); opacity: .7; }
+.zonas { display: grid; gap: 18px; }
+.zona { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 16px; align-items: start; }
+@media (max-width: 560px) { .zona { grid-template-columns: 1fr; } }
+.zona .nome { display: grid; gap: 2px; }
+.zona .nome b { font: 600 1.3rem/1 var(--display); }
+.zona .nome span { font-size: .82rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.zona .barra { display: flex; gap: 2px; height: 22px; border-radius: 3px; overflow: hidden; }
+.zona .barra span { display: block; height: 100%; min-width: 2px; }
+.zona .barra span:first-child { border-radius: 3px 0 0 3px; } .zona .barra span:last-child { border-radius: 0 3px 3px 0; }
+.zona .partes { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .84rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; margin-top: 6px; }
+.zona .partes span { display: inline-flex; align-items: center; gap: 6px; }
+.zona .partes i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.zona .partes b { color: var(--tinta); font-weight: 600; }
+td .marca.q { border-radius: 2px; }
+#tabela th:first-child, #tabela td:first-child { min-width: 6rem; }
+.mapas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 760px) { .mapas { grid-template-columns: 1fr; } }
+.mapas figure { margin: 0; display: grid; gap: 8px; }
+.mapas figcaption { display: grid; gap: 2px; }
+.mapas figcaption b { font: 600 1.25rem/1.1 var(--display); }
+.mapas figcaption span { font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.mapa-ra path.ra { stroke: var(--contorno); stroke-width: .8; cursor: pointer; }
+.mapa-ra path.ra:hover { stroke: var(--tinta); stroke-width: 1.6; }
+svg .rotulo-ra { font: 600 10px var(--texto); fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,.45); stroke-width: 2.5px; pointer-events: none; }
+#margens text.valor { font-size: 11px; font-variant-numeric: tabular-nums; }
+.firmeza { display: grid; gap: 10px; }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo" id="sobretitulo"></span>
+    <h1>__TITULO__</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="indicadores" id="indicadores"></div>
+
+  <section class="quadro" aria-labelledby="t-mapas">
+    <h2 id="t-mapas">Por região administrativa e por zona eleitoral</h2>
+    <p class="nota">Os mesmos votos, contados de dois jeitos. As zonas juntam RAs: quem vence a zona leva a cor dela inteira. O contorno das zonas é aproximado (o TSE não o publica): cada área fica com a zona do local de votação mais próximo.</p>
+    <div class="legenda" id="legenda"></div>
+    <div class="mapas">
+      <figure><figcaption><b>Por região administrativa</b><span id="cap-ra"></span></figcaption>
+        <div class="mapa-caixa"><svg id="mapa-ra" class="mapa-ra" role="img" aria-label="Mapa das RAs coloridas pelo vencedor"></svg></div></figure>
+      <figure><figcaption><b>Por zona eleitoral</b><span id="cap-zona"></span></figcaption>
+        <div class="mapa-caixa"><svg id="mapa" role="img" aria-label="Mapa aproximado das zonas eleitorais coloridas pelo vencedor"></svg></div></figure>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-margens">
+    <h2 id="t-margens">A margem em cada RA</h2>
+    <p class="nota">Margem nos votos válidos, em pontos, e a diferença em votos. Passe o mouse para ver os números.</p>
+    <svg id="margens" role="img" aria-label="Margem de cada região administrativa"></svg>
+  </section>
+
+  <section class="quadro firmeza" aria-labelledby="t-firmeza">
+    <h2 id="t-firmeza">Quão firme é cada vitória</h2>
+    <p class="nota" id="firmeza"></p>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <h2 id="t-tabela">Todas as regiões administrativas</h2>
+    <p class="nota">Clique no cabeçalho para ordenar.</p>
+    <div class="tabela"><table id="tabela"></table></div>
+  </section>
+
+  <footer class="metodo nota" id="metodo">
+    <span class="rotulo">Método e fontes</span>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+const M = D.meta, T = D.total, NA = D.nomes.a, NB = D.nomes.b;
+const curto = n => n.split(" ")[0];
+const fmt = (v, c = 1) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : Math.round(v).toLocaleString("pt-BR");
+// margens perto de zero com duas casas: "+0,02", não "+0,0"
+const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), v && Math.abs(v) < 0.1 && c < 2 ? 2 : c);
+const sinalInt = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + inteiro(Math.abs(v));
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const quem = m => m > 0 ? curto(NA) : m < 0 ? curto(NB) : "empate";
+const corVenc = m => m > 0 ? "--c13" : m < 0 ? "--c22" : "--div-3";
+const pa = x => x.a + x.b ? 100 * x.a / (x.a + x.b) : null;
+const porRA = new Map(D.ras.map(r => [r.chave, r]));
+const porZona = new Map(D.zonas.map(z => [z.z, z]));
+const votosTxt = v => `${inteiro(Math.abs(v))} ${Math.abs(v) === 1 ? "voto" : "votos"}`;
+
+document.getElementById("sobretitulo").textContent = `Eleições 2026 · Presidente · 2º turno (25 de outubro) · ${M.rotulo}`;
+document.getElementById("lede").textContent = D.textos.lede;
+document.getElementById("firmeza").textContent = D.textos.firmeza;
+document.getElementById("cap-ra").textContent = `${curto(NB)} venceu em ${T.ra_b}, ${curto(NA)} em ${T.ra_a} das ${T.ras} RAs`;
+document.getElementById("cap-zona").textContent = `${curto(NB)} venceu em ${T.zb}, ${curto(NA)} em ${T.za} das ${T.zonas} zonas`;
+
+// --- Indicadores -------------------------------------------------------------------
+(function indicadores() {
+  const alvo = document.getElementById("indicadores");
+  const apertadas = D.ras.filter(r => Math.abs(r.dif) < M.apertada).length;
+  const itens = [
+    { nome: `RAs de ${curto(NB)}`, cor: "--c22", valor: inteiro(T.ra_b), v: `das ${T.ras} regiões administrativas` },
+    { nome: `RAs de ${curto(NA)}`, cor: "--c13", valor: inteiro(T.ra_a), v: `com ${inteiro(T.ap_ra_a)} eleitores, ${fmt(100 * T.ap_ra_a / T.ap)}% do DF` },
+    { nome: "Por zona eleitoral", valor: `${T.zb} × ${T.za}`, v: `zonas de ${curto(NB)} × zonas de ${curto(NA)}, das ${T.zonas}` },
+    { nome: "RAs apertadas", valor: inteiro(apertadas), v: `decididas por menos de ${inteiro(M.apertada)} votos` },
+  ];
+  for (const it of itens) {
+    const el = document.createElement("div"); el.className = "indicador";
+    el.innerHTML = `<span class="rotulo nome"></span><span class="valor"></span><span class="variacao"></span>`;
+    const n = el.querySelector(".nome");
+    if (it.cor) { const i = document.createElement("i"); i.style.background = `var(${it.cor})`; n.appendChild(i); }
+    n.appendChild(document.createTextNode(it.nome));
+    el.querySelector(".valor").textContent = it.valor;
+    el.querySelector(".variacao").textContent = it.v;
+    alvo.appendChild(el);
+  }
+})();
+
+// --- Dica ------------------------------------------------------------------------
+const dica = document.getElementById("dica");
+function dicaLinhas(ev, linhas) {
+  dica.hidden = false; dica.innerHTML = "";
+  linhas.forEach((t, i) => { const e = document.createElement(i ? "span" : "b"); e.textContent = t; dica.appendChild(e); if (i < linhas.length - 1) dica.appendChild(document.createElement("br")); });
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 310) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+const linhasRA = r => [r.ra, `${curto(NA)} ${inteiro(r.a)} (${fmt(pa(r))}%) × ${curto(NB)} ${inteiro(r.b)} (${fmt(100 - pa(r))}%)`,
+  `${quem(r.m)} ${sinal(r.m)} pontos · ${votosTxt(r.dif)} de diferença`,
+  `${inteiro(r.se)} urnas em ${r.locais} ${r.locais === 1 ? "local" : "locais"} · ${inteiro(r.ap)} eleitores`,
+  `Zona${r.zonas.length > 1 ? "s" : ""}: ${r.zonas.map(z => `${porZona.get(z.z).nome}${r.zonas.length > 1 ? ` (${fmt(z.pct, 0)}%)` : ""}`).join(", ")}`];
+const linhasZona = z => [`${z.nome} zona eleitoral`, `${curto(NA)} ${inteiro(z.a)} × ${curto(NB)} ${inteiro(z.b)} · ${quem(z.m)} ${sinal(z.m)}`,
+  ...z.ras.map(p => `${p.ra} (${fmt(p.pct, 0)}% da zona): ${quem(p.m)} ${sinal(p.m)}`)];
+const esconderDica = () => { dica.hidden = true; };
+
+// --- Mapas -----------------------------------------------------------------------
+function legenda() {
+  const leg = document.getElementById("legenda");
+  leg.innerHTML = `<span><i class="quadrado" style="background:var(--c13)"></i>${NA} venceu</span>` +
+                  `<span><i class="quadrado" style="background:var(--c22)"></i>${NB} venceu</span>` +
+                  `<span><i class="tracejado"></i>limite de RA (no mapa das zonas)</span>`;
+}
+function dimensoes(svg) {
+  const largura = svg.node().getBoundingClientRect().width || 500;
+  return [largura, Math.round(largura * 0.66)];
+}
+function desenharRA() {
+  const svg = d3.select("#mapa-ra"), [largura, altura] = dimensoes(svg);
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const proj = d3.geoMercator().fitExtent([[6, 6], [largura - 6, altura - 6]], MALHA), caminho = d3.geoPath(proj);
+  svg.append("g").selectAll("path").data(MALHA.features).join("path").attr("class", "ra").attr("d", caminho)
+    .attr("fill", f => { const r = porRA.get(f.properties.chave); return r ? cor(corVenc(r.m)) : cor("--linha"); })
+    .on("mousemove", (ev, f) => { const r = porRA.get(f.properties.chave); if (r) dicaLinhas(ev, linhasRA(r)); })
+    .on("mouseleave", esconderDica)
+    .on("click", (ev, f) => { const r = porRA.get(f.properties.chave); if (r) dicaLinhas(ev, linhasRA(r)); });
+  // nome das RAs de quem perdeu no DF (as poucas, que somem no mapa por zona) onde couber
+  const minoria = T.ra_a < T.ra_b ? (r => r.m > 0) : (r => r.m < 0);
+  svg.append("g").selectAll("text").data(MALHA.features.filter(f => { const r = porRA.get(f.properties.chave);
+      const [[x0, y0], [x1, y1]] = caminho.bounds(f); return r && minoria(r) && x1 - x0 > 22 && y1 - y0 > 10; })).join("text")
+    .attr("class", "rotulo-ra").attr("text-anchor", "middle").attr("transform", f => `translate(${caminho.centroid(f)})`).attr("dy", "0.35em")
+    .text(f => porRA.get(f.properties.chave).ra);
+}
+function desenharZonas() {
+  const svg = d3.select("#mapa"), [largura, altura] = dimensoes(svg);
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  const proj = d3.geoMercator().fitExtent([[6, 6], [largura - 6, altura - 6]], MALHA), caminho = d3.geoPath(proj);
+  svg.append("clipPath").attr("id", "df").selectAll("path").data(MALHA.features).join("path").attr("d", caminho);
+  const xy = D.pontos.map(p => proj([p[0], p[1]]));
+  const vor = d3.Delaunay.from(xy).voronoi([0, 0, largura, altura]);
+  const g = svg.append("g").attr("clip-path", "url(#df)");
+  const corZ = p => cor(corVenc(porZona.get(p[2]).m));
+  g.selectAll("path").data(D.pontos).join("path").attr("class", "celula").attr("d", (p, i) => vor.renderCell(i))
+    .attr("fill", corZ).attr("stroke", corZ)
+    .on("mousemove", (ev, p) => dicaLinhas(ev, linhasZona(porZona.get(p[2])))).on("mouseleave", esconderDica)
+    .on("click", (ev, p) => dicaLinhas(ev, linhasZona(porZona.get(p[2]))));
+  const segs = [], perto = (u, v) => Math.abs(u[0] - v[0]) < 1e-6 && Math.abs(u[1] - v[1]) < 1e-6;
+  for (let i = 0; i < D.pontos.length; i++) {
+    const ci = vor.cellPolygon(i); if (!ci) continue;
+    for (const j of vor.neighbors(i)) {
+      if (j <= i || D.pontos[j][2] === D.pontos[i][2]) continue;
+      const cj = vor.cellPolygon(j); if (!cj) continue;
+      const comuns = ci.filter(u => cj.some(v => perto(u, v)));
+      if (comuns.length >= 2) segs.push(`M${comuns[0]}L${comuns[1]}`);
+    }
+  }
+  g.append("path").attr("class", "borda-zona").attr("d", segs.join(""));
+  svg.append("g").selectAll("path").data(MALHA.features).join("path").attr("class", "limite-ra").attr("d", caminho);
+}
+
+// --- Margens ---------------------------------------------------------------------
+function desenharMargens() {
+  const svg = d3.select("#margens");
+  const largura = svg.node().getBoundingClientRect().width || 900, estreito = largura < 560;
+  const esq = estreito ? Math.min(150, largura * 0.4) : 190, dir = estreito ? 46 : 150, topo = 22, passo = 22;
+  const lista = D.ras;   // já em ordem de margem, da maior de Lula à maior do 22
+  const x = d3.scaleLinear().domain([Math.min(0, d3.min(lista, r => r.m)), Math.max(0, d3.max(lista, r => r.m))]).nice()
+    .range([esq, largura - dir]);
+  const altura = topo + lista.length * passo + 6;
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  for (const t of x.ticks(estreito ? 4 : 8)) {
+    svg.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y1", topo - 4).attr("y2", altura - 4).attr("stroke", cor("--linha"));
+    svg.append("text").attr("x", x(t)).attr("y", topo - 9).attr("text-anchor", "middle").text(sinal(t, 0));
+  }
+  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", topo - 4).attr("y2", altura - 4).attr("stroke", cor("--tinta-2"));
+  lista.forEach((r, i) => {
+    const y = topo + i * passo, h = passo - 8;
+    const g = svg.append("g").on("mousemove", ev => dicaLinhas(ev, linhasRA(r))).on("mouseleave", esconderDica);
+    g.append("rect").attr("x", 0).attr("y", y).attr("width", largura).attr("height", passo).attr("fill", "transparent");
+    g.append("text").attr("x", esq - 10).attr("y", y + h / 2 + 8).attr("text-anchor", "end").style("font-size", estreito ? "11px" : null).text(r.ra);
+    const x0 = Math.min(x(0), x(r.m)), w = Math.max(2, Math.abs(x(r.m) - x(0)));
+    g.append("rect").attr("x", x0).attr("y", y + 4).attr("width", w).attr("height", h).attr("rx", 2).attr("fill", cor(corVenc(r.m)));
+    g.append("text").attr("class", "valor").attr("x", largura - dir + 8).attr("y", y + h / 2 + 8)
+      .attr("x", estreito ? largura - dir + 4 : largura - dir + 8).text(estreito ? sinal(r.m) : `${sinal(r.m)} · ${votosTxt(r.dif)}`);
+  });
+}
+
+// --- Tabela ----------------------------------------------------------------------
+let ordem = { id: "m", desc: true };
+const COLS = [
+  { id: "ra", rot: "Região administrativa", v: r => r.ra, texto: true },
+  { id: "venc", rot: "Venceu", v: r => r.m, f: v => quem(v) },
+  { id: "ap", rot: "Eleitores", v: r => r.ap, f: inteiro },
+  { id: "se", rot: "Urnas", v: r => r.se, f: inteiro },
+  { id: "locais", rot: "Locais", v: r => r.locais, f: inteiro },
+  { id: "zonas", rot: "Zonas", v: r => r.zonas.map(z => z.z).join(","), f: (v, r) => r.zonas.map(z => porZona.get(z.z).nome).join(", "), texto: true },
+  { id: "a", rot: curto(NA), v: r => r.a, f: inteiro },
+  { id: "b", rot: curto(NB), v: r => r.b, f: inteiro },
+  { id: "pa", rot: `% ${curto(NA)}`, v: r => pa(r), f: v => fmt(v) + "%" },
+  { id: "m", rot: "Margem", v: r => r.m, f: v => sinal(v) },
+  { id: "dif", rot: "Diferença", v: r => r.dif, f: sinalInt },
+];
+function desenharTabela() {
+  const t = document.getElementById("tabela"); t.innerHTML = "";
+  const thead = t.createTHead().insertRow();
+  for (const c of COLS) {
+    const th = document.createElement("th"); th.textContent = c.rot; th.tabIndex = 0; th.scope = "col";
+    if (ordem.id === c.id) th.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto }; desenharTabela(); };
+    th.addEventListener("click", ordenar);
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    thead.appendChild(th);
+  }
+  const col = COLS.find(c => c.id === ordem.id);
+  const linhas = [...D.ras].sort((x, y) => { const vx = col.v(x), vy = col.v(y);
+    const r = col.texto ? String(vx).localeCompare(String(vy), "pt-BR", { numeric: true }) : vx - vy; return ordem.desc ? -r : r; });
+  const tbody = t.createTBody();
+  for (const r of linhas) {
+    const tr = tbody.insertRow(); tr.style.cursor = "default";
+    for (const c of COLS) {
+      const td = tr.insertCell(); td.textContent = c.f ? c.f(c.v(r), r) : c.v(r);
+      if (c.id === "venc") { const m = document.createElement("span"); m.className = "marca q"; m.style.background = `var(${corVenc(r.m)})`; td.prepend(m); }
+    }
+  }
+}
+
+// --- Método ----------------------------------------------------------------------
+(function metodo() {
+  const pe = document.getElementById("metodo");
+  for (const t of M.metodo) { const p = document.createElement("p"); p.textContent = t; pe.appendChild(p); }
+})();
+
+function redesenhar() { legenda(); desenharRA(); desenharZonas(); desenharMargens(); }
+desenharTabela(); redesenhar();
+let pendente;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(redesenhar, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redesenhar);
+new MutationObserver(redesenhar).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
