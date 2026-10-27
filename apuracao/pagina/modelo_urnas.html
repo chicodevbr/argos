@@ -1,0 +1,383 @@
+<title>__TITULO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: relatório de uma coluna (~1080px), irmão das páginas por região. Um ponto por local de votação,
+   área proporcional aos eleitores; cor = margem do 13 sobre o 22 no divergente validado (13 = vermelho,
+   22 = azul, cinza no meio), as mesmas cores das outras páginas. Mapa com zoom (roda/pinça) e tabela com busca. */
+:root {
+  --fundo: #f5f6f8;
+  --superficie: #ffffff;
+  --tinta: #15181e;
+  --tinta-2: #4a505d;
+  --apagado: #737a89;
+  --linha: #dde1e7;
+  --dado-atual: #2a78d6;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --texto: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --raio: 6px;
+  --c13: #b3302f; --c22: #2a78d6;
+  --div-1: #1c5cab; --div-2: #86b6ef; --div-3: #d6d4cf; --div-4: #f2a3a2; --div-5: #b3302f;
+  --terra: #eceef1; --contorno: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c13: #e66767; --c22: #3987e5;
+    --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+    --linha: #2a2e36; --dado-atual: #3987e5;
+    --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #5c5b56; --div-4: #8f3433; --div-5: #e66767;
+    --terra: #20242a; --contorno: #111317;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c13: #e66767; --c22: #3987e5;
+  --fundo: #111317; --superficie: #191c21; --tinta: #eef0f3; --tinta-2: #b9bec8; --apagado: #8b91a0;
+  --linha: #2a2e36; --dado-atual: #3987e5;
+  --div-1: #6da7ec; --div-2: #1c5cab; --div-3: #5c5b56; --div-4: #8f3433; --div-5: #e66767;
+  --terra: #20242a; --contorno: #111317;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 32px 20px 56px; }
+.pagina { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+h2 { font-size: 1.75rem; }
+p { margin: 0; max-width: 65ch; }
+.rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
+.nota { font-size: .875rem; color: var(--tinta-2); }
+section { display: grid; gap: 16px; }
+.cabeca { display: grid; gap: 12px; }
+.cabeca .lede { font-size: 1.125rem; color: var(--tinta-2); }
+
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--linha);
+  border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.indicador { background: var(--superficie); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+.indicador .nome { display: inline-flex; align-items: center; gap: 6px; }
+.indicador .nome i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.indicador .valor { font: 600 2.4rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.variacao { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+
+.quadro { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; display: grid; gap: 14px; }
+.quadro-topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--tinta-2); font: 12px var(--texto); }
+
+.segmentado { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.segmentado button { background: var(--superficie); color: var(--tinta-2); border: 0; padding: 6px 14px; font: 500 .875rem var(--texto); cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--linha); }
+.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--superficie); }
+.botao { background: var(--superficie); color: var(--tinta-2); border: 1px solid var(--linha); border-radius: var(--raio);
+  padding: 6px 12px; font: 500 .875rem var(--texto); cursor: pointer; }
+button:focus-visible, th:focus-visible, input:focus-visible, tr:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+
+.mapa-caixa { position: relative; border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; background: var(--superficie); }
+#mapa { touch-action: none; cursor: grab; }
+#mapa:active { cursor: grabbing; }
+#mapa .ra { fill: var(--terra); stroke: var(--apagado); stroke-width: .6; vector-effect: non-scaling-stroke; }
+#mapa .ponto { stroke: var(--contorno); vector-effect: non-scaling-stroke; stroke-width: .8; cursor: pointer; }
+#mapa .ponto.ativo { stroke: var(--tinta); stroke-width: 2.5; }
+.zoom { position: absolute; top: 10px; right: 10px; display: grid; gap: 4px; }
+.zoom button { width: 32px; height: 32px; padding: 0; font-size: 1.1rem; line-height: 1; }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.listas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+@media (max-width: 760px) { .listas { grid-template-columns: 1fr; } }
+.lista { display: grid; gap: 2px; font-size: .9rem; }
+.lista b { font-weight: 600; margin-bottom: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.lista b i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.lista button { all: unset; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+.lista button:hover { background: var(--fundo); }
+.lista button:focus-visible { outline: 2px solid var(--dado-atual); }
+.lista .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lista .s { color: var(--apagado); font-size: .8rem; display: block; }
+
+.busca { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.busca input { flex: 1 1 260px; padding: 8px 12px; border: 1px solid var(--linha); border-radius: var(--raio);
+  background: var(--fundo); color: var(--tinta); font: 400 .95rem var(--texto); }
+.tabela { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 14rem; }
+th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--fundo); }
+td .marca { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: baseline; }
+.pequena { color: var(--apagado); font-size: .78rem; display: block; white-space: normal; line-height: 1.35; }
+
+.dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--superficie); padding: 8px 10px;
+  border-radius: var(--raio); font-size: .82rem; line-height: 1.4; font-variant-numeric: tabular-nums; z-index: 10; max-width: 300px; }
+.metodo { border-top: 1px solid var(--linha); padding-top: 20px; display: grid; gap: 8px; }
+</style>
+
+<main class="pagina">
+  <header class="cabeca">
+    <span class="rotulo" id="sobretitulo"></span>
+    <h1>__TITULO__</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="indicadores" id="indicadores"></div>
+
+  <section class="quadro" aria-labelledby="t-mapa">
+    <div class="quadro-topo">
+      <h2 id="t-mapa">Os locais de votação</h2>
+      <div class="segmentado" role="group" aria-label="O que colorir">
+        <button data-m="margem" aria-pressed="true">Margem</button>
+        <button data-m="vencedor" aria-pressed="false">Quem venceu</button>
+      </div>
+    </div>
+    <p class="nota">Cada círculo é um local de votação; o tamanho segue o número de eleitores. Use a roda do mouse ou dois dedos para aproximar, arraste para mover, e passe o mouse ou toque num círculo para ver as urnas.</p>
+    <div class="legenda" id="legenda"></div>
+    <div class="mapa-caixa">
+      <svg id="mapa" role="img" aria-label="Mapa dos locais de votação coloridos pelo vencedor"></svg>
+      <div class="zoom">
+        <button class="botao" id="mais" aria-label="Aproximar">+</button>
+        <button class="botao" id="menos" aria-label="Afastar">−</button>
+        <button class="botao" id="tudo" aria-label="Ver tudo" title="Ver tudo">⤢</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-maiores">
+    <h2 id="t-maiores">As maiores vantagens</h2>
+    <p class="nota" id="nota-maiores"></p>
+    <div class="listas" id="listas"></div>
+  </section>
+
+  <section class="quadro" aria-labelledby="t-tabela">
+    <h2 id="t-tabela">Todos os locais de votação</h2>
+    <div class="busca">
+      <input id="busca" type="search" placeholder="Busque por escola, bairro ou região administrativa" aria-label="Buscar local de votação">
+      <span class="nota" id="contagem"></span>
+    </div>
+    <div class="tabela"><table id="tabela"></table></div>
+    <button class="botao" id="mostrar" hidden></button>
+  </section>
+
+  <footer class="metodo nota" id="metodo">
+    <span class="rotulo">Método e fontes</span>
+  </footer>
+</main>
+<div class="dica" id="dica" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D = __DADOS__;
+const MALHA = __MALHA__;
+const M = D.meta, T = D.total, NA = D.nomes.a, NB = D.nomes.b;
+const curto = n => n.split(" ")[0];
+const fmt = (v, c = 1) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+const inteiro = v => v == null ? "–" : Math.round(v).toLocaleString("pt-BR");
+const sinal = (v, c = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), c);
+const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+const semAcento = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+D.pontos.forEach((p, i) => { p.id = i; p.busca = semAcento([p.n, p.br, p.ra].join(" ")); p.pa = p.a + p.b ? 100 * p.a / (p.a + p.b) : null; });
+
+document.getElementById("sobretitulo").textContent = `Eleições 2026 · Presidente · 2º turno (25 de outubro) · ${M.rotulo}`;
+document.getElementById("lede").textContent = D.textos.lede;
+document.getElementById("nota-maiores").textContent = D.textos.destaque;
+
+// --- Indicadores -------------------------------------------------------------------
+(function indicadores() {
+  const alvo = document.getElementById("indicadores");
+  const itens = [
+    { nome: `Urnas de ${curto(NB)}`, cor: "--c22", valor: inteiro(T.sb), v: `${fmt(100 * T.sb / T.secoes)}% das ${inteiro(T.secoes)} urnas · ${inteiro(T.lb)} locais de votação` },
+    { nome: `Urnas de ${curto(NA)}`, cor: "--c13", valor: inteiro(T.sa), v: `${fmt(100 * T.sa / T.secoes)}% das urnas · ${inteiro(T.la)} locais de votação` },
+    { nome: "Resultado", valor: `${fmt(100 - T.a_pct, 2)}% × ${fmt(T.a_pct, 2)}%`, v: `${curto(NB)} ${inteiro(T.b)} × ${curto(NA)} ${inteiro(T.a)} votos` },
+    { nome: "Empates", valor: inteiro(T.empates), v: `urnas com o mesmo número de votos para os dois${T.lempates ? ` · ${T.lempates} locais empatados` : ""}` },
+  ];
+  for (const it of itens) {
+    const el = document.createElement("div"); el.className = "indicador";
+    el.innerHTML = `<span class="rotulo nome"></span><span class="valor"></span><span class="variacao"></span>`;
+    const n = el.querySelector(".nome");
+    if (it.cor) { const i = document.createElement("i"); i.style.background = `var(${it.cor})`; n.appendChild(i); }
+    n.appendChild(document.createTextNode(it.nome));
+    el.querySelector(".valor").textContent = it.valor;
+    if (it.nome === "Resultado") el.querySelector(".valor").style.fontSize = "1.9rem";
+    el.querySelector(".variacao").textContent = it.v;
+    alvo.appendChild(el);
+  }
+})();
+
+// --- Dica ------------------------------------------------------------------------
+const dica = document.getElementById("dica");
+function mostrarDica(ev, p) {
+  dica.hidden = false; dica.innerHTML = "";
+  const linhas = [
+    [p.n, "b"],
+    [[p.br, p.ra].filter(Boolean).join(" · "), "span"],
+    [`${curto(NA)} ${inteiro(p.a)} (${fmt(p.pa)}%) × ${curto(NB)} ${inteiro(p.b)} (${fmt(p.pa == null ? null : 100 - p.pa)}%)`, "span"],
+    [`${p.se} ${p.se === 1 ? "urna" : "urnas"}: ${p.sa} de ${curto(NA)}, ${p.sb} de ${curto(NB)}${p.se - p.sa - p.sb ? `, ${p.se - p.sa - p.sb} empatada${p.se - p.sa - p.sb > 1 ? "s" : ""}` : ""}`, "span"],
+    [`${inteiro(p.ap)} eleitores · ${inteiro(p.c)} votaram · ${inteiro(p.bn)} brancos e nulos`, "span"],
+  ];
+  linhas.forEach(([t, tag], i) => { if (!t) return; const e = document.createElement(tag); e.textContent = t; dica.appendChild(e); if (i < linhas.length - 1) dica.appendChild(document.createElement("br")); });
+  dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 310) + "px"; dica.style.top = (ev.clientY + 14) + "px";
+}
+const esconderDica = () => { dica.hidden = true; };
+
+// --- Mapa ------------------------------------------------------------------------
+const CORTES = [-20, -5, 5, 20];
+const CORES_DIV = ["--div-1", "--div-2", "--div-3", "--div-4", "--div-5"];
+let modo = "margem", zoom, gZoom, transform = d3.zoomIdentity, raio, proj, ativo = null;
+const corPonto = p => {
+  if (p.m == null) return cor("--div-3");
+  if (modo === "vencedor") return p.m > 0 ? cor("--c13") : p.m < 0 ? cor("--c22") : cor("--div-3");
+  return cor(CORES_DIV[d3.bisect(CORTES, p.m)]);
+};
+function legenda() {
+  const leg = document.getElementById("legenda"); leg.innerHTML = "";
+  const itens = modo === "vencedor"
+    ? [[`${NA} venceu`, "--c13", p => p.m > 0], [`${NB} venceu`, "--c22", p => p.m < 0], ["empate", "--div-3", p => p.m === 0]]
+    : [[`${curto(NB)} por 20+ pontos`, CORES_DIV[0]], [`${curto(NB)} por 5 a 20`, CORES_DIV[1]], ["diferença até 5", CORES_DIV[2]],
+       [`${curto(NA)} por 5 a 20`, CORES_DIV[3]], [`${curto(NA)} por 20+ pontos`, CORES_DIV[4]]]
+      .map(([t, c], i) => [t, c, p => p.m != null && d3.bisect(CORTES, p.m) === i]);
+  for (const [t, c, f] of itens) {
+    const n = D.pontos.filter(f).length; if (!n && modo === "vencedor" && c === "--div-3") continue;
+    const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
+    s.querySelector("i").style.background = cor(c); s.querySelector("span").textContent = `${t} (${n} locais)`;
+    leg.appendChild(s);
+  }
+}
+function desenharMapa() {
+  const svg = d3.select("#mapa");
+  const largura = svg.node().getBoundingClientRect().width || 900;
+  const altura = Math.round(largura * (largura < 560 ? 0.7 : 0.62));
+  svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
+  proj = d3.geoMercator().fitExtent([[8, 8], [largura - 8, altura - 8]], MALHA);
+  const caminho = d3.geoPath(proj);
+  gZoom = svg.append("g");
+  gZoom.append("g").selectAll("path").data(MALHA.features).join("path").attr("class", "ra").attr("d", caminho)
+    .append("title").text(f => f.properties.nome);
+  const maxAp = d3.max(D.pontos, p => p.ap);
+  raio = d3.scaleSqrt().domain([0, maxAp]).range([0, largura < 560 ? 9 : 14]);
+  gZoom.append("g").selectAll("circle").data(D.pontos).join("circle")   // maiores primeiro: os pequenos ficam por cima
+    .attr("class", "ponto").attr("cx", p => proj([p.lon, p.lat])[0]).attr("cy", p => proj([p.lon, p.lat])[1])
+    .attr("fill", corPonto).attr("tabindex", 0)
+    .attr("aria-label", p => `${p.n}: ${curto(NA)} ${fmt(p.pa)}%, ${curto(NB)} ${fmt(p.pa == null ? null : 100 - p.pa)}%`)
+    .classed("ativo", p => p.id === ativo)
+    .on("mousemove", mostrarDica).on("mouseleave", esconderDica)
+    .on("click", (ev, p) => mostrarDica(ev, p))
+    .on("focus", function (ev, p) { const b = this.getBoundingClientRect(); mostrarDica({ clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }, p); })
+    .on("blur", esconderDica);
+  zoom = d3.zoom().scaleExtent([1, 24]).translateExtent([[0, 0], [largura, altura]]).extent([[0, 0], [largura, altura]])
+    .on("zoom", ev => { transform = ev.transform; aplicarZoom(); });
+  svg.call(zoom).call(zoom.transform, transform);
+  legenda();
+}
+function aplicarZoom() {
+  gZoom.attr("transform", transform);
+  gZoom.selectAll("circle").attr("r", p => Math.max(1.5, raio(p.ap)) / Math.sqrt(transform.k));
+}
+document.getElementById("mais").addEventListener("click", () => d3.select("#mapa").transition().duration(250).call(zoom.scaleBy, 2));
+document.getElementById("menos").addEventListener("click", () => d3.select("#mapa").transition().duration(250).call(zoom.scaleBy, 0.5));
+document.getElementById("tudo").addEventListener("click", () => d3.select("#mapa").transition().duration(350).call(zoom.transform, d3.zoomIdentity));
+function irPara(p) {
+  ativo = p.id;
+  const svg = d3.select("#mapa"), vb = svg.attr("viewBox").split(" ").map(Number);
+  const [x, y] = proj([p.lon, p.lat]), k = 10;
+  d3.selectAll("#mapa .ponto").classed("ativo", q => q.id === ativo);
+  document.getElementById("t-mapa").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(vb[2] / 2 - k * x, vb[3] / 2 - k * y).scale(k));
+}
+for (const b of document.querySelectorAll("[data-m]")) b.addEventListener("click", () => {
+  modo = b.dataset.m; for (const o of document.querySelectorAll("[data-m]")) o.setAttribute("aria-pressed", String(o === b));
+  d3.selectAll("#mapa .ponto").attr("fill", corPonto); legenda(); });
+
+// --- Maiores vantagens ---------------------------------------------------------------
+(function listas() {
+  const alvo = document.getElementById("listas");
+  const grandes = D.pontos.filter(p => p.a + p.b >= 1000 && p.m != null);
+  const blocos = [[`Maiores vitórias de ${NA}`, "--c13", [...grandes].sort((x, y) => y.m - x.m).slice(0, 10)],
+                  [`Maiores vitórias de ${NB}`, "--c22", [...grandes].sort((x, y) => x.m - y.m).slice(0, 10)]];
+  for (const [t, c, lista] of blocos) {
+    const div = document.createElement("div"); div.className = "lista";
+    const b = document.createElement("b"); b.innerHTML = "<i></i>"; b.querySelector("i").style.background = `var(${c})`;
+    b.appendChild(document.createTextNode(t)); div.appendChild(b);
+    for (const p of lista) {
+      const bt = document.createElement("button");
+      bt.innerHTML = `<span><span class="n"></span><span class="s"></span></span><span class="v"></span>`;
+      bt.querySelector(".n").textContent = p.n;
+      bt.querySelector(".s").textContent = [p.br, p.ra].filter(Boolean).join(" · ");
+      bt.querySelector(".v").textContent = `${fmt(Math.max(p.pa, 100 - p.pa))}%`;
+      bt.title = "Mostrar no mapa"; bt.addEventListener("click", () => irPara(p));
+      div.appendChild(bt);
+    }
+    alvo.appendChild(div);
+  }
+})();
+
+// --- Tabela ----------------------------------------------------------------------
+let ordem = { id: "ap", desc: true }, todos = false, termo = "";
+const COLS = [
+  { id: "n", rot: "Local de votação", v: p => p.n, texto: true },
+  { id: "ra", rot: "Região", v: p => p.ra || "", texto: true },
+  { id: "se", rot: "Urnas", v: p => p.se, f: inteiro },
+  { id: "ap", rot: "Eleitores", v: p => p.ap, f: inteiro },
+  { id: "a", rot: curto(NA), v: p => p.a, f: inteiro },
+  { id: "b", rot: curto(NB), v: p => p.b, f: inteiro },
+  { id: "pa", rot: `% ${curto(NA)}`, v: p => p.pa, f: v => fmt(v) + "%" },
+  { id: "m", rot: "Margem", v: p => p.m, f: v => sinal(v) },
+  { id: "sa", rot: `Urnas ${curto(NA)}`, v: p => p.sa, f: inteiro },
+  { id: "sb", rot: `Urnas ${curto(NB)}`, v: p => p.sb, f: inteiro },
+];
+function desenharTabela() {
+  const t = document.getElementById("tabela"); t.innerHTML = "";
+  const thead = t.createTHead().insertRow();
+  for (const c of COLS) {
+    const th = document.createElement("th"); th.textContent = c.rot; th.tabIndex = 0; th.scope = "col";
+    if (ordem.id === c.id) th.setAttribute("aria-sort", ordem.desc ? "descending" : "ascending");
+    const ordenar = () => { ordem = { id: c.id, desc: ordem.id === c.id ? !ordem.desc : !c.texto }; desenharTabela(); };
+    th.addEventListener("click", ordenar);
+    th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } });
+    thead.appendChild(th);
+  }
+  const col = COLS.find(c => c.id === ordem.id);
+  const q = semAcento(termo.trim());
+  const filtrados = D.pontos.filter(p => !q || p.busca.includes(q)).sort((x, y) => {
+    const vx = col.v(x), vy = col.v(y); if (vx == null) return 1; if (vy == null) return -1;
+    const r = col.texto ? String(vx).localeCompare(String(vy), "pt-BR") : vx - vy; return ordem.desc ? -r : r; });
+  const lim = todos || q ? filtrados.length : 25;
+  const tbody = t.createTBody();
+  for (const p of filtrados.slice(0, lim)) {
+    const tr = tbody.insertRow(); tr.tabIndex = 0; tr.title = "Mostrar no mapa";
+    tr.addEventListener("click", () => irPara(p));
+    tr.addEventListener("keydown", e => { if (e.key === "Enter") irPara(p); });
+    for (const c of COLS) {
+      const td = tr.insertCell(); const v = c.v(p);
+      if (c.id === "n") {
+        const m = document.createElement("span"); m.className = "marca"; m.style.background = p.m > 0 ? "var(--c13)" : p.m < 0 ? "var(--c22)" : "var(--div-3)";
+        td.appendChild(m); td.appendChild(document.createTextNode(v));
+        if (p.br) { const e = document.createElement("span"); e.className = "pequena"; e.textContent = p.br; td.appendChild(e); }
+      } else td.textContent = c.f ? c.f(v) : v;
+    }
+  }
+  document.getElementById("contagem").textContent = q ? `${filtrados.length} de ${D.pontos.length} locais` : `${D.pontos.length} locais`;
+  const bt = document.getElementById("mostrar");
+  bt.hidden = !!q || filtrados.length <= 25;
+  bt.textContent = todos ? "Mostrar só os 25 primeiros" : `Mostrar todos os ${filtrados.length}`;
+}
+document.getElementById("mostrar").addEventListener("click", () => { todos = !todos; desenharTabela(); });
+document.getElementById("busca").addEventListener("input", e => { termo = e.target.value; desenharTabela(); });
+
+// --- Método ----------------------------------------------------------------------
+(function metodo() {
+  const pe = document.getElementById("metodo");
+  for (const t of M.metodo) { const p = document.createElement("p"); p.textContent = t; pe.appendChild(p); }
+})();
+
+desenharTabela(); desenharMapa();
+let pendente, ultimaLargura = document.getElementById("mapa").getBoundingClientRect().width;
+window.addEventListener("resize", () => { clearTimeout(pendente); pendente = setTimeout(() => {
+  const l = document.getElementById("mapa").getBoundingClientRect().width;
+  if (l !== ultimaLargura) { ultimaLargura = l; transform = d3.zoomIdentity; desenharMapa(); } }, 150); });
+const recolorir = () => { d3.selectAll("#mapa .ponto").attr("fill", corPonto); legenda(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", recolorir);
+new MutationObserver(recolorir).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

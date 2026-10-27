@@ -167,6 +167,7 @@ uv run python -m apuracao.carga --secao 2026 --secao 2022 --regioes-df --regioes
 uv run python -m apuracao.pagina --inicio --site site              # página inicial (links) -> site/index.html
 uv run python -m apuracao.pagina --recorte brasilia --turnos --site site   # 1º x 2º turno, Brasília -> site/brasilia/
 uv run python -m apuracao.pagina --recorte rio --turnos --site site        # 1º x 2º turno, cidade do Rio -> site/rio-de-janeiro/
+uv run python -m apuracao.pagina --recorte brasilia --urnas --site site   # quem venceu em cada urna -> site/brasilia/urnas/
 uv run python -m apuracao.pagina --recorte brasilia --turnos --ano 2022    # o mesmo com 2022 (conferência) -> data/pagina/
 uv run python -m apuracao.pagina --recorte brasilia    # abstenção do 1º turno (saiu do site em 26/10) -> data/pagina/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
@@ -179,8 +180,11 @@ uv run python -m apuracao.pagina --pesquisas --site site   # pesquisas do 2º tu
 
 **Do 1º ao 2º turno** (`apuracao/pagina/turnos.py`): votos de Lula e do 22, brancos, nulos e abstenção em cada RA,
 no 1º e no 2º turno, seção a seção. Precisa do 2º turno nos arquivos por seção do TSE (detalhe e votação por seção),
-que saem dias depois da eleição: `uv run python -m apuracao.carga --secao 2026` baixa de novo os três arquivos
-quando o tamanho no TSE muda. Sem o 2º turno neles, o comando para com uma mensagem.
+que saem dias depois da eleição (em 2026, no dia seguinte): `uv run python -m apuracao.carga --secao 2026` baixa de
+novo os três arquivos quando o tamanho no TSE muda. Sem o 2º turno neles, o comando para com uma mensagem.
+
+**Quem venceu em cada urna** (`apuracao/pagina/urnas.py`): o 2º turno seção a seção (cada seção é uma urna),
+somado por local de votação e desenhado no mapa pelas coordenadas do local; mapa com zoom e tabela com busca.
 
 **Pesquisas do 2º turno** (`apuracao/pagina/pesquisas.py`): as pesquisas nacionais com campo encerrado de 20 a
 24/10/2026 ficam em `apuracao/pagina/pesquisas_2t_2026.csv` (votos totais como divulgados, fonte por linha); o

@@ -200,9 +200,12 @@ def _textos(r: Recorte, d: dict) -> dict:
         abst = f"A abstenção subiu do 1º para o 2º turno em {subiu} {de} {n} {r.abrev} e caiu nas outras {n - subiu}." \
             if r.todas == "todas" else \
             f"A abstenção subiu do 1º para o 2º turno em {subiu} {de} {n} {r.abrev} e caiu nos outros {n - subiu}."
-    a_max = max(us, key=lambda u: u["var_abst"])
-    abst += (f" A maior alta foi {em(r, a_max['ra'])} ({'+' if a_max['var_abst'] > 0 else ''}"
-             f"{_br(a_max['var_abst'], 1)} {_pontos(a_max['var_abst'])}).")
+    if subiu:
+        x = max(us, key=lambda u: u["var_abst"])
+        abst += f" A maior alta foi {em(r, x['ra'])} (+{_br(x['var_abst'], 1)} {_pontos(x['var_abst'])})."
+    else:
+        x = min(us, key=lambda u: u["var_abst"])
+        abst += f" A maior queda foi {em(r, x['ra'])} (−{_br(-x['var_abst'], 1)} {_pontos(x['var_abst'])})."
     return {"lede": lede, "vitorias": vitorias[0].upper() + vitorias[1:] + ".", "crescimento": cresc,
             "titulo_var": titulo_var, "abstencao": abst}
 

@@ -1,6 +1,7 @@
 """uv run python -m apuracao.pagina [--saida data/pagina/abstencao-1o-turno-2026.html]
 uv run python -m apuracao.pagina --recorte brasilia|rio|estado-rj   (abstenção por região; ver pagina/recortes.py)
 uv run python -m apuracao.pagina --recorte brasilia|rio --turnos --site site   (1º x 2º turno por região; pagina/turnos.py)
+uv run python -m apuracao.pagina --recorte brasilia --urnas --site site   (quem venceu em cada urna; pagina/urnas.py)
 uv run python -m apuracao.pagina --pesquisas --site site   (pesquisas do 2º turno x resultado; ver pagina/pesquisas.py)
 uv run python -m apuracao.pagina --recorte rio --site site   (também grava site/<subpasta>/index.html completo,
     para hospedar fora do claude.ai, ex.: Netlify; --brasilia = --recorte brasilia)"""
@@ -12,7 +13,7 @@ import sys
 from pathlib import Path
 
 from apuracao.config import carregar
-from apuracao.pagina import perdas, pesquisas, regioes, turnos, vitoria, votos
+from apuracao.pagina import perdas, pesquisas, regioes, turnos, urnas, vitoria, votos
 from apuracao.pagina.recortes import RECORTES
 from apuracao.pagina.abstencao import gerar
 
@@ -42,6 +43,8 @@ SITE = [
      "As 30 pesquisas dos cinco dias antes da votação, de 20 institutos, comparadas ao resultado.", "Pesquisas"),
     ("1º x 2º turno · Brasília", "brasilia", "2º turno · Brasília", "Do 1º ao 2º turno em Brasília",
      "Votos de Lula e Flávio e abstenção nas 35 RAs do DF, no 1º e no 2º turno.", "Votos"),
+    ("Urnas · Brasília", "brasilia/urnas", "2º turno · Brasília", "Quem venceu em cada urna de Brasília",
+     "As 6.969 urnas do DF no 2º turno, nos 622 locais de votação, no mapa.", "Votos"),
     ("1º x 2º turno · Rio", "rio-de-janeiro", "2º turno · Rio de Janeiro", "Do 1º ao 2º turno no Rio",
      "Votos de Lula e Flávio e abstenção nas RAs da cidade, no 1º e no 2º turno, com os bairros.", "Votos"),
     ("Onde Lula perdeu no 1º turno", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos no 1º turno",
@@ -118,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--brasilia", action="store_true", help="atalho para --recorte brasilia")
     ap.add_argument("--votos", action="store_true", help="com --recorte: página de votos por candidato")
     ap.add_argument("--turnos", action="store_true", help="com --recorte: 1º x 2º turno por região")
+    ap.add_argument("--urnas", action="store_true", help="com --recorte: quem venceu em cada urna (2º turno)")
     ap.add_argument("--ano", type=int, default=2026, help="com --turnos: ano (2022 para conferir)")
     ap.add_argument("--inicio", action="store_true", help="com --site: página inicial com os links (raiz do site)")
     ap.add_argument("--perdas", action="store_true", help="página \"Onde Lula perdeu votos\" (municípios, 2022 e 2014)")
@@ -158,7 +162,10 @@ def main(argv: list[str] | None = None) -> int:
     elif recorte:
         cfg = carregar(args.config)
         r = RECORTES[recorte](cfg)
-        if args.turnos:
+        if args.urnas:
+            sub = f"{r.subpasta}/urnas"
+            saida = urnas.gerar(r, cfg, args.dir_parquet, args.saida or Path(f"data/pagina/urnas-{r.id}-2026.html"))
+        elif args.turnos:
             sub = r.subpasta   # substitui a página de abstenção do 1º turno (endereço já divulgado)
             saida = turnos.gerar(r, cfg, args.dir_parquet,
                                  args.saida or Path(f"data/pagina/turnos-{r.id}-{args.ano}.html"), args.ano)
