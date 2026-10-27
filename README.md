@@ -170,7 +170,7 @@ uv run python -m apuracao.pagina --recorte rio --turnos --site site        # 1º
 uv run python -m apuracao.pagina --recorte brasilia --urnas --site site   # quem venceu em cada urna -> site/brasilia/urnas/
 uv run python -m apuracao.pagina --recorte brasilia --ras --site site     # quem venceu em cada RA x zona -> site/brasilia/ras/
 uv run python -m apuracao.pagina --recorte brasilia --zonas --site site   # votos por zona eleitoral -> site/brasilia/zonas/
-uv run python -m apuracao.pagina --recorte rio --ras --site site          # o mesmo na cidade do Rio -> site/rio-de-janeiro/ras/ (e --zonas)
+uv run python -m apuracao.pagina --recorte rio --ras --site site          # o mesmo na cidade do Rio -> site/rio-de-janeiro/ras/ (e --zonas, --urnas)
 uv run python -m apuracao.pagina --recorte brasilia --turnos --ano 2022    # o mesmo com 2022 (conferência) -> data/pagina/
 uv run python -m apuracao.pagina --recorte brasilia    # abstenção do 1º turno (saiu do site em 26/10) -> data/pagina/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/

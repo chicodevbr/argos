@@ -358,7 +358,7 @@ function desenharTabela() {
       } else td.textContent = c.f ? c.f(v) : v;
     }
   }
-  document.getElementById("contagem").textContent = q ? `${filtrados.length} de ${D.pontos.length} locais` : `${D.pontos.length} locais`;
+  document.getElementById("contagem").textContent = q ? `${inteiro(filtrados.length)} de ${inteiro(D.pontos.length)} locais` : `${inteiro(D.pontos.length)} locais`;
   const bt = document.getElementById("mostrar");
   bt.hidden = !!q || filtrados.length <= 25;
   bt.textContent = todos ? "Mostrar só os 25 primeiros" : `Mostrar todos os ${filtrados.length}`;

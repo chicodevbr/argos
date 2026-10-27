@@ -1,7 +1,7 @@
 """Página "quem venceu em cada urna": o 2º turno seção a seção (cada seção é uma urna), agrupado por local
-de votação e desenhado no mapa pelas coordenadas do local. Por enquanto, Brasília.
+de votação e desenhado no mapa pelas coordenadas do local. Brasília e cidade do Rio.
 
-uv run python -m apuracao.pagina --recorte brasilia --urnas --site site
+uv run python -m apuracao.pagina --recorte brasilia|rio --urnas --site site
 
 Dados: votação por seção (votos de cada número), detalhe por seção (aptos, comparecimento, local) e locais de
 votação com coordenadas, todos do 2º turno (Portal de Dados Abertos do TSE; ver carga/secao.py). A região de
@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from apuracao.carga import regioes as malhas, secao
 from apuracao.config import Config
 from apuracao.pagina import regioes, votos
 from apuracao.pagina.recortes import nome_proprio
@@ -27,7 +26,8 @@ MODELO = Path(__file__).with_name("modelo_urnas.html")
 A, B = 13, 22
 BRANCO, NULO = 95, 96
 CHAVE = ["cod_mun", "zona", "secao"]
-TITULOS = {"brasilia": "Quem venceu em cada urna de Brasília"}
+TITULOS = {"brasilia": "Quem venceu em cada urna de Brasília", "rio": "Quem venceu em cada urna do Rio"}
+LIMITES = {"brasilia": "das 35 RAs (SISDIA/GDF, 2022)", "rio": "das 33 RAs da prefeitura (Instituto Pereira Passos)"}
 GRANDE = 1_000   # locais com pelo menos 1.000 votos válidos entram nos destaques das frases
 
 
@@ -58,11 +58,12 @@ def por_local(s: pd.DataFrame, locais: pd.DataFrame) -> pd.DataFrame:
     return g
 
 
-# siglas que ficam em maiúsculas (nomes de escolas e setores do DF); "UNB" vira "UnB"
+# siglas que ficam em maiúsculas (nomes de escolas e setores do DF e do Rio); "UNB" vira "UnB"
 SIGLAS = {"CEF", "EC", "E.C.", "CAIC", "CEM", "CED", "CIL", "CILB", "CEMI", "SQS", "SQN", "SGAS", "SEPS", "IFB", "CE",
           "SMU", "CCM", "CCI", "CESAS", "CEJA", "CEPAG", "COC", "CEUB", "CEMAB", "CEAN", "SHI", "RCG", "UDF", "GG",
           "JK", "IESB", "DJ", "UPIS", "SESI", "UNIP", "INCRA", "CEI", "CEPI", "SESC", "SENAI", "QNM", "QNN", "QNL",
-          "II", "III", "IV", "VI", "VII", "VIII", "IX", "XI", "XII"}
+          "II", "III", "IV", "VI", "VII", "VIII", "IX", "XI", "XII",
+          "CIEP", "EDI", "GET", "E.M.", "FAETEC", "INSS", "CRAS", "UERJ", "UFRJ", "PUC", "CEFET", "IFRJ", "SENAC", "RJ", "ACM", "G.R.E.S."}
 
 
 def _nome_local(n: str) -> str:
@@ -106,8 +107,10 @@ def metodo(r: Recorte) -> list[str]:
         "Cada ponto é um local de votação, na posição do cadastro de locais do TSE; o tamanho é proporcional aos "
         "eleitores aptos. Locais com o mesmo nome e as mesmas coordenadas (um prédio com seções de mais de uma "
         "zona) viram um ponto só. Margem = % de Lula − % do 22 nos votos válidos do local.",
-        "A região administrativa de cada local é a que contém as suas coordenadas, nos limites oficiais das 35 RAs "
-        "(SISDIA/GDF, 2022). O eleitor vota onde está inscrito, que em geral é perto de onde mora, mas não sempre.",
+        "A região administrativa de cada local é a que contém as suas coordenadas, nos limites oficiais "
+        f"{LIMITES.get(r.id, 'da malha do recorte')}; local sem coordenada no 2º turno herda a do 1º turno, de 2022 ou do "
+        "local onde as mesmas seções votaram no 1º turno. O eleitor vota onde está inscrito, que em geral é perto de "
+        "onde mora, mas não sempre.",
     ]
 
 
@@ -119,7 +122,7 @@ def _textos(r: Recorte, d: dict) -> dict:
     lede = (f"{r.no_lugar}, {venc} venceu o 2º turno com {_br(max(t['a_pct'], 100 - t['a_pct']))}% dos votos "
             f"válidos e ganhou em {_br(sv, 0)} das {_br(t['secoes'], 0)} urnas; {perd} ganhou em {_br(sp, 0)}"
             + (f", e {t['empates']} {'terminaram empatadas' if t['empates'] > 1 else 'terminou empatada'}" if t["empates"] else "")
-            + f". Nos {t['locais']} locais de votação, {venc} venceu em {lv} e {perd} em {lp}"
+            + f". Nos {_br(t['locais'], 0)} locais de votação, {venc} venceu em {_br(lv, 0)} e {perd} em {_br(lp, 0)}"
             + (f" ({t['lempates']} empatados)" if t["lempates"] else "") + ".")
     grandes = [p for p in d["pontos"] if p["a"] + p["b"] >= GRANDE and p["m"] is not None]
     ma, mb = max(grandes, key=lambda p: p["m"]), min(grandes, key=lambda p: p["m"])
@@ -130,16 +133,9 @@ def _textos(r: Recorte, d: dict) -> dict:
 
 
 def gerar(r: Recorte, cfg: Config, dir_parquet: Path, saida: Path, ano: int = 2026) -> Path:
-    dh = Path(cfg.historico.dir) / str(ano)
-    s = secao.secoes(dh / f"detalhe_votacao_secao_{ano}.zip", r.uf, turno=2)
-    v = secao.votos(dh / f"votacao_secao_{ano}_BR.zip", r.uf, turno=2)
-    loc = secao.locais(dh / f"eleitorado_local_votacao_{ano}.zip", r.uf, turno=2)
-    if r.cod_mun:
-        s, v, loc = (x[x["cod_mun"] == r.cod_mun] for x in (s, v, loc))
-    if s.empty or v.empty:
-        raise SystemExit(f"sem o 2º turno de {ano} nos arquivos por seção em {dh}")
-    loc = loc.assign(unidade=malhas.regiao_de(loc["lon"], loc["lat"], malhas.ler(r.malha, r.campo)))
-    sec = por_secao(s, v)
+    from apuracao.pagina import zonas   # zonas importa este módulo; a carga (com as coordenadas completadas) é dela
+    sec, loc = zonas.carregar(r, cfg, ano)
+    sec = sec.drop(columns=["unidade"])
     dados = montar_dados(r, sec, por_local(sec, loc), votos.candidatos_validos(dir_parquet, cfg)[ano])
     malha = regioes.malha_pagina(r)
     for f in malha["features"]:

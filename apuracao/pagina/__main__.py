@@ -1,7 +1,7 @@
 """uv run python -m apuracao.pagina [--saida data/pagina/abstencao-1o-turno-2026.html]
 uv run python -m apuracao.pagina --recorte brasilia|rio|estado-rj   (abstenção por região; ver pagina/recortes.py)
 uv run python -m apuracao.pagina --recorte brasilia|rio --turnos --site site   (1º x 2º turno por região; pagina/turnos.py)
-uv run python -m apuracao.pagina --recorte brasilia --urnas --site site   (quem venceu em cada urna; pagina/urnas.py)
+uv run python -m apuracao.pagina --recorte brasilia|rio --urnas --site site   (quem venceu em cada urna; pagina/urnas.py)
 uv run python -m apuracao.pagina --recorte brasilia --zonas --site site   (votos por zona eleitoral; pagina/zonas.py)
 uv run python -m apuracao.pagina --recorte brasilia --ras --site site   (quem venceu em cada RA x zona; pagina/ras.py)
 uv run python -m apuracao.pagina --pesquisas --site site   (pesquisas do 2º turno x resultado; ver pagina/pesquisas.py)
@@ -44,7 +44,7 @@ DESTAQUE = "como-lula-venceu"
 # Onde há barrinha de vitórias (RAs, urnas), a frase fala de outra coisa.
 FATOS = {"como-lula-venceu": ("decisivo", 0, 2), "pesquisas": ("media", 0, 2), "brasilia": ("lede", 0, 2),
          "brasilia/urnas": ("lede", 1, 2), "brasilia/zonas": ("lede", 1, 2), "brasilia/ras": ("lede", 1, 2),
-         "rio-de-janeiro/ras": ("lede", 1, 2), "rio-de-janeiro/zonas": ("lede", 1, 2), "rio-de-janeiro": ("lede", 0, 2)}
+         "rio-de-janeiro/ras": ("lede", 1, 2), "rio-de-janeiro/urnas": ("lede", 1, 2), "rio-de-janeiro/zonas": ("lede", 1, 2), "rio-de-janeiro": ("lede", 0, 2)}
 SITE = [
     ("Como Lula venceu", "como-lula-venceu", "2º turno · Brasil", "Como Lula venceu em 2026",
      "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.",
@@ -63,6 +63,8 @@ SITE = [
      "As regiões administrativas da cidade, comparadas à contagem por zona eleitoral.", "Votos"),
     ("1º x 2º turno · Rio", "rio-de-janeiro", "2º turno · Rio de Janeiro", "Do 1º ao 2º turno no Rio",
      "Votos de Lula e Flávio e abstenção nas RAs da cidade, no 1º e no 2º turno, com os bairros.", "Votos"),
+    ("Urnas · Rio", "rio-de-janeiro/urnas", "2º turno · Rio de Janeiro", "Quem venceu em cada urna do Rio",
+     "As 12.635 urnas da cidade no 2º turno, nos 1.448 locais de votação, no mapa.", "Votos"),
     ("Zonas · Rio", "rio-de-janeiro/zonas", "2º turno · Rio de Janeiro", "Os votos por zona eleitoral no Rio",
      "As zonas eleitorais da cidade no 2º turno e as RAs que cada uma junta.", "Votos"),
     ("Onde Lula perdeu no 1º turno", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos no 1º turno",
