@@ -9,6 +9,8 @@ uv run python -m apuracao.pagina --recorte rio --site site   (também grava site
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -35,6 +37,11 @@ ESQUELETO = """<!doctype html>
 # Brasília foi a raiz até 07/10/2026 e passou para brasilia/. Em brasilia/ e rio-de-janeiro/, a abstenção do
 # 1º turno deu lugar ao 1º x 2º turno (pagina/turnos.py), a pedido do usuário em 26/10/2026.
 DESTAQUE = "como-lula-venceu"
+# Na página inicial, cada página mostra uma frase dela mesma: (chave em D.textos, frases i:j), lida do HTML já
+# gerado em site/, para a inicial não repetir números à mão. Gere as páginas antes de --inicio.
+# Onde há barrinha de vitórias (RAs, urnas), a frase fala de outra coisa.
+FATOS = {"como-lula-venceu": ("decisivo", 0, 2), "pesquisas": ("media", 0, 2), "brasilia": ("lede", 0, 2),
+         "brasilia/urnas": ("lede", 1, 2), "rio-de-janeiro": ("lede", 0, 2)}
 SITE = [
     ("Como Lula venceu", "como-lula-venceu", "2º turno · Brasil", "Como Lula venceu em 2026",
      "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.",
@@ -91,14 +98,45 @@ def documento_completo(pagina: Path, destino: Path, nav: str | None = None) -> P
     return destino
 
 
+def dados_pagina(arq: Path) -> dict | None:
+    """O `const D = {...};` de uma página gerada (JSON numa linha só); None se o arquivo não existe ou não tem."""
+    if not Path(arq).exists():
+        return None
+    m = re.search(r"const D = (\{.*?\});\n", Path(arq).read_text())
+    return json.loads(m.group(1)) if m else None
+
+
+def frases(texto: str, i: int, j: int) -> str:
+    """Frases i:j de um texto (corta em ponto seguido de maiúscula ou número; "4.430.191" e "51,79" não cortam)."""
+    return " ".join(re.split(r"(?<=[.!?])\s+(?=[A-ZÀ-Ú0-9])", texto.strip())[i:j])
+
+
+def vitorias_pagina(d: dict) -> dict | None:
+    """Em quantas unidades (RAs, urnas) cada um venceu, para a barrinha do cartão: 1º x 2º turno ou urnas."""
+    if d.get("ras") and "t2" in d["ras"][0]:
+        ms = [r["t2"]["margem"] for r in d["ras"] if r["t2"]["margem"] is not None]
+        return {"a": sum(m > 0 for m in ms), "b": sum(m < 0 for m in ms), "empates": sum(m == 0 for m in ms),
+                "de": d["meta"]["abrev"]}
+    if "pontos" in d and "total" in d:
+        t = d["total"]
+        return {"a": t["sa"], "b": t["sb"], "empates": t["empates"], "de": "urnas"}
+    return None
+
+
 def inicio(destino: Path, placar: dict | None = None) -> Path:
-    """Página inicial do site a partir de SITE: DESTAQUE em cima (com o placar do 2º turno, se dado) e as outras
-    páginas por grupo. Documento completo, sem a barra (os cartões já são a navegação)."""
-    import json
+    """Página inicial do site a partir de SITE: o resultado do 2º turno em cima (placar, se dado), as páginas do
+    2º turno com uma frase de cada (FATOS) e as do 1º turno numa lista curta. Documento completo, sem a barra (os
+    cartões já são a navegação)."""
     from datetime import date
     modelo = Path(__file__).with_name("modelo_inicio.html").read_text()
-    paginas = [{"sub": sub, "grupo": g, "titulo": tit, "descricao": desc, "tema": tema, "destaque": sub == DESTAQUE}
-               for _, sub, g, tit, desc, tema in SITE]
+    paginas = []
+    for _, sub, g, tit, desc, tema in SITE:
+        d = dados_pagina(Path(destino).parent / sub / "index.html")
+        chave = FATOS.get(sub)
+        fato = frases(d["textos"][chave[0]], *chave[1:]) if d and chave and chave[0] in d.get("textos", {}) else None
+        paginas.append({"sub": sub, "grupo": g, "titulo": tit, "descricao": desc, "tema": tema,
+                        "destaque": sub == DESTAQUE, "fato": fato, "vitorias": vitorias_pagina(d) if d else None,
+                        "lede": d["textos"].get("lede") if d and sub == DESTAQUE else None})
     dados = {"paginas": paginas, "placar": placar, "atualizado": date.today().strftime("%d/%m/%Y")}
     corpo = modelo.replace("const D = __DADOS__;", "const D = " + json.dumps(dados, ensure_ascii=False) + ";")
     if "__DADOS__" in corpo:

@@ -245,3 +245,23 @@ def test_pagina_inicial_com_destaque_e_placar(tmp_path):
     assert "site-nav" not in html and html.startswith("<!doctype html>")
     sem = json.loads(inicio(tmp_path / "sem" / "index.html").read_text().split("const D = ", 1)[1].split(";\n", 1)[0])
     assert sem["placar"] is None                       # sem 2º turno nas tabelas: só os cartões
+
+
+def test_pagina_inicial_le_frase_e_vitorias_das_paginas(tmp_path):
+    import json
+    from apuracao.pagina.__main__ import frases, inicio
+    assert frases("Lula teve 4.430.191 votos. Ganhou 51,79%. 27 pesquisas erraram.", 1, 3) == \
+        "Ganhou 51,79%. 27 pesquisas erraram."
+    ras = [{"t2": {"margem": m}} for m in (8.7, 0.02, -3.0, 0.0)]
+    d = {"ras": ras, "meta": {"abrev": "RAs"}, "textos": {"lede": "No DF, Flávio venceu. Lula cresceu. Fim."}}
+    (tmp_path / "brasilia").mkdir()
+    (tmp_path / "brasilia" / "index.html").write_text("<script>\nconst D = " + json.dumps(d) + ";\nconst X = 1;\n")
+    urnas = {"pontos": [], "total": {"sa": 10, "sb": 30, "empates": 1}, "textos": {"lede": "A. Nos locais, B."}}
+    (tmp_path / "brasilia" / "urnas").mkdir()
+    (tmp_path / "brasilia" / "urnas" / "index.html").write_text("const D = " + json.dumps(urnas) + ";\n")
+    html = inicio(tmp_path / "index.html").read_text()
+    p = {x["sub"]: x for x in json.loads(html.split("const D = ", 1)[1].split(";\n", 1)[0])["paginas"]}
+    assert p["brasilia"]["fato"] == "No DF, Flávio venceu. Lula cresceu."
+    assert p["brasilia"]["vitorias"] == {"a": 2, "b": 1, "empates": 1, "de": "RAs"}
+    assert p["brasilia/urnas"]["fato"] == "Nos locais, B." and p["brasilia/urnas"]["vitorias"]["b"] == 30
+    assert p["pesquisas"]["fato"] is None and p["pesquisas"]["vitorias"] is None   # página ainda não gerada

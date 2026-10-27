@@ -9,9 +9,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: uma coluna estreita e centralizada. Em cima, o resultado do 2º turno num cartão de destaque (placar e
-   barra Lula x 22) que leva à página principal; abaixo, as outras páginas agrupadas por turno e lugar, cada uma
-   com a etiqueta do tema. Mesmos tokens das páginas do site; Lula vermelho e 22 azul, como em "Como Lula venceu". */
+/* Layout: uma coluna estreita e centralizada, como resumo da eleição. Em cima, o resultado do 2º turno (título,
+   placar e barra Lula x 22); abaixo, as páginas do 2º turno em cartões, cada um com a frase principal da página e,
+   quando há, a barrinha de onde cada um venceu (RAs, urnas); no fim, as páginas do 1º turno numa lista curta.
+   Mesmos tokens das páginas do site; Lula vermelho e 22 azul, como em "Como Lula venceu". */
 :root {
   --fundo: #f5f6f8; --superficie: #ffffff; --tinta: #15181e; --tinta-2: #4a505d; --apagado: #737a89;
   --linha: #dde1e7; --realce: #15181e; --raio: 10px;
@@ -33,7 +34,7 @@
 }
 * { box-sizing: border-box; }
 body { background: var(--fundo); color: var(--tinta); font: 400 16px/1.55 var(--texto); padding: 56px 20px 64px; }
-.coluna { max-width: 600px; margin: 0 auto; display: grid; gap: 36px; }
+.coluna { max-width: 640px; margin: 0 auto; display: grid; gap: 36px; }
 .cabeca { display: grid; gap: 10px; text-align: center; justify-items: center; }
 .rotulo { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--apagado); font-weight: 500; }
 h1 { font: 700 clamp(2.6rem, 9vw, 3.6rem)/1 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
@@ -70,6 +71,18 @@ a.destaque { gap: 14px; padding: 22px 22px 20px; border-color: var(--tinta-2); }
   a.cartao:hover { transform: translateY(-1px); }
   a.cartao:hover .seta { transform: translateX(3px); color: var(--tinta); }
 }
+.resultado { display: grid; gap: 14px; }
+.cartao .fato { font-size: .98rem; color: var(--tinta); line-height: 1.5; }
+.venceu { display: grid; gap: 6px; margin-top: 4px; }
+.venceu .rot { display: flex; justify-content: space-between; gap: 12px; font-size: .82rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.venceu .rot b { font: 600 1.05rem/1 var(--texto); color: var(--tinta); }
+.venceu .barra { height: 8px; }
+.lista { display: grid; gap: 0; border-top: 1px solid var(--linha); }
+.lista a { display: grid; gap: 2px; padding: 12px 2px; border-bottom: 1px solid var(--linha); text-decoration: none; color: var(--tinta); }
+.lista a:hover strong { text-decoration: underline; }
+.lista a:focus-visible { outline: 2px solid var(--dado-atual); outline-offset: 2px; }
+.lista strong { font-weight: 600; font-size: .98rem; }
+.lista span { font-size: .85rem; color: var(--tinta-2); }
 .rodape { text-align: center; font-size: .82rem; color: var(--apagado); display: grid; gap: 4px; }
 .rodape a { color: var(--tinta-2); }
 @media (max-width: 420px) { .placar .num { font-size: 1.6rem; } .destaque b { font-size: 1.7rem; } }
@@ -80,9 +93,9 @@ a.destaque { gap: 14px; padding: 22px 22px 20px; border-color: var(--tinta-2); }
 
 <main class="coluna">
   <header class="cabeca">
-    <span class="rotulo">Eleições 2026 · Presidente</span>
-    <h1>Eleições 2026 em dados</h1>
-    <p class="lede">O resultado do 2º turno e o que mudou desde 2022, por município, cidade e região. Os dois turnos em Brasília e no Rio, e Brasília urna por urna. Dados públicos do TSE.</p>
+    <span class="rotulo">Eleições 2026 em dados · Presidente · 2º turno, 25 de outubro</span>
+    <h1 id="titulo">Eleições 2026 em dados</h1>
+    <p class="lede" id="lede">O resultado do 2º turno e o que mudou desde 2022, por município, cidade e região. Dados públicos do TSE.</p>
   </header>
   <div id="destaque"></div>
   <div id="grupos" style="display:grid;gap:28px"></div>
@@ -94,7 +107,7 @@ a.destaque { gap: 14px; padding: 22px 22px 20px; border-color: var(--tinta-2); }
 </main>
 
 <script>
-const D = {"paginas": [{"sub": "como-lula-venceu", "grupo": "2º turno · Brasil", "titulo": "Como Lula venceu em 2026", "descricao": "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.", "tema": "Votos", "destaque": true}, {"sub": "pesquisas", "grupo": "2º turno · Brasil", "titulo": "As pesquisas do 2º turno", "descricao": "As 30 pesquisas dos cinco dias antes da votação, de 20 institutos, comparadas ao resultado.", "tema": "Pesquisas", "destaque": false}, {"sub": "brasilia", "grupo": "2º turno · Brasília", "titulo": "Do 1º ao 2º turno em Brasília", "descricao": "Votos de Lula e Flávio e abstenção nas 35 RAs do DF, no 1º e no 2º turno.", "tema": "Votos", "destaque": false}, {"sub": "brasilia/urnas", "grupo": "2º turno · Brasília", "titulo": "Quem venceu em cada urna de Brasília", "descricao": "As 6.969 urnas do DF no 2º turno, nos 622 locais de votação, no mapa.", "tema": "Votos", "destaque": false}, {"sub": "rio-de-janeiro", "grupo": "2º turno · Rio de Janeiro", "titulo": "Do 1º ao 2º turno no Rio", "descricao": "Votos de Lula e Flávio e abstenção nas RAs da cidade, no 1º e no 2º turno, com os bairros.", "tema": "Votos", "destaque": false}, {"sub": "onde-lula-perdeu", "grupo": "1º turno · Brasil", "titulo": "Onde Lula perdeu votos no 1º turno", "descricao": "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "tema": "Votos", "destaque": false}, {"sub": "votos", "grupo": "1º turno · Brasília", "titulo": "Votos em Brasília", "descricao": "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022.", "tema": "Votos", "destaque": false}, {"sub": "onde-lula-perdeu/brasilia", "grupo": "1º turno · Brasília", "titulo": "Onde Lula perdeu votos em Brasília no 1º turno", "descricao": "As 35 RAs do DF, comparadas a 2022 (Lula) e a 2014 (Dilma).", "tema": "Votos", "destaque": false}, {"sub": "estado-do-rio", "grupo": "1º turno · Rio de Janeiro", "titulo": "Abstenção no Estado do Rio", "descricao": "Os 92 municípios do estado, comparados a 2022.", "tema": "Abstenção", "destaque": false}], "placar": {"pct_secoes": 100.0, "lula": 51.79, "n22": 48.21, "vantagem": 4430191, "abstencao": 19.22, "abstencao_t1": 21.08}, "atualizado": "27/10/2026"};
+const D = {"paginas": [{"sub": "como-lula-venceu", "grupo": "2º turno · Brasil", "titulo": "Como Lula venceu em 2026", "descricao": "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.", "tema": "Votos", "destaque": true, "fato": "A vantagem de Lula cresceu 2,3 milhões de votos em relação a 2022. Três estados explicam 77% desse aumento: São Paulo (+676.801 votos), Rio de Janeiro (+644.037 votos) e Pernambuco (+442.858 votos).", "vitorias": null, "lede": "Lula venceu com 51,79% dos votos válidos, 0,9 ponto acima de 2022, e abriu 4,4 milhões de votos de vantagem, contra 2,1 milhões de votos em 2022. Flávio Bolsonaro teve 1,6 milhão de votos a mais que Jair Bolsonaro em 2022, mas Lula cresceu mais: 3,9 milhões de votos a mais."}, {"sub": "pesquisas", "grupo": "2º turno · Brasil", "titulo": "As pesquisas do 2º turno", "descricao": "As 30 pesquisas dos cinco dias antes da votação, de 20 institutos, comparadas ao resultado.", "tema": "Pesquisas", "destaque": false, "fato": "Na média da última pesquisa de cada instituto, Flávio tinha 50,8% e Lula 49,2% dos votos válidos. A diferença real entre os dois ficou 5,1 pontos mais favorável a Lula do que a média indicava.", "vitorias": null, "lede": null}, {"sub": "brasilia", "grupo": "2º turno · Brasília", "titulo": "Do 1º ao 2º turno em Brasília", "descricao": "Votos de Lula e Flávio e abstenção nas 35 RAs do DF, no 1º e no 2º turno.", "tema": "Votos", "destaque": false, "fato": "No Distrito Federal, Flávio Bolsonaro venceu o 2º turno com 54,27% dos votos válidos. Do 1º para o 2º turno, Lula ganhou 150 mil votos (+22,1%), e Flávio Bolsonaro ganhou 70 mil votos (+7,7%).", "vitorias": {"a": 6, "b": 29, "empates": 0, "de": "RAs"}, "lede": null}, {"sub": "brasilia/urnas", "grupo": "2º turno · Brasília", "titulo": "Quem venceu em cada urna de Brasília", "descricao": "As 6.969 urnas do DF no 2º turno, nos 622 locais de votação, no mapa.", "tema": "Votos", "destaque": false, "fato": "Nos 622 locais de votação, Flávio Bolsonaro venceu em 514 e Lula em 108.", "vitorias": {"a": 1409, "b": 5507, "empates": 53, "de": "urnas"}, "lede": null}, {"sub": "rio-de-janeiro", "grupo": "2º turno · Rio de Janeiro", "titulo": "Do 1º ao 2º turno no Rio", "descricao": "Votos de Lula e Flávio e abstenção nas RAs da cidade, no 1º e no 2º turno, com os bairros.", "tema": "Votos", "destaque": false, "fato": "Na cidade do Rio de Janeiro, Lula venceu o 2º turno com 51,54% dos votos válidos. Do 1º para o 2º turno, Lula ganhou 374 mil votos (+24,5%), e Flávio Bolsonaro ganhou 123 mil votos (+7,4%).", "vitorias": {"a": 21, "b": 11, "empates": 0, "de": "RAs"}, "lede": null}, {"sub": "onde-lula-perdeu", "grupo": "1º turno · Brasil", "titulo": "Onde Lula perdeu votos no 1º turno", "descricao": "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "tema": "Votos", "destaque": false, "fato": null, "vitorias": null, "lede": null}, {"sub": "votos", "grupo": "1º turno · Brasília", "titulo": "Votos em Brasília", "descricao": "Todos os candidatos a presidente nas RAs do DF, 2026 e 2022.", "tema": "Votos", "destaque": false, "fato": null, "vitorias": null, "lede": null}, {"sub": "onde-lula-perdeu/brasilia", "grupo": "1º turno · Brasília", "titulo": "Onde Lula perdeu votos em Brasília no 1º turno", "descricao": "As 35 RAs do DF, comparadas a 2022 (Lula) e a 2014 (Dilma).", "tema": "Votos", "destaque": false, "fato": null, "vitorias": null, "lede": null}, {"sub": "estado-do-rio", "grupo": "1º turno · Rio de Janeiro", "titulo": "Abstenção no Estado do Rio", "descricao": "Os 92 municípios do estado, comparados a 2022.", "tema": "Abstenção", "destaque": false, "fato": null, "vitorias": null, "lede": null}], "placar": {"pct_secoes": 100.0, "lula": 51.79, "n22": 48.21, "vantagem": 4430191, "abstencao": 19.22, "abstencao_t1": 21.08}, "atualizado": "27/10/2026"};
 const fmt = (v, c = 2) => v.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 
@@ -104,6 +117,8 @@ function cartao(p) {
   topo.append(el("span", "etiqueta", p.destaque ? `${p.grupo} · ${p.tema}` : p.tema), el("i", "seta", "→"));
   topo.lastChild.setAttribute("aria-hidden", "true");
   a.append(topo, el("b", null, p.titulo));
+  if (p.fato) a.append(el("span", "fato", p.fato));
+  if (p.vitorias) a.append(vitorias(p.vitorias));
   if (p.destaque && D.placar) {
     const x = D.placar;
     const placar = el("div", "placar");
@@ -120,21 +135,48 @@ function cartao(p) {
     const vant = x.vantagem >= 2e6 ? fmt(x.vantagem / 1e6, 1) + " milhões" : x.vantagem >= 1e6 ? fmt(x.vantagem / 1e6, 1) + " milhão"
                : x.vantagem.toLocaleString("pt-BR");
     a.append(placar, barra, el("span", "desc",
-      `Votos válidos no 2º turno${x.pct_secoes < 100 ? ` (${fmt(x.pct_secoes)}% das seções)` : ""}; ${vant} de votos de diferença. ${p.descricao}`));
-  } else {
+      `Votos válidos no 2º turno${x.pct_secoes < 100 ? ` (${fmt(x.pct_secoes)}% das seções)` : ""}; ${vant} de votos de diferença.${p.fato ? "" : " " + p.descricao}`));
+    if (p.fato) a.append(a.querySelector(".fato"));   // a frase da página depois do placar
+  } else if (!p.fato) {
     a.append(el("span", "desc", p.descricao));
   }
   return a;
 }
 
+// barrinha "onde cada um venceu": Lula | empates | Flávio, com os números nas pontas
+function vitorias(v) {
+  const box = el("div", "venceu"), rot = el("div", "rot"), n = v.a + v.b + v.empates;
+  const lado = (num, quem) => { const s = el("span"); s.append(el("b", null, num.toLocaleString("pt-BR")), ` ${quem}`); return s; };
+  rot.append(lado(v.a, `${v.de} de Lula`), lado(v.b, `de Flávio`));
+  if (v.empates) rot.insertBefore(el("span", null, `${v.empates.toLocaleString("pt-BR")} empate${v.empates > 1 ? "s" : ""}`), rot.lastChild);
+  const barra = el("div", "barra"); barra.setAttribute("role", "img");
+  barra.setAttribute("aria-label", `Lula venceu em ${v.a} ${v.de}, Flávio Bolsonaro em ${v.b}` + (v.empates ? `, ${v.empates} empates` : ""));
+  for (const [k, c] of [["a", "var(--lula)"], ["empates", "var(--linha)"], ["b", "var(--n22)"]]) {
+    if (!v[k]) continue; const s = el("span"); s.style.width = (100 * v[k] / n) + "%"; s.style.background = c; barra.append(s); }
+  box.append(rot, barra); return box;
+}
+
+if (D.placar && D.placar.pct_secoes >= 100)
+  document.getElementById("titulo").textContent = D.placar.lula > 50 ? "Lula venceu o 2º turno" : "Flávio venceu o 2º turno";
 const destaque = D.paginas.find(p => p.destaque);
+if (destaque && destaque.lede) document.getElementById("lede").textContent = destaque.lede;
 if (destaque) document.getElementById("destaque").append(cartao(destaque));
 const alvo = document.getElementById("grupos");
 const resto = D.paginas.filter(p => !p.destaque);
-for (const grupo of [...new Set(resto.map(p => p.grupo))]) {
+const do1 = p => p.grupo.startsWith("1º turno");
+for (const grupo of [...new Set(resto.filter(p => !do1(p)).map(p => p.grupo))]) {
   const sec = el("section", "grupo"); sec.append(el("h2", null, grupo));
   for (const p of resto.filter(p => p.grupo === grupo)) sec.append(cartao(p));
   alvo.append(sec);
+}
+// 1º turno: lista curta, com o lugar na frente do título
+const ant = resto.filter(do1);
+if (ant.length) {
+  const sec = el("section", "grupo"); sec.append(el("h2", null, "Do 1º turno (4 de outubro)"));
+  const lista = el("div", "lista");
+  for (const p of ant) { const a = el("a"); a.href = `/${p.sub}/`;
+    a.append(el("strong", null, p.titulo), el("span", null, `${p.grupo.replace("1º turno · ", "")} · ${p.descricao}`)); lista.append(a); }
+  sec.append(lista); alvo.append(sec);
 }
 document.getElementById("atualizado").textContent = `Atualizado em ${D.atualizado}.`;
 </script>
