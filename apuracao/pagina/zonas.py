@@ -49,7 +49,7 @@ def montar_dados(r: Recorte, sec: pd.DataFrame, loc: pd.DataFrame, nomes: dict[i
         partes = []
         for u, gu in g.groupby("unidade", dropna=False):
             p = _soma(gu)
-            partes.append({"ra": nome(u), "ap": p["ap"], "a": p["a"], "b": p["b"], "m": p["m"],
+            partes.append({"ra": nome(u), "ap": p["ap"], "a": p["a"], "b": p["b"], "m": p["m"], "se": p["se"],
                            "pct": round(100 * p["ap"] / g["aptos"].sum(), 1), "m_ra": ra_total.get(nome(u))})
         partes.sort(key=lambda p: -p["ap"])
         zonas.append({"z": int(z), "nome": ordinal(int(z)), **_soma(g), "locais": int(g["local"].nunique()),

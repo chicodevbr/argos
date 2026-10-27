@@ -319,7 +319,7 @@ for (const b of document.querySelectorAll("[data-m]")) b.addEventListener("click
       s.addEventListener("mousemove", ev => { dica.hidden = false; dica.innerHTML = "";
         [[`${p.ra} na ${z.nome} zona`, "b"], [`${fmt(p.pct, 0)}% dos eleitores da zona · ${inteiro(p.ap)} eleitores`, "span"],
          [`${curto(NA)} ${inteiro(p.a)} × ${curto(NB)} ${inteiro(p.b)} · ${quem(p.m)} ${sinal(p.m)}`, "span"],
-         [`${p.ra} inteira: ${quem(p.m_ra)} ${sinal(p.m_ra)}`, "span"]].forEach(([t, tag], i) => {
+         [`${inteiro(p.se)} ${p.se === 1 ? "urna" : "urnas"} · ${p.ra} inteira: ${quem(p.m_ra)} ${sinal(p.m_ra)}`, "span"]].forEach(([t, tag], i) => {
           const e = document.createElement(tag); e.textContent = t; dica.appendChild(e); if (i < 3) dica.appendChild(document.createElement("br")); });
         dica.style.left = Math.min(ev.clientX + 14, window.innerWidth - 310) + "px"; dica.style.top = (ev.clientY + 14) + "px"; });
       s.addEventListener("mouseleave", esconderDica);
@@ -327,7 +327,10 @@ for (const b of document.querySelectorAll("[data-m]")) b.addEventListener("click
       const t = document.createElement("span"); t.innerHTML = '<i></i><span><b></b> <span class="v"></span></span>';
       t.querySelector("i").style.background = `var(${corVenc(p.m)})`;
       t.querySelector("b").textContent = p.ra;
-      t.querySelector(".v").textContent = `${fmt(p.pct, 0)}% · ${quem(p.m)} ${sinal(p.m)}`;
+      // pedaço pequeno de uma RA: mostra as urnas e, se o vencedor da RA inteira for outro, o resultado dela
+      const outro = p.m_ra != null && p.m != null && Math.sign(p.m_ra) !== Math.sign(p.m);
+      t.querySelector(".v").textContent = `${fmt(p.pct, 0)}%${z.ras.length > 1 ? ` (${inteiro(p.se)} ${p.se === 1 ? "urna" : "urnas"})` : ""} · ${quem(p.m)} ${sinal(p.m)}`
+        + (outro ? ` nesta parte; na RA inteira, ${quem(p.m_ra)} ${sinal(p.m_ra)}` : "");
       partes.appendChild(t);
     }
     dir.append(barra, partes); el.append(nome, dir); alvo.appendChild(el);
