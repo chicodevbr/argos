@@ -99,6 +99,8 @@ th:first-child, td:first-child { text-align: left; white-space: normal; min-widt
 th { font-weight: 600; color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
 th[aria-sort="descending"]::after { content: " ↓"; } th[aria-sort="ascending"]::after { content: " ↑"; }
 td.forte { font-weight: 600; color: var(--tinta); }
+i.venc { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 7px; border: 1px solid var(--linha); vertical-align: -1px; flex: none; }
+.rotulo-mapa { font-size: 10px; font-weight: 600; fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: 2px; }
 td.grupo { border-left: 1px solid var(--linha); }
 .pequena { color: var(--apagado); font-size: .78rem; display: block; white-space: normal; max-width: 46ch; line-height: 1.35; }
 
@@ -128,7 +130,8 @@ td.grupo { border-left: 1px solid var(--linha); }
     <div class="quadro-topo">
       <h2 id="t-mapa">Mapa</h2>
       <div class="segmentado" role="group" aria-label="O que colorir">
-        <button data-m="t2" aria-pressed="true">Margem no 2º turno</button>
+        <button data-m="venc" aria-pressed="true">Quem venceu</button>
+        <button data-m="t2" aria-pressed="false">Margem no 2º turno</button>
         <button data-m="var" aria-pressed="false">Mudança da margem</button>
       </div>
     </div>
@@ -195,6 +198,14 @@ const mil = v => Math.abs(v) >= 1e6 ? fmt(v / 1e6, 2) + " mi" : Math.abs(v) >= 1
 const sinalMil = v => (v > 0 ? "+" : v < 0 ? "−" : "") + mil(Math.abs(v));
 const cor = nome => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
 const porChave = new Map(D.ras.map(r => [r.chave, r]));
+// quadradinho na cor de quem venceu a unidade no 2º turno (vazio se empatou)
+const vencedor = r => r.t2.margem > 0 ? "a" : r.t2.margem < 0 ? "b" : null;
+const corVenc = r => ({ a: "var(--c13)", b: "var(--c22)" })[vencedor(r)] || "transparent";
+function marca(r) { const i = document.createElement("i"); i.className = "venc"; i.style.background = corVenc(r); return i; }
+function marcaSvg(g, r, x, y) {
+  g.append("rect").attr("x", x - 10).attr("y", y - 5).attr("width", 10).attr("height", 10).attr("rx", 2)
+    .attr("fill", corVenc(r) === "transparent" ? "none" : cor(vencedor(r) === "a" ? "--c13" : "--c22")).attr("stroke", cor("--linha"));
+}
 const fem = M.unidade.startsWith("região");
 const pontos = v => Math.abs(Math.round(v * 10) / 10) < 2 ? "ponto" : "pontos";
 
@@ -313,6 +324,11 @@ function desenharEleitores() {
 // margem = % do 13 − % do 22 nos válidos (pontos). Divergente validada: vermelho = 13, azul = 22.
 const CORES_DIV = ["--div-1", "--div-2", "--div-3", "--div-4", "--div-5"];
 const MAPAS = {
+  // só o vencedor: cor cheia do candidato, sem faixa neutra (vitórias por décimos aparecem como vitórias)
+  venc: { cortes: [0, 1e-9], cores: ["--c22", "--linha", "--c13"], valor: r => r.t2.margem,
+          nota: () => `Quem teve mais votos no 2º turno em cada ${M.unidade}. Passe o mouse para ver a margem.`,
+          rotulos: () => [`${NB} venceu`, "empate", `${NA} venceu`],
+          titulos: [`Maiores vitórias de ${curto(NB)}`, `Maiores vitórias de ${curto(NA)}`] },
   t2: { cortes: [-20, -5, 5, 20], valor: r => r.t2.margem,
         nota: () => `Margem no 2º turno: % de ${NA} menos % de ${NB} nos votos válidos, em pontos.`,
         rotulos: c => [`${NB} à frente por ${c[3]}+`, `${NB} à frente por ${c[2]} a ${c[3]}`, `diferença até ${c[2]}`, `${NA} à frente por ${c[2]} a ${c[3]}`, `${NA} à frente por ${c[3]}+`],
@@ -322,7 +338,7 @@ const MAPAS = {
          rotulos: c => [`${NB} ganhou ${c[3]}+ pontos`, `${NB} ganhou ${c[2]} a ${c[3]}`, `praticamente igual (±${c[2]})`, `${NA} ganhou ${c[2]} a ${c[3]}`, `${NA} ganhou ${c[3]}+ pontos`],
          titulos: [`Mais a favor de ${NB}`, `Mais a favor de ${NA}`] },
 };
-let modo = "t2";
+let modo = "venc";
 function desenharMapa() {
   const svg = d3.select("#mapa");
   const largura = svg.node().getBoundingClientRect().width || 700;
@@ -330,7 +346,8 @@ function desenharMapa() {
   svg.attr("viewBox", `0 0 ${largura} ${altura}`).selectAll("*").remove();
   const caminho = d3.geoPath(d3.geoMercator().fitSize([largura, altura], MALHA));
   const m = MAPAS[modo];
-  const corDe = v => v == null ? cor("--linha") : cor(CORES_DIV[d3.bisect(m.cortes, v)]);
+  const cores = m.cores || CORES_DIV;
+  const corDe = v => v == null ? cor("--linha") : cor(cores[d3.bisect(m.cortes, v)]);
   svg.append("g").selectAll("path").data(MALHA.features).join("path")
     .attr("d", caminho)
     .attr("fill", f => { const r = porChave.get(f.properties.chave); return r ? corDe(m.valor(r)) : cor("--linha"); })
@@ -342,20 +359,33 @@ function desenharMapa() {
       if (r) mostrarDica({ clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }, r); d3.select(this).classed("ativo", true); })
     .on("blur", function () { esconderDica(); d3.select(this).classed("ativo", false); });
   document.getElementById("t-mapa").textContent = modo === "var" ? D.textos.titulo_var : D.textos.vitorias.replace(/\.$/, "");
+  if (modo === "venc") {   // nome de cada unidade sobre o mapa, onde couber
+    svg.append("g").attr("pointer-events", "none").selectAll("text").data(MALHA.features.filter(f => {
+      const [[x0, y0], [x1, y1]] = caminho.bounds(f); return x1 - x0 > 60 && y1 - y0 > 22; })).join("text")
+      .attr("class", "rotulo-mapa").attr("text-anchor", "middle")
+      .attr("transform", f => `translate(${caminho.centroid(f)})`).attr("dy", "0.35em")
+      .text(f => { const r = porChave.get(f.properties.chave); return r ? r.ra : ""; });
+  }
   document.getElementById("mapa-nota").textContent = m.nota();
   const leg = document.getElementById("legenda-mapa"); leg.innerHTML = "";
   const c = m.cortes.map(v => fmt(Math.abs(v), Number.isInteger(v) ? 0 : 1));
   m.rotulos(c).forEach((t, i) => {
+    if (modo === "venc" && i === 1 && !D.ras.some(r => r.t2.margem === 0)) return;
     const n = D.ras.filter(r => { const v = m.valor(r); return v != null && d3.bisect(m.cortes, v) === i; }).length;
     const s = document.createElement("span"); s.innerHTML = "<i></i><span></span>";
-    s.querySelector("i").style.background = cor(CORES_DIV[i]); s.querySelector("span").textContent = `${t} (${n})`;
+    s.querySelector("i").style.background = cor(cores[i]); s.querySelector("span").textContent = `${t} (${n})`;
     leg.appendChild(s);
   });
   const ord = D.ras.filter(r => m.valor(r) != null).sort((a, b) => m.valor(a) - m.valor(b));
   const des = document.getElementById("destaques"); des.innerHTML = "";
-  for (const [t, lista] of [[m.titulos[0], ord.slice(0, 3)], [m.titulos[1], ord.slice(-3).reverse()]]) {
+  const listas = modo === "venc"   // quem venceu: todas as unidades de cada um, da maior vitória à menor
+    ? [[`${NA} venceu em`, ord.filter(r => m.valor(r) > 0).reverse()], [`${NB} venceu em`, ord.filter(r => m.valor(r) < 0)]]
+        .sort((x, y) => x[1].length - y[1].length)
+    : [[m.titulos[0], ord.slice(0, 3)], [m.titulos[1], ord.slice(-3).reverse()]];
+  for (const [t, lista] of listas) {
     const b = document.createElement("b"); b.textContent = t; des.appendChild(b);
-    for (const r of lista) { const d = document.createElement("span"); d.textContent = `${r.ra}: ${sinal(m.valor(r))}`; des.appendChild(d); }
+    for (const r of lista) { const d = document.createElement("span"); d.textContent = `${r.ra}: ${sinal(m.valor(r), Math.abs(m.valor(r)) < 0.1 ? 2 : 1)}`;
+      if (modo === "venc") d.prepend(marca(r)); des.appendChild(d); }
   }
 }
 for (const b of document.querySelectorAll("[data-m]")) b.addEventListener("click", () => {
@@ -395,7 +425,8 @@ function desenharCresc() {
     const y = topo + i * passo;
     const g = svg.append("g").on("mousemove", ev => mostrarDica(ev, r)).on("mouseleave", esconderDica);
     g.append("rect").attr("x", 0).attr("y", y - 2).attr("width", largura).attr("height", passo).attr("fill", "transparent");
-    g.append("text").attr("x", esq - 10).attr("y", y + barra + 4).attr("text-anchor", "end").text(r.ra);
+    marcaSvg(g, r, esq - 8, y + barra);
+    g.append("text").attr("x", esq - 24).attr("y", y + barra + 4).attr("text-anchor", "end").text(r.ra);
     [["a", "--c13", 0], ["b", "--c22", barra + 1]].forEach(([k, c, dy]) => {
       const v = val(r, k); if (v == null) return;
       const x0 = Math.min(x(0), x(v)), w = Math.max(1, Math.abs(x(v) - x(0)));
@@ -437,7 +468,8 @@ function desenharAbst() {
       `Abstenção: ${fmt(r.t1.abst_pct, 1)}% no 1º turno → ${fmt(r.t2.abst_pct, 1)}% no 2º (${sinal(r.var_abst)} ${pontos(r.var_abst)})`,
       `${inteiro(r.t2.abstencoes)} de ${inteiro(r.t2.aptos)} eleitores não votaram no 2º turno`])).on("mouseleave", esconderDica);
     g.append("rect").attr("x", 0).attr("y", y - passo / 2).attr("width", largura).attr("height", passo).attr("fill", "transparent");
-    g.append("text").attr("x", esq - 10).attr("y", y + 4).attr("text-anchor", "end").text(r.ra);
+    marcaSvg(g, r, esq - 8, y);
+    g.append("text").attr("x", esq - 24).attr("y", y + 4).attr("text-anchor", "end").text(r.ra);
     g.append("line").attr("x1", x(r.t1.abst_pct)).attr("x2", x(r.t2.abst_pct)).attr("y1", y).attr("y2", y).attr("stroke", cor("--apagado")).attr("stroke-width", 2);
     g.append("circle").attr("cx", x(r.t1.abst_pct)).attr("cy", y).attr("r", 4.5).attr("fill", cor("--superficie")).attr("stroke", cor("--dado-base")).attr("stroke-width", 2);
     g.append("circle").attr("cx", x(r.t2.abst_pct)).attr("cy", y).attr("r", 4.5).attr("fill", cor("--tinta")).attr("stroke", cor("--superficie")).attr("stroke-width", 1.5);
@@ -459,6 +491,7 @@ function desenharTabela() {
   ];
   const colunas = [
     { id: "ra", rot: M.unidade[0].toUpperCase() + M.unidade.slice(1), v: r => r.ra, texto: true },
+    { id: "venc", rot: "Venceu", v: r => r.t2.margem, texto: false, venc: true },
     { id: "aptos", rot: "Eleitores", v: r => r.t2.aptos, f: inteiro },
     { id: "ab1", rot: "Abst. 1º", v: r => r.t1.abst_pct, f: v => fmt(v, 1) + "%", grupo: true },
     { id: "ab2", rot: "Abst. 2º", v: r => r.t2.abst_pct, f: v => fmt(v, 1) + "%" },
@@ -483,7 +516,8 @@ function desenharTabela() {
   const linha = (tr, r, forte) => {
     for (const c of colunas) {
       const td = tr.insertCell(); const v = c.v(r);
-      td.textContent = c.f ? c.f(v) : v;
+      td.textContent = c.venc ? (vencedor(r) ? curto(vencedor(r) === "a" ? NA : NB) : "empate") : c.f ? c.f(v) : v;
+      if (c.venc) td.prepend(marca(r));
       if (c.id === "ra" && r.extra) { const e = document.createElement("span"); e.className = "pequena"; e.textContent = r.extra; td.appendChild(e); }
       td.className = [c.forte || forte ? "forte" : "", c.grupo ? "grupo" : ""].join(" ").trim();
     }
@@ -495,7 +529,7 @@ for (const b of document.querySelectorAll("[data-t]")) b.addEventListener("click
   tabModo = b.dataset.t; for (const o of document.querySelectorAll("[data-t]")) o.setAttribute("aria-pressed", String(o === b));
   if (!colIds().includes(ordem.id)) ordem = { id: "margem", desc: false };
   desenharTabela(); });
-const colIds = () => ["ra", "aptos", "ab1", "ab2", "a1", "a2", "b1", "b2", "margem", ...(tabModo === "pct" ? [] : ["ca", "cb"])];
+const colIds = () => ["ra", "aptos", "ab1", "ab2", "a1", "a2", "b1", "b2", "margem", "venc", ...(tabModo === "pct" ? [] : ["ca", "cb"])];
 
 // --- Método ----------------------------------------------------------------------
 (function metodo() {
