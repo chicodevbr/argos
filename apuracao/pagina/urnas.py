@@ -69,7 +69,8 @@ def _nome_local(n: str) -> str:
     def sigla(m):
         w = m.group(0)
         return "UnB" if w.upper() == "UNB" else w.upper() if w.upper() in SIGLAS else w
-    return re.sub(r"[\wÀ-ÿ.]+", sigla, nome_proprio(n.strip()))
+    n = re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", n.strip()))   # "( ANTIGA X )" -> "(ANTIGA X)"
+    return re.sub(r"[\wÀ-ÿ.]+", sigla, nome_proprio(n))
 
 
 def montar_dados(r: Recorte, s: pd.DataFrame, loc: pd.DataFrame, nomes: dict[int, str]) -> dict:

@@ -286,9 +286,11 @@ function desenharMapa() {
   }
   g.append("path").attr("class", "borda-zona").attr("d", segs.join(""));
   svg.append("g").selectAll("path").data(MALHA.features).join("path").attr("class", "limite-ra").attr("d", caminho);
-  // nome da zona no centro (média ponderada pelos eleitores dos seus locais)
+  // nome da zona perto do centro (média ponderada pelos eleitores dos seus locais),
+  // ancorado no local da zona mais perto dessa média: zona em pedaços não ganha rótulo em área de outra zona
   const centros = d3.rollups(D.pontos.map((p, i) => [p, xy[i]]), v => {
-    const w = d3.sum(v, d => d[0][3]); return [d3.sum(v, d => d[1][0] * d[0][3]) / w, d3.sum(v, d => d[1][1] * d[0][3]) / w]; }, d => d[0][2]);
+    const w = d3.sum(v, d => d[0][3]), c = [d3.sum(v, d => d[1][0] * d[0][3]) / w, d3.sum(v, d => d[1][1] * d[0][3]) / w];
+    return d3.least(v, d => (d[1][0] - c[0]) ** 2 + (d[1][1] - c[1]) ** 2)[1]; }, d => d[0][2]);
   svg.append("g").selectAll("text").data(centros).join("text").attr("class", "rotulo-zona").attr("text-anchor", "middle")
     .attr("x", d => d[1][0]).attr("y", d => d[1][1]).attr("dy", "0.35em").text(d => porZona.get(d[0]).nome);
   legenda();

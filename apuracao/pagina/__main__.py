@@ -43,7 +43,8 @@ DESTAQUE = "como-lula-venceu"
 # gerado em site/, para a inicial não repetir números à mão. Gere as páginas antes de --inicio.
 # Onde há barrinha de vitórias (RAs, urnas), a frase fala de outra coisa.
 FATOS = {"como-lula-venceu": ("decisivo", 0, 2), "pesquisas": ("media", 0, 2), "brasilia": ("lede", 0, 2),
-         "brasilia/urnas": ("lede", 1, 2), "brasilia/zonas": ("lede", 1, 2), "brasilia/ras": ("lede", 1, 2), "rio-de-janeiro": ("lede", 0, 2)}
+         "brasilia/urnas": ("lede", 1, 2), "brasilia/zonas": ("lede", 1, 2), "brasilia/ras": ("lede", 1, 2),
+         "rio-de-janeiro/ras": ("lede", 1, 2), "rio-de-janeiro/zonas": ("lede", 1, 2), "rio-de-janeiro": ("lede", 0, 2)}
 SITE = [
     ("Como Lula venceu", "como-lula-venceu", "2º turno · Brasil", "Como Lula venceu em 2026",
      "Onde a vantagem cresceu, onde o 22 perdeu votos e a abstenção, nos 5.570 municípios, comparados a 2022.",
@@ -58,8 +59,12 @@ SITE = [
      "As 6.969 urnas do DF no 2º turno, nos 622 locais de votação, no mapa.", "Votos"),
     ("Zonas · Brasília", "brasilia/zonas", "2º turno · Brasília", "Os votos por zona eleitoral em Brasília",
      "As 19 zonas eleitorais do DF no 2º turno e as RAs que cada uma junta.", "Votos"),
+    ("RAs · Rio", "rio-de-janeiro/ras", "2º turno · Rio de Janeiro", "Quem venceu em cada RA do Rio",
+     "As regiões administrativas da cidade, comparadas à contagem por zona eleitoral.", "Votos"),
     ("1º x 2º turno · Rio", "rio-de-janeiro", "2º turno · Rio de Janeiro", "Do 1º ao 2º turno no Rio",
      "Votos de Lula e Flávio e abstenção nas RAs da cidade, no 1º e no 2º turno, com os bairros.", "Votos"),
+    ("Zonas · Rio", "rio-de-janeiro/zonas", "2º turno · Rio de Janeiro", "Os votos por zona eleitoral no Rio",
+     "As zonas eleitorais da cidade no 2º turno e as RAs que cada uma junta.", "Votos"),
     ("Onde Lula perdeu no 1º turno", "onde-lula-perdeu", "1º turno · Brasil", "Onde Lula perdeu votos no 1º turno",
      "Os 5.570 municípios, comparados a 2022 (Lula) e a 2014 (Dilma).", "Votos"),
     ("Votos · Brasília", "votos", "1º turno · Brasília", "Votos em Brasília",

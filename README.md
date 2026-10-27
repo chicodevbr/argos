@@ -170,6 +170,7 @@ uv run python -m apuracao.pagina --recorte rio --turnos --site site        # 1º
 uv run python -m apuracao.pagina --recorte brasilia --urnas --site site   # quem venceu em cada urna -> site/brasilia/urnas/
 uv run python -m apuracao.pagina --recorte brasilia --ras --site site     # quem venceu em cada RA x zona -> site/brasilia/ras/
 uv run python -m apuracao.pagina --recorte brasilia --zonas --site site   # votos por zona eleitoral -> site/brasilia/zonas/
+uv run python -m apuracao.pagina --recorte rio --ras --site site          # o mesmo na cidade do Rio -> site/rio-de-janeiro/ras/ (e --zonas)
 uv run python -m apuracao.pagina --recorte brasilia --turnos --ano 2022    # o mesmo com 2022 (conferência) -> data/pagina/
 uv run python -m apuracao.pagina --recorte brasilia    # abstenção do 1º turno (saiu do site em 26/10) -> data/pagina/
 uv run python -m apuracao.pagina --recorte estado-rj --site site   # estado do Rio -> site/estado-do-rio/
@@ -194,7 +195,8 @@ urnas). Por isso, gere de novo a inicial depois de atualizar qualquer página.
 
 **Quem venceu em cada RA** (`apuracao/pagina/ras.py`) e **votos por zona eleitoral** (`apuracao/pagina/zonas.py`):
 o 2º turno por região administrativa (RA do local de votação, pelas coordenadas) e por zona eleitoral, que junta RAs.
-O TSE não publica o contorno das zonas; o mapa usa a zona do local de votação mais próximo (Voronoi). A página das
+O TSE não publica o contorno das zonas; o mapa usa a zona do local de votação mais próximo (Voronoi). Locais sem coordenada no 2º turno herdam a do 1º turno, de 2022 ou do
+local onde as mesmas seções votaram no 1º turno. A página das
 RAs confere a atribuição: move para a RA vizinha cada local a menos de 100 m do limite ou cujo bairro no TSE cita
 outra RA e mostra se algum vencedor mudaria.
 

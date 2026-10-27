@@ -23,7 +23,8 @@ from apuracao.pagina.regioes import Recorte, _br
 from apuracao.pagina.urnas import A, B
 
 MODELO = Path(__file__).with_name("modelo_zonas.html")
-TITULOS = {"brasilia": "Os votos por zona eleitoral em Brasília"}
+TITULOS = {"brasilia": "Os votos por zona eleitoral em Brasília", "rio": "Os votos por zona eleitoral no Rio"}
+LIMITES = {"brasilia": "das 35 RAs, SISDIA/GDF, 2022", "rio": "das 33 RAs da prefeitura, Instituto Pereira Passos"}
 PARTE = 0.03   # parte de uma RA dentro da zona: a partir de 3% dos eleitores da zona entra nas frases
 
 
@@ -78,7 +79,7 @@ def metodo(r: Recorte) -> list[str]:
         "seção\". A soma das zonas confere com o resultado oficial.",
         "A zona eleitoral é a divisão do TRE para organizar o eleitorado e os cartórios; não segue os limites das "
         "regiões administrativas. A parte de cada RA numa zona é a das seções cujo local de votação fica dentro da "
-        "RA (limites oficiais das 35 RAs, SISDIA/GDF, 2022).",
+        f"RA (limites oficiais {LIMITES.get(r.id, 'da malha do recorte')}).",
         "O TSE não publica o contorno das zonas. No mapa, cada ponto do DF fica com a zona do local de votação mais "
         "próximo (diagrama de Voronoi); as áreas sem eleitor, como parques e áreas rurais, também entram. Os "
         "contornos são aproximados; as linhas finas são os limites das RAs.",
@@ -88,12 +89,15 @@ def metodo(r: Recorte) -> list[str]:
 
 def _textos(r: Recorte, d: dict) -> dict:
     t, na, nb = d["total"], d["nomes"]["a"], d["nomes"]["b"]
-    venc, perd = (nb, na) if t["b"] > t["a"] else (na, nb)
-    zv, zp = (t["zb"], t["za"]) if t["b"] > t["a"] else (t["za"], t["zb"])
-    perd_z = [z for z in d["zonas"] if z["m"] is not None and (z["m"] > 0) == (t["b"] > t["a"])]
     lista = lambda xs: xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " e " + xs[-1]  # noqa: E731
+    # quem venceu mais zonas primeiro; as zonas de quem venceu menos listadas, se forem poucas
+    a_mais = t["za"] > t["zb"] or (t["za"] == t["zb"] and t["a"] > t["b"])
+    venc, perd, zv, zp = (na, nb, t["za"], t["zb"]) if a_mais else (nb, na, t["zb"], t["za"])
+    perd_z = [z["nome"] for z in d["zonas"] if z["m"] is not None and z["m"] != 0 and (z["m"] > 0) != a_mais]
+    venc_votos = nb if t["b"] > t["a"] else na
     lede = (f"{r.no_lugar}, {venc} venceu em {zv} das {t['zonas']} zonas eleitorais"
-            + (f"; {perd} venceu em {zp} ({lista([z['nome'] for z in perd_z])})" if zp else f"; {perd} não venceu em nenhuma")
+            + (f" e {perd} em {zp}" + (f" ({lista(perd_z)})" if len(perd_z) <= 6 else "") if zp else f"; {perd} não venceu em nenhuma")
+            + (f", embora {venc_votos} tenha tido mais votos no total" if venc != venc_votos and zv != zp else "")
             + f". {t['mistas']} das {t['zonas']} zonas {'junta' if t['mistas'] == 1 else 'juntam'} mais de uma região administrativa.")
     # partes de RA em que o vencedor foi outro que o da zona
     contra = []
@@ -103,7 +107,7 @@ def _textos(r: Recorte, d: dict) -> dict:
         outras = [p for p in z["ras"] if p["m"] is not None and p["pct"] >= 100 * PARTE and (p["m"] > 0) != (z["m"] > 0)]
         if outras:
             vz, vo = (na, nb) if z["m"] > 0 else (nb, na)
-            contra.append(f"na {z['nome']} zona, {vz} venceu por {_br(abs(z['m']) + 1e-9, 1)} pontos, mas {vo} ganhou na parte "
+            contra.append(f"na {z['nome']} zona, {vz} venceu por {_br(abs(z['m']) + 1e-9, 1)} {'ponto' if abs(z['m']) < 1.95 else 'pontos'}, mas {vo} ganhou na parte "
                           f"{lista([_de(r, p['ra']) for p in outras])}")
     escondido = ("As zonas escondem vitórias: " + "; ".join(contra) + ".") if contra else \
         "Em todas as zonas, o vencedor da zona também venceu em cada RA que ela junta."
@@ -125,6 +129,26 @@ def carregar(r: Recorte, cfg: Config, ano: int = 2026) -> tuple[pd.DataFrame, pd
         s, v, loc = (x[x["cod_mun"] == r.cod_mun] for x in (s, v, loc))
     if s.empty or v.empty:
         raise SystemExit(f"sem o 2º turno de {ano} nos arquivos por seção em {dh}")
+    # local sem coordenada no cadastro do 2º turno: herda a do mesmo local no 1º turno ou na eleição anterior
+    for turno, a in ((1, ano), (2, ano - 4)):
+        if not loc["lat"].isna().any():
+            break
+        arq = Path(cfg.historico.dir) / str(a) / f"eleitorado_local_votacao_{a}.zip"
+        if arq.exists():
+            outro = secao.locais(arq, r.uf, turno=turno)
+            loc = regioes._completar_coordenadas(loc, outro).drop(columns=["herdou"])
+    if loc["lat"].isna().any():
+        # local novo no 2º turno: usa o local onde as mesmas seções votaram no 1º turno
+        s1 = secao.secoes(dh / f"detalhe_votacao_secao_{ano}.zip", r.uf, turno=1)
+        l1 = secao.locais(dh / f"eleitorado_local_votacao_{ano}.zip", r.uf, turno=1).dropna(subset=["lat", "lon"])
+        par = s.merge(s1[["cod_mun", "zona", "secao", "local"]], on=["cod_mun", "zona", "secao"], suffixes=("", "_1"))
+        par = par.merge(l1[["cod_mun", "zona", "local", "lat", "lon"]].rename(columns={"local": "local_1"}),
+                        on=["cod_mun", "zona", "local_1"])
+        ref = par.groupby(["cod_mun", "zona", "local"])[["lat", "lon"]].agg(lambda c: c.mode().iloc[0]).reset_index()
+        m = loc.merge(ref, on=["cod_mun", "zona", "local"], how="left", suffixes=("", "_1"))
+        falta = m["lat"].isna()
+        m.loc[falta, "lat"], m.loc[falta, "lon"] = m.loc[falta, "lat_1"], m.loc[falta, "lon_1"]
+        loc = m.drop(columns=["lat_1", "lon_1"])
     loc = loc.assign(unidade=malhas.regiao_de(loc["lon"], loc["lat"], malhas.ler(r.malha, r.campo)))
     sec = urnas.por_secao(s, v).merge(loc[["cod_mun", "zona", "local", "unidade"]], on=["cod_mun", "zona", "local"],
                                       how="left")

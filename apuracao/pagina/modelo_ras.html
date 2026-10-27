@@ -226,7 +226,7 @@ document.getElementById("cap-zona").textContent = `${curto(NB)} venceu em ${T.zb
   const apertadas = D.ras.filter(r => Math.abs(r.dif) < M.apertada).length;
   const itens = [
     { nome: `RAs de ${curto(NB)}`, cor: "--c22", valor: inteiro(T.ra_b), v: `das ${T.ras} regiões administrativas` },
-    { nome: `RAs de ${curto(NA)}`, cor: "--c13", valor: inteiro(T.ra_a), v: `com ${inteiro(T.ap_ra_a)} eleitores, ${fmt(100 * T.ap_ra_a / T.ap)}% do DF` },
+    { nome: `RAs de ${curto(NA)}`, cor: "--c13", valor: inteiro(T.ra_a), v: `com ${inteiro(T.ap_ra_a)} eleitores, ${fmt(100 * T.ap_ra_a / T.ap)}% do total` },
     { nome: "Por zona eleitoral", valor: `${T.zb} × ${T.za}`, v: `zonas de ${curto(NB)} × zonas de ${curto(NA)}, das ${T.zonas}` },
     { nome: "RAs apertadas", valor: inteiro(apertadas), v: `decididas por menos de ${inteiro(M.apertada)} votos` },
   ];

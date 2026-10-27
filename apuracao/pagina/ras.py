@@ -23,7 +23,10 @@ from apuracao.pagina.regioes import Recorte, _br
 from apuracao.pagina.urnas import A, B, _nome_local
 
 MODELO = Path(__file__).with_name("modelo_ras.html")
-TITULOS = {"brasilia": "Quem venceu em cada RA de Brasília"}
+TITULOS = {"brasilia": "Quem venceu em cada RA de Brasília", "rio": "Quem venceu em cada RA do Rio"}
+# fonte dos limites das RAs e exemplos de bairro com o nome antigo no cadastro do TSE, por recorte
+LIMITES = {"brasilia": "das 35 RAs (SISDIA/GDF, 2022)", "rio": "das 33 RAs da prefeitura (Instituto Pereira Passos)"}
+BAIRRO_ANTIGO = {"brasilia": " (Sol Nascente aparece como \"Ceilândia Norte\", Sobradinho II como \"Sobradinho\")"}
 PERTO_M = 100        # locais a menos de 100 m do limite da RA entram no teste
 ATENCAO_M = 300      # e, nas RAs apertadas, os locais até 300 m do limite aparecem se decidirem a RA
 APERTADA = 1_000     # RAs decididas por menos de 1.000 votos
@@ -60,8 +63,10 @@ def checar(r: Recorte, sec: pd.DataFrame, loc: pd.DataFrame, regs: list[dict]) -
     lc = loc.merge(por_local, on=["zona", "local"])
     segs = {x["nome"]: _segmentos(x["geometria"]) for x in regs}
     ras_norm = {_norm(nome(u)): u for u in segs}
-    tot = sec.groupby("unidade")[["a", "b"]].sum()
+    # RAs sem nenhum local (no Rio, o Jacarezinho) entram zeradas; ganhar um vencedor não conta como virada
+    tot = sec.groupby("unidade")[["a", "b"]].sum().reindex(list(segs), fill_value=0)
     base = np.sign(tot["a"] - tot["b"])
+    com_votos = (tot["a"] + tot["b"]) > 0
     apertadas = set(tot.index[(tot["a"] - tot["b"]).abs() < APERTADA])
     trocas, viradas, atencao, duvidosos = 0, [], [], set()
     for x in lc.itertuples():
@@ -93,7 +98,7 @@ def checar(r: Recorte, sec: pd.DataFrame, loc: pd.DataFrame, regs: list[dict]) -
             if (t.loc[x.unidade] == 0).all():
                 continue
             trocas += 1
-            for ra in t.index[np.sign(t["a"] - t["b"]) != base]:
+            for ra in t.index[(np.sign(t["a"] - t["b"]) != base) & com_votos]:
                 viradas.append({"local": _nome_local(x.nome), "de": nome(x.unidade), "para": nome(u), "motivo": motivo,
                                 "ra": nome(ra), "antes": int(tot.loc[ra, "a"] - tot.loc[ra, "b"]),
                                 "depois": int(t.loc[ra, "a"] - t.loc[ra, "b"])})
@@ -117,7 +122,8 @@ def montar_dados(r: Recorte, sec: pd.DataFrame, loc: pd.DataFrame, nomes: dict[i
     d = {"ras": sorted(ras, key=lambda x: -x["m"]), "zonas": dz["zonas"], "pontos": dz["pontos"], "total": tot,
          "checagem": checagem, "nomes": {"a": nomes[A], "b": nomes[B]},
          "meta": {"titulo": TITULOS.get(r.id, f"Quem venceu em cada {r.unidade}: {r.nome_total}"), "rotulo": r.rotulo,
-                  "nome_total": r.nome_total, "abrev": r.abrev, "apertada": APERTADA, "metodo": metodo(r)}}
+                  "nome_total": r.nome_total, "sigla": r.sigla, "abrev": r.abrev, "apertada": APERTADA,
+                  "metodo": metodo(r)}}
     d["textos"] = _textos(r, d)
     return d
 
@@ -125,17 +131,17 @@ def montar_dados(r: Recorte, sec: pd.DataFrame, loc: pd.DataFrame, nomes: dict[i
 def metodo(r: Recorte) -> list[str]:
     return [
         "Votos de cada seção eleitoral no 2º turno para presidente (Portal de Dados Abertos do TSE, \"votação por "
-        "seção\"), somados pela região administrativa do local de votação. A soma das RAs confere com o resultado "
-        "oficial do DF.",
-        "A RA de cada local é a que contém as coordenadas do local no cadastro do TSE, nos limites oficiais das 35 "
-        "RAs (SISDIA/GDF, 2022). O eleitor vota onde está inscrito, que em geral é perto de onde mora, mas não sempre: "
-        "o resultado de uma RA é o das urnas instaladas nela.",
+        f"seção\"), somados pela região administrativa do local de votação. A soma das RAs confere com o resultado "
+        f"oficial {r.do_lugar}.",
+        f"A RA de cada local é a que contém as coordenadas do local no cadastro do TSE, nos limites oficiais "
+        f"{LIMITES.get(r.id, 'da malha do recorte')}; local sem coordenada no 2º turno herda a do 1º turno ou de 2022. "
+        "O eleitor vota onde está inscrito, que em geral é perto de onde mora, mas não sempre: o resultado de uma RA "
+        "é o das urnas instaladas nela.",
         "Zona eleitoral é a divisão do TRE para organizar o eleitorado e não segue as RAs. O mapa das zonas é "
         "aproximado: o TSE não publica o contorno, e cada área fica com a zona do local de votação mais próximo.",
         f"Conferência: cada local a menos de {PERTO_M} m do limite da sua RA, ou cujo bairro no cadastro do TSE cita "
         "outra RA, foi movido para a RA alternativa, um de cada vez, para ver se algum vencedor mudaria. O bairro do "
-        "TSE muitas vezes usa o nome antigo (Sol Nascente aparece como \"Ceilândia Norte\", Sobradinho II como "
-        "\"Sobradinho\"), por isso não substitui as coordenadas.",
+        f"TSE muitas vezes usa o nome antigo{BAIRRO_ANTIGO.get(r.id, '')}, por isso não substitui as coordenadas.",
         "Margem = % de Lula − % do 22 nos votos válidos, em pontos; diferença = votos de Lula − votos do 22.",
     ]
 
@@ -143,14 +149,26 @@ def metodo(r: Recorte) -> list[str]:
 def _textos(r: Recorte, d: dict) -> dict:
     t, na, nb = d["total"], d["nomes"]["a"], d["nomes"]["b"]
     lista = lambda xs: xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " e " + xs[-1]  # noqa: E731
-    ras_a = [x["ra"] for x in d["ras"] if x["dif"] > 0]
-    zonas_a = [z["nome"] for z in d["zonas"] if z["m"] is not None and z["m"] > 0]
-    lede = (f"{r.no_lugar}, {nb if t['b'] > t['a'] else na} venceu em {t['ra_b'] if t['b'] > t['a'] else t['ra_a']} "
-            f"das {t['ras']} regiões administrativas, e {na if t['b'] > t['a'] else nb} em "
-            f"{t['ra_a'] if t['b'] > t['a'] else t['ra_b']}: {lista(ras_a)}. "
-            f"Por zona eleitoral, como o resultado costuma ser divulgado, {na} aparece vencendo em só {len(zonas_a)} "
-            f"das {t['zonas']}" + (f" ({lista(zonas_a)})" if zonas_a else "") + ": as zonas juntam RAs, e as "
-            "vitórias nas menores somem dentro de zonas maiores.")
+    # quem venceu menos RAs ("minoria"): suas RAs listadas e o que acontece com elas na contagem por zona
+    a_menos = t["ra_a"] < t["ra_b"]
+    maior, menor = (nb, na) if a_menos else (na, nb)
+    sinal = 1 if a_menos else -1
+    ras_m = [x["ra"] for x in sorted(d["ras"], key=lambda x: -sinal * x["m"]) if sinal * x["dif"] > 0]
+    zonas_m = [z["nome"] for z in d["zonas"] if z["m"] is not None and sinal * z["m"] > 0]
+    lede = (f"{r.no_lugar}, {maior} venceu em {max(t['ra_a'], t['ra_b'])} das {t['ras']} regiões administrativas, e "
+            f"{menor} em {len(ras_m)}" + (f": {lista(ras_m)}" if 0 < len(ras_m) <= 8 else "") + ". ")
+    zv = sorted([(t["zb"], nb), (t["za"], na)], reverse=True)   # quem venceu mais zonas
+    venc_votos = nb if t["b"] > t["a"] else na
+    if zv[0][1] != venc_votos and zv[0][0] != zv[1][0]:
+        lede += (f"Por zona eleitoral, como o resultado costuma ser divulgado, o quadro se inverte: {zv[0][1]} vence em "
+                 f"{zv[0][0]} das {t['zonas']} zonas, embora {venc_votos} tenha tido mais votos no total. As vitórias "
+                 f"de {venc_votos} se concentram em menos zonas, com margens maiores.")
+    elif len(zonas_m) / t["zonas"] < len(ras_m) / t["ras"]:
+        lede += (f"Por zona eleitoral, como o resultado costuma ser divulgado, {menor} aparece vencendo em só "
+                 f"{len(zonas_m)} das {t['zonas']}" + (f" ({lista(zonas_m)})" if 0 < len(zonas_m) <= 4 else "")
+                 + ": as zonas juntam RAs, e as vitórias nas menores somem dentro de zonas maiores.")
+    else:
+        lede += f"Por zona eleitoral, {menor} vence em {len(zonas_m)} das {t['zonas']}."
     apertadas = [x for x in d["ras"] if abs(x["dif"]) < APERTADA]
     c = d["checagem"]
     firm = (f"{len(apertadas)} RAs foram decididas por menos de {_br(APERTADA, 0)} votos"
@@ -167,8 +185,9 @@ def _textos(r: Recorte, d: dict) -> dict:
                  "limite ou com bairro de outra RA no cadastro do TSE, nenhum vencedor muda.")
     if c["atencao"]:
         firm += (f" Mais longe do limite, entre {c['perto_m']} e {c['atencao_m']} m, "
-                 + ("um local decide" if len(c["atencao"]) == 1 else f"{len(c['atencao'])} locais decidem")
-                 + " uma RA apertada se fosse contado na RA vizinha: "
+                 + ("um local decidiria uma RA apertada se fosse contado" if len(c["atencao"]) == 1 else
+                    f"{len(c['atencao'])} locais decidiriam uma RA apertada se fossem contados")
+                 + " na RA vizinha: "
                  + "; ".join(f"{x['local']} (bairro no TSE: {x['bairro']}), a {x['m']} m do limite com {x['para']}"
                              for x in c["atencao"])
                  + ". Pelas coordenadas e pelos limites oficiais, ficam onde estão.")
